@@ -9,7 +9,7 @@ import {
 } from "../../../reflex-runtime/test/differential/harness";
 import type { Observation, Op, Program } from "../../../reflex-runtime/test/differential/api";
 import { RuntimeMachine } from "../../../reflex-runtime/test/differential/internal/machine/RuntimeMachine";
-import { DIRTY, node, read, readSignal, write, type Node } from "../../src/kernel";
+import { DIRTY, node, read, write, type Node } from "../../src/kernel";
 import { run, stop, watcher } from "../../src/host";
 import { ContractSpecMachine } from "./contract-spec";
 
@@ -24,7 +24,7 @@ export class QuantMachine extends RuntimeMachine<Node, Node, Node> {
       createProducer: (value) => keep(node(null, value, 0)),
       createComputed: (compute) => keep(node(compute as Node["fn"], undefined, DIRTY)),
       createWatcher: (compute) => keep(watcher(compute, false)),
-      readProducer: (n) => readSignal(n) as never,
+      readProducer: (n) => read(n) as never,
       writeProducer: (n, value) => write(n, value),
       readComputed: (n) => read(n) as never,
       runWatcher: run,

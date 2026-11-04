@@ -1,60 +1,47 @@
-// Policy around the kernel: the watcher lifecycle (validate, consume the
-// cleanup, execute), a FIFO queue for scheduled watchers, and batching.
-import {
-  DIRTY,
-  STALE,
-  WATCH,
-  WOKEN,
-  dispose,
-  execute,
-  node,
-  setDeliver,
-  untracked,
-  validateAll,
-  type Node,
-} from "./kernel";
+// Policy around the kernel: the watcher lifecycle (check, consume the
+// cleanup, run), a FIFO queue for scheduled watchers, and batching.
+import { DIRTY, STALE, WATCH, WOKEN, check, dispose, exec, node, onWake, untracked, type Node } from "./kernel";
 
-/** Scheduled by this host; unscheduled watchers are run by their owner. */
-const SCHEDULED = 64;
+/** Run by this host's queue; other watchers are run by their owner. */
+const AUTO = 64;
 const QUEUED = 128;
-/** Validation threw: run() validates again although no push re-marked it (V1). */
+/** Its check threw: run() checks again although no push marked it (V1). */
 const RETRY = 256;
 
-type Body = () => unknown;
+type Fn = () => unknown;
 
-const queue: Node[] = [];
+const queue: (Node | null)[] = [];
+let size = 0;
 let depth = 0;
-let flushing = false;
+let draining = false;
 
-/** Queue a scheduled watcher once; the kernel calls this on every push. */
-export function schedule(w: Node): void {
-  if ((w.flags & (SCHEDULED | QUEUED)) !== SCHEDULED) return;
+/** Queue a scheduled watcher once; the kernel calls this when it wakes one. */
+export function wake(w: Node): void {
+  if ((w.flags & (AUTO | QUEUED)) !== AUTO) return;
   w.flags |= QUEUED;
-  queue.push(w);
+  queue[size++] = w;
 }
 
-setDeliver(schedule);
+onWake(wake);
 
-/** A watcher runs `body` and keeps its returned function as the cleanup. */
-export function watcher(body: Body, scheduled: boolean): Node {
-  return node(body, undefined, WATCH | STALE | DIRTY | (scheduled ? SCHEDULED : 0));
+/** A watcher runs `fn` and keeps a returned function as its cleanup. */
+export function watcher(fn: Fn, auto: boolean): Node {
+  return node(fn, undefined, WATCH | STALE | DIRTY | (auto ? AUTO : 0));
 }
 
 /**
- * Validate every committed dependency, then, if an execution is owed,
- * consume the previous cleanup and execute. A watcher that is not STALE is
- * clean, or cold after a failure until a dependency changes.
+ * Check every committed source unless only signals woke it, then, if a run
+ * is owed, consume the previous cleanup and run. A watcher neither STALE,
+ * WOKEN nor RETRY is clean, or cold after a failure until a source changes.
+ * Precondition: its own run is not on the stack (flush is not reentrant).
  */
 export function run(w: Node): void {
-  // Precondition: w's own pass is not on the stack (flush is not reentrant).
-  const flags = w.flags;
-  if (w.fn === null || (flags & (STALE | WOKEN | RETRY)) === 0) return;
-  w.flags = flags & ~(STALE | WOKEN | RETRY);
-  // Woken by signals only: every committed computed source is clean, so the
-  // universal validation would find nothing; the write already owed it.
-  if ((flags & (STALE | RETRY)) !== 0) {
+  const f = w.flags;
+  if (w.fn === null || (f & (STALE | WOKEN | RETRY)) === 0) return;
+  w.flags = f & ~(STALE | WOKEN | RETRY);
+  if ((f & (STALE | RETRY)) !== 0) {
     try {
-      validateAll(w);
+      check(w);
     } catch (error) {
       w.flags |= RETRY;
       throw error;
@@ -64,10 +51,10 @@ export function run(w: Node): void {
   const cleanup = w.value;
   if (typeof cleanup === "function") {
     w.value = undefined;
-    untracked(cleanup as Body);
+    untracked(cleanup as Fn);
     if (w.fn === null) return;
   }
-  execute(w);
+  exec(w);
 }
 
 /** Terminal: detach, then run the last cleanup outside tracking. */
@@ -76,30 +63,28 @@ export function stop(w: Node): void {
   const cleanup = w.value;
   w.value = undefined;
   dispose(w);
-  if (typeof cleanup === "function") untracked(cleanup as Body);
+  if (typeof cleanup === "function") untracked(cleanup as Fn);
 }
 
 /** Run queued watchers until the queue drains; rethrow the first error. */
 export function flush(): void {
-  if (flushing || depth !== 0 || queue.length === 0) return;
-  flushing = true;
+  if (draining || depth !== 0 || size === 0) return;
+  draining = true;
   let failed = false;
   let first: unknown;
-  try {
-    for (let i = 0; i < queue.length; i++) {
-      const w = queue[i]!;
-      w.flags &= ~QUEUED;
-      try {
-        run(w);
-      } catch (error) {
-        if (!failed) first = error;
-        failed = true;
-      }
+  for (let i = 0; i < size; i++) {
+    const w = queue[i]!;
+    queue[i] = null;
+    w.flags &= ~QUEUED;
+    try {
+      run(w);
+    } catch (error) {
+      if (!failed) first = error;
+      failed = true;
     }
-  } finally {
-    queue.length = 0;
-    flushing = false;
   }
+  size = 0;
+  draining = false;
   if (failed) throw first;
 }
 

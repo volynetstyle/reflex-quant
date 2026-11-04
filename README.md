@@ -8,7 +8,8 @@ measure what is left.
 - **Production code:** three files, [`src/kernel.ts`](src/kernel.ts) (graph,
   tracking, invalidation, validation), [`src/host.ts`](src/host.ts)
   (watcher lifecycle, queue, batch), [`src/index.ts`](src/index.ts)
-  (`signal`, `computed`, `effect`, `batch`, `untracked`). About 2 KB gzip.
+  (`signal`, `computed`, `effect`, `get`, `set`, `dispose`, `batch`,
+  `untracked`; a handle is the node itself). About 2 KB gzip.
 - **Report:** [research/REPORT.md](research/REPORT.md). **Design log**, one
   counterexample per mechanism: [research/LOG.md](research/LOG.md).
 

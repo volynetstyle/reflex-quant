@@ -268,3 +268,34 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
 - **Repair:** `source.subs === null` proves absence at once.
 - **Status:** mutant `no-fresh-source` survives every test (no comparison
   counter). A constant factor only; CI timing is its only witness.
+
+### 23. Refactor for V8 and for reading (kernel v4 → v5)
+
+- **Request:** no array methods, no needless allocation, one layer less,
+  short clear names, maximum performance; and the V8 rules of the Reflex
+  runtime (Smi transitions, ToBoolean).
+- **API (written by the owner):** `get`/`set`/`dispose` functions over
+  branded handles; the handle is the node, so a signal or computed is one
+  allocation and an effect returns its node instead of a closure.
+- **One read path:** `read` serves signals too (their flags are 0); the
+  `fn === null ? readSignal : read` dispatch in `get` is gone.
+- **No array methods:** one LIFO work stack with a manual `top` replaces
+  three arrays with `push`/`pop`/`length` (mark's siblings, pull's climb
+  edges, displaced slot cells); the host queue keeps a manual `size`.
+  Popped slots are cleared, so a dead graph is not retained by the stack.
+  After warm-up only nodes and new edges allocate.
+- **Shape audit** (`bench/shape.mjs` on the readable bundle, all 18
+  scenarios): `--trace-generalization` shows every node and edge field in
+  its first representation (Smi fields stay Smi; only const→mutable);
+  `--trace-deopt` shows one-time feedback, grow-store and overflow
+  bailouts; the repeated `not a Smi` was the benchmark's own sink
+  (`out += ...` leaving the Smi range), now bounded for all runtimes.
+- **replace-half 4.32× (CI run 41829341839):** not explained by deopts,
+  generalization, inlining (the miss path, `link`, `cut`, `unsub` inline
+  into TurboFan code) or GC (129/116/122 scavenges, equal promotion for
+  quant, Reflex, alien). The work counters equal v3's (1.40×). Left to the
+  next CI run on the reshaped code.
+- **Names:** `prev`/`next` and `prevSub`/`nextSub` for the two lists, `last`
+  for the cursor, `ver`, `pull`, `mark`, `exec`, `check`, `miss`, `link`,
+  `move`, `cut`, `unsub`, BUSY, INDEX; host AUTO, QUEUED, RETRY, `wake`.
+- **Size:** kernel 542 → 486 lines (423 → 378 code), host 113 → 98.

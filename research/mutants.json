@@ -56,7 +56,7 @@
   },
   {
     "id": "no-displaced",
-    "mechanism": "save/restore of an enclosing pass's slot cells",
+    "mechanism": "save/restore of an enclosing run's slot cells",
     "killed": true,
     "failed": [
       "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)"
@@ -75,7 +75,7 @@
   },
   {
     "id": "validate-tentative",
-    "mechanism": "tentative relations excluded from watcher validation",
+    "mechanism": "tentative edges excluded from watcher validation",
     "killed": true,
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification",
@@ -84,7 +84,7 @@
   },
   {
     "id": "keep-tentative",
-    "mechanism": "removal of earlier failed attempts' unread relations",
+    "mechanism": "removal of earlier failed runs' unread edges",
     "killed": true,
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification"
@@ -92,7 +92,7 @@
   },
   {
     "id": "cut-on-failure",
-    "mechanism": "committed relations kept after a failure (wake set)",
+    "mechanism": "committed edges kept after a failure (wake set)",
     "killed": true,
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification",
@@ -103,7 +103,7 @@
   },
   {
     "id": "clear-after",
-    "mechanism": "STALE cleared before the pass, so pushes during it survive",
+    "mechanism": "STALE cleared before the run, so pushes during it survive",
     "killed": true,
     "failed": [
       "semantics.test.ts > an effect writing a source it read converges",
@@ -158,7 +158,7 @@
   },
   {
     "id": "eager-dispose",
-    "mechanism": "disposal deferred to the end of the node's own pass",
+    "mechanism": "disposal deferred to the end of the node's own run",
     "killed": true,
     "failed": [
       "semantics.test.ts > dispose inside the callback, then more reads: no ghost relation"
@@ -166,7 +166,7 @@
   },
   {
     "id": "no-cycle-check",
-    "mechanism": "RUNNING checked on read (cycle detection)",
+    "mechanism": "BUSY checked on read (cycle detection)",
     "killed": true,
     "failed": [
       "semantics.test.ts > cycles throw instead of overflowing"
@@ -193,7 +193,7 @@
   },
   {
     "id": "prepend-subs",
-    "mechanism": "subscribers kept in birth order (subsTail append)",
+    "mechanism": "subscribers kept in birth order (lastSub append)",
     "killed": true,
     "failed": [
       "semantics.test.ts > failing effect does not stop the others; the error reaches the writer",

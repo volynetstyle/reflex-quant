@@ -1,7 +1,7 @@
 // Structural checks over the quant graph. Failures throw plain Errors with
 // indices and counts only: never hand a node or edge to an assertion library
 // (inspecting one walks the whole cyclic graph).
-import { RUNNING, stats, type Edge, type Node } from "../../src/kernel";
+import { BUSY, stats, type Edge, type Node } from "../../src/kernel";
 
 export function check(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -9,7 +9,7 @@ export function check(condition: boolean, message: string): void {
 
 export function deps(n: Node): Node[] {
   const out: Node[] = [];
-  for (let e = n.deps; e !== null; e = e.nextDep) out.push(e.from);
+  for (let e = n.deps; e !== null; e = e.next) out.push(e.from);
   return out;
 }
 
@@ -26,7 +26,7 @@ export function indices(nodes: readonly Node[], pool: readonly Node[]): number[]
 
 export function edgeCount(nodes: readonly Node[]): number {
   let count = 0;
-  for (const n of nodes) for (let e = n.deps; e !== null; e = e.nextDep) count++;
+  for (const n of nodes) for (let e = n.deps; e !== null; e = e.next) count++;
   return count;
 }
 
@@ -42,7 +42,7 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
   const visit = (n: Node) => {
     if (all.has(n)) return;
     all.add(n);
-    for (let e = n.deps; e !== null; e = e.nextDep) visit(e.from);
+    for (let e = n.deps; e !== null; e = e.next) visit(e.from);
     for (let e = n.subs; e !== null; e = e.nextSub) visit(e.to);
   };
   nodes.forEach(visit);
@@ -51,13 +51,13 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
   const inDeps = new Set<Edge>();
   const inSubs = new Set<Edge>();
   for (const n of list) {
-    check((n.flags & RUNNING) === 0, `${label}: node ${id(n)} still RUNNING`);
+    check((n.flags & BUSY) === 0, `${label}: node ${id(n)} still BUSY`);
     check(n.slot === null, `${label}: node ${id(n)} has a slot cell at rest`);
     const seen = new Set<Node>();
     let prev: Edge | null = null;
-    for (let e = n.deps; e !== null; e = e.nextDep) {
+    for (let e = n.deps; e !== null; e = e.next) {
       check(e.to === n, `${label}: deps edge of ${id(n)} points to ${id(e.to)}`);
-      check(e.prevDep === prev, `${label}: broken prevDep in ${id(n)}`);
+      check(e.prev === prev, `${label}: broken prevDep in ${id(n)}`);
       check(!seen.has(e.from), `${label}: duplicate relation ${id(e.from)} -> ${id(n)}`);
       check(!inDeps.has(e), `${label}: edge in two deps lists`);
       seen.add(e.from);
@@ -72,7 +72,7 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
       inSubs.add(e);
       prev = e;
     }
-    check(n.subsTail === prev, `${label}: subsTail of ${id(n)} is not its last edge`);
+    check(n.lastSub === prev, `${label}: lastSub of ${id(n)} is not its last edge`);
   }
   check(inDeps.size === inSubs.size, `${label}: ${inDeps.size} deps edges vs ${inSubs.size} subs edges`);
   for (const e of inDeps) check(inSubs.has(e), `${label}: edge ${id(e.from)} -> ${id(e.to)} missing from subs`);

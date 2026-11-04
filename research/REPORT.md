@@ -84,26 +84,37 @@ after its failure, the spec does.
 ## 2. The machine
 
 **Node** (one shape for signal, computed, watcher; 10 fields): `flags`,
-`value`, `version`, `fn`, `deps`, `cursor`, `subs`, `subsTail`, `slot`,
-`gen`. **Relation** (8 fields): `from`, `to`, `version`, `gen`, `prevDep`,
-`nextDep`, `prevSub`, `nextSub`. **Kernel bits:** STALE (may be out of
-date; for a watcher: validate), DIRTY (must execute), RUNNING (pass on the
-stack), INDEXED (pass uses slot cells), WATCH (root), WOKEN (watcher woken by
-signals only: execute without validating). **Host bits:** SCHEDULED, QUEUED,
-RETRY.
-**Mutable globals:** kernel `active`, `deliver` and three transient stacks
-(`displaced`, `siblings`, `descent`); host `queue`, `depth`, `flushing`.
+`value`, `ver`, `fn`, `deps`, `last` (the running pass's cursor), `subs`,
+`lastSub`, `slot`, `gen`. **Edge** (8 fields): `from`, `to`, `ver`, `gen`,
+`prev`/`next` (in `to.deps`), `prevSub`/`nextSub` (in `from.subs`).
+**Kernel bits:** STALE (may be out of date; for a watcher: validate), DIRTY
+(must run), BUSY (run on the stack), INDEX (run uses slot cells), WATCH
+(watcher), WOKEN (watcher woken by signals only: run without validating).
+**Host bits:** AUTO, QUEUED, RETRY. **Mutable globals:** kernel `active`,
+`wake`, one work stack with `top`; host `queue` with `size`, `depth`,
+`draining`. **API:** `signal`, `computed`, `effect`, `get`, `set`,
+`dispose`, `batch`, `untracked`; a handle is the node itself, so a signal
+costs one allocation.
 
-- **Write:** commit, bump `version`; direct subscribers get DIRTY unless
-  RUNNING; everything downstream gets STALE in one iterative depth-first
-  walk that stops at nodes already STALE; a watcher becoming STALE is handed
-  to the host.
-- **Read:** a computed that is STALE or DIRTY is refreshed; then, inside a
-  pass, the read is tracked. A refresh is an iterative descent in read
-  order: the first source whose version differs makes the node execute; a
-  STALE source is descended into, a DIRTY one executes.
+V8 discipline (the rules of the Reflex runtime): one node shape and one
+edge shape, each built at a single literal site; every numeric field a
+masked Smi counter, so no field ever holds a double (`--trace-generalization`
+shows only const→mutable after first initialization); conditions as explicit
+comparisons and `=== true` on boolean call results, so no ToBoolean runs on
+mixed values; no array methods (manual `top`/`size`, popped slots cleared);
+no recursion. A deopt audit of all 18 scenarios finds only one-time
+feedback, grow-store and benchmark-sink deopts, none repeating.
+
+- **Write:** commit, bump `ver`; direct subscribers get DIRTY unless BUSY;
+  everything downstream gets STALE in one iterative depth-first walk that
+  stops at nodes already STALE; a watcher becoming STALE is handed to the
+  host.
+- **Read:** one path for signals and computeds (a signal's flags are 0). A
+  stale computed is pulled: an iterative descent in read order, the first
+  source whose version differs makes the node run; a STALE source is
+  descended into, a DIRTY one runs. Inside a pass the read is tracked.
 - **Tracking:** `deps` is kept in read order; the hot path compares the next
-  relation's source and advances `cursor`. A miss tries bounded exact scans
+  edge's source and advances `last`. A miss tries bounded exact scans
   (unread suffix, accepted prefix, the source's subscribers); otherwise the
   pass indexes its relations in their sources' `slot` cells once (O(d)),
   after which every read is an O(1) exact answer: duplicate, move, or new.
@@ -201,9 +212,9 @@ dev, profiling, projection and domains. Quant: the three production files.
 
 | | Reflex | Quant |
 | --- | --- | --- |
-| implementation lines (code lines) | 5,610 (3,671) in 42 files | 712 (553) in 3 files: kernel 542 (423), host 113 (87), index 57 (43) |
-| of which tracking and graph shape | 1,881 (1,114) | 123 code lines (miss path, index, scans, links) |
-| minified bundle, gzip | 8,980 B (whole internal surface) | 2,023 B (kernel + host + API) |
+| implementation lines (code lines) | 5,610 (3,671) in 42 files | 644 (494) in 3 files: kernel 486 (378), host 98 (74), index 60 (42) |
+| of which tracking and graph shape | 1,881 (1,114) | 103 code lines (miss path, index, scans, links) |
+| minified bundle, gzip | 8,980 B (whole internal surface) | 2,019 B (kernel + host + API) |
 | node fields | 8 | 10 |
 | relation fields | 7 | 8 |
 | node state bits | 10 production (+2 dev) | 6 kernel + 3 host |
@@ -214,9 +225,9 @@ dev, profiling, projection and domains. Quant: the three production files.
 | stable read work | cursor hit | cursor hit: 1 comparison, 2 stores |
 | dynamic reorder work | finger, lockstep, tape | ≤ 24 comparisons per miss, else one O(d) index walk per pass |
 
-The soft budget (kernel ≤ 300 lines) is exceeded by 41 % in code lines.
+The soft budget (kernel ≤ 300 lines) is exceeded by 26 % in code lines.
 What forced it: exact uniqueness without hashing (miss path, index, scans:
-123 code lines), the iterative pull with its failure unwinding (55), and the
+103 code lines), the iterative pull with its failure unwinding (55), and the
 exact failure bookkeeping (abort, generations: 22).
 
 ## Q6. Performance

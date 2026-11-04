@@ -1,7 +1,7 @@
 // Level 1: adversarial dependency tracking on the kernel. Every case checks
 // values, relation uniqueness, list integrity and the work counters.
 import { beforeEach, describe, expect, it } from "vitest";
-import { DIRTY, atRest, node, read, stats, write, type Edge, type Node } from "../src/kernel";
+import { DIRTY, idle, node, read, stats, write, type Edge, type Node } from "../src/kernel";
 import { checkGraph, deps, edgeCount, indices, resetStats, subs } from "./support/graph";
 
 const signal = (v: unknown) => node(null, v, 0);
@@ -31,7 +31,7 @@ function scripted(ps: Node[], order: { get(): number[] }, tick: Node) {
 
 function edges(c: Node): Edge[] {
   const out: Edge[] = [];
-  for (let e = c.deps; e !== null; e = e.nextDep) out.push(e);
+  for (let e = c.deps; e !== null; e = e.next) out.push(e);
   return out;
 }
 
@@ -48,7 +48,7 @@ describe("tracking", () => {
     expect(indices(deps(c), [a, b])).toEqual([0, 1]);
     expect(subs(a).length).toBe(1);
     checkGraph([c]);
-    expect(atRest()).toBe(true);
+    expect(idle()).toBe(true);
   });
 
   it("A A (immediate repeat) is recognised without indexing", () => {
@@ -59,7 +59,7 @@ describe("tracking", () => {
     write(a, 2);
     expect(read(c)).toBe(4);
     expect(stats.repeats).toBe(1);
-    expect(stats.indexings).toBe(0);
+    expect(stats.indexes).toBe(0);
   });
 
   it("reorder A B C D E -> E A B C D reuses every relation, allocates none", () => {
@@ -74,9 +74,9 @@ describe("tracking", () => {
     write(tick, 1);
     expect(read(c)).toBe(10);
     expect(indices(deps(c), [tick, ...ps])).toEqual([0, 5, 1, 2, 3, 4]);
-    expect(stats.allocations).toBe(0);
-    expect(stats.removals).toBe(0);
-    expect(stats.moves + stats.skips).toBe(1);
+    expect(stats.links).toBe(0);
+    expect(stats.unlinks).toBe(0);
+    expect(stats.moves + stats.scans).toBe(1);
     expect(edges(c).every((e) => before.has(e))).toBe(true);
     checkGraph([c]);
   });
@@ -99,15 +99,15 @@ describe("tracking", () => {
         expect(indices(deps(c), [tick, ...ps]).slice(1)).toEqual(orders[(pass + cs.indexOf(c)) % orders.length]!.map((i) => i + 1));
       }
     }
-    expect(stats.allocations).toBe(0);
-    expect(stats.removals).toBe(0);
+    expect(stats.links).toBe(0);
+    expect(stats.unlinks).toBe(0);
     // Each pass indexes once and walks the list once: O(d), not O(d^2).
-    expect(stats.indexings).toBe(39 * 3);
+    expect(stats.indexes).toBe(39 * 3);
     expect(stats.indexed).toBe(39 * 3 * (n + 1));
     cs.forEach((c, j) => expect(edges(c).every((e) => identity[j]!.has(e))).toBe(true));
     for (const p of ps) expect(subs(p).length).toBe(3);
     checkGraph(cs);
-    expect(atRest()).toBe(true);
+    expect(idle()).toBe(true);
   });
 
   it("branch switch cond ? A : B neither leaks nor loses relations", () => {
@@ -138,15 +138,15 @@ describe("tracking", () => {
     write(tick, 1);
     read(c);
     expect(indices(deps(c), [tick, ...ps])).toEqual([0, 1, 2, 7, 3, 4, 5, 6]);
-    expect(stats.allocations).toBe(1);
-    expect(stats.removals).toBe(0);
+    expect(stats.links).toBe(1);
+    expect(stats.unlinks).toBe(0);
     resetStats();
     order = [2, 3, 4, 5]; // C D E F
     write(tick, 2);
     read(c);
     expect(indices(deps(c), [tick, ...ps])).toEqual([0, 3, 4, 5, 6]);
-    expect(stats.allocations).toBe(0);
-    expect(stats.removals).toBe(3);
+    expect(stats.links).toBe(0);
+    expect(stats.unlinks).toBe(3);
     checkGraph([c]);
   });
 
@@ -217,7 +217,7 @@ describe("tracking", () => {
       expect(edgeCount([outer])).toBe(n + 2);
       expect(new Set(deps(outer)).size).toBe(n + 2);
       checkGraph([outer, inner]);
-      expect(atRest()).toBe(true);
+      expect(idle()).toBe(true);
     }
   });
 
@@ -251,10 +251,10 @@ describe("tracking", () => {
       read(outer);
       expect(edgeCount([outer])).toBe(n + 2);
       checkGraph([outer, inner, ...others]);
-      expect(atRest()).toBe(true);
+      expect(idle()).toBe(true);
     }
-    expect(stats.indexings).toBeGreaterThan(0);
-    expect(stats.allocations).toBe(0);
+    expect(stats.indexes).toBeGreaterThan(0);
+    expect(stats.links).toBe(0);
   });
 
   it("failure halfway: committed ∪ attempt reads survive, nothing accumulates", () => {
@@ -285,7 +285,7 @@ describe("tracking", () => {
       expect(now.size).toBe(deps(c).length);
       expect(deps(c).length).toBeLessThanOrEqual(committed.length + 3);
       checkGraph([c]);
-      expect(atRest()).toBe(true);
+      expect(idle()).toBe(true);
     }
     // After the z attempt, x/y (read only by earlier failures) are gone or re-read.
     write(mode, 0);
@@ -316,7 +316,7 @@ describe("tracking", () => {
     expect(seen).toBe(-1);
     expect(read(leaf)).toBe(depth + 6);
     expect(w.flags & 1).toBe(1);
-    expect(atRest()).toBe(true);
+    expect(idle()).toBe(true);
   });
 
   it("repeated identical failures do not grow the graph", () => {

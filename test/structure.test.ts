@@ -33,7 +33,7 @@ describe("structural bounds", () => {
     }
     expect(stats.reads).toBe(6400);
     expect(stats.hits).toBe(6400);
-    expect([stats.allocations, stats.lookups, stats.indexed, stats.removals]).toEqual([0, 0, 0, 0]);
+    expect([stats.links, stats.lookups, stats.indexed, stats.unlinks]).toEqual([0, 0, 0, 0]);
   });
 
   it("O2: a direct write executes the computed without a validation walk", () => {
@@ -43,8 +43,8 @@ describe("structural bounds", () => {
     resetStats();
     write(ps[200]!, -1);
     read(c);
-    expect(stats.validations).toBe(0);
-    expect(stats.executions).toBe(1);
+    expect(stats.checks).toBe(0);
+    expect(stats.runs).toBe(1);
   });
 
   it("WOKEN: a signal write runs its watcher without the universal validation", () => {
@@ -59,7 +59,7 @@ describe("structural bounds", () => {
     write(ps[300]!, -1);
     run(w);
     expect(runs).toBe(2);
-    expect(stats.validations).toBe(0);
+    expect(stats.checks).toBe(0);
   });
 
   it("O1: rotation and adjacent swaps are resolved without indexing", () => {
@@ -79,8 +79,8 @@ describe("structural bounds", () => {
       read(rotate);
       read(swap);
     }
-    expect(stats.indexings).toBe(0);
-    expect(stats.allocations).toBe(0);
+    expect(stats.indexes).toBe(0);
+    expect(stats.links).toBe(0);
     expect(edgeCount([rotate, swap])).toBe(2 * (n + 1));
   });
 
@@ -95,9 +95,9 @@ describe("structural bounds", () => {
       write(cond, t % 2 === 1);
       cs.forEach(read);
     }
-    expect(stats.indexings).toBe(0);
-    expect(stats.allocations).toBe(20 * 100);
-    expect(stats.removals).toBe(20 * 100);
+    expect(stats.indexes).toBe(0);
+    expect(stats.links).toBe(20 * 100);
+    expect(stats.unlinks).toBe(20 * 100);
   });
 
   it("O1: sources with a few other subscribers are proven absent without indexing", () => {
@@ -119,8 +119,8 @@ describe("structural bounds", () => {
       write(cond, t % 2 === 1);
       cs.forEach(read);
     }
-    expect(stats.indexings).toBe(0);
-    expect(stats.allocations).toBe(10 * 50);
+    expect(stats.indexes).toBe(0);
+    expect(stats.links).toBe(10 * 50);
   });
 
   it("random reorder of wide sources: one linear index walk per pass, no allocation", () => {
@@ -145,8 +145,8 @@ describe("structural bounds", () => {
       write(tick, t);
       read(c);
     }
-    expect(stats.allocations).toBe(0);
-    expect(stats.indexings).toBe(40);
+    expect(stats.links).toBe(0);
+    expect(stats.indexes).toBe(40);
     expect(stats.indexed).toBe(40 * (n + 1));
   });
 });

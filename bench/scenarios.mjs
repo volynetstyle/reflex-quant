@@ -108,7 +108,8 @@ export const scenarios = [
       const order = range(8);
       const sink = api.computed(() => sumOf(last, order));
       sink.get();
-      return (i) => (s.set(i), sink.get());
+      // Bounded input: the layered sums stay Smi for every runtime.
+      return (i) => (s.set(i & 0xffff), sink.get());
     },
   },
   // ------------------------------------------------------------- fan-in
@@ -132,7 +133,7 @@ export const scenarios = [
     setup(api) {
       const s = api.signal(0);
       let out = 0;
-      for (let k = 0; k < 1000; k++) api.effect(() => void (out += s.get()));
+      for (let k = 0; k < 1000; k++) api.effect(() => void (out = (out + s.get()) & 0x3fffffff));
       return (i) => (s.set(i), out);
     },
   },
@@ -305,7 +306,7 @@ export const scenarios = [
       return () => {
         let out = 0;
         const stops = [];
-        for (let k = 0; k < 100; k++) stops.push(api.effect(() => void (out += sumOf(ps, order))));
+        for (let k = 0; k < 100; k++) stops.push(api.effect(() => void (out = (out + sumOf(ps, order)) & 0x3fffffff)));
         for (const stop of stops) stop();
         return out;
       };

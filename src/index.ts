@@ -1,57 +1,60 @@
-// Public API: signal, computed, effect, batch, untracked.
-import { DIRTY, dispose, node, read, readSignal, write, type Node } from "./kernel";
-import { flush, schedule, stop, watcher } from "./host";
+// Public API: signal, computed, effect, get, set, dispose, batch, untracked.
+// A handle is the node itself: nothing is allocated besides the node.
+import { DIRTY, WATCH, dispose as detach, node, read, write, type Node } from "./kernel";
+import { flush, stop, wake, watcher } from "./host";
 
 export { batch } from "./host";
 export { untracked } from "./kernel";
 
+// Compile-time brands only. They do not exist at runtime.
+declare const SIGNAL: unique symbol;
+declare const COMPUTED: unique symbol;
+declare const EFFECT: unique symbol;
+
 export interface Signal<T> {
-  get(): T;
-  set(value: T): void;
+  readonly [SIGNAL]: T;
 }
 
 export interface Computed<T> {
-  get(): T;
-  /** Detach from sources; the node keeps its last value. */
-  dispose(): void;
+  readonly [COMPUTED]: T;
 }
 
-class SignalRef<T> implements Signal<T> {
-  constructor(private readonly n: Node) {}
-  get(): T {
-    return readSignal(this.n) as T;
-  }
-  set(value: T): void {
-    write(this.n, value);
-    flush();
-  }
+export interface Effect {
+  readonly [EFFECT]: true;
 }
 
-class ComputedRef<T> implements Computed<T> {
-  constructor(private readonly n: Node) {}
-  get(): T {
-    return read(this.n) as T;
-  }
-  dispose(): void {
-    dispose(this.n);
-  }
-}
+export type Readable<T> = Signal<T> | Computed<T>;
+
+const raw = (handle: unknown): Node => handle as Node;
 
 export function signal<T>(value: T): Signal<T> {
-  return new SignalRef(node(null, value, 0));
+  return node(null, value, 0) as unknown as Signal<T>;
 }
 
-export function computed<T>(fn: (previous: T | undefined) => T): Computed<T> {
-  return new ComputedRef(node(fn as Node["fn"], undefined, DIRTY));
+export function computed<T>(fn: (prev: T | undefined) => T): Computed<T> {
+  return node(fn as Node["fn"], undefined, DIRTY) as unknown as Computed<T>;
 }
 
-/**
- * Runs through the host queue: now, or at the end of the enclosing batch or
- * drain, then after every change it read. Returns the disposer.
- */
-export function effect(fn: () => void | (() => void)): () => void {
+/** Runs now (or when the enclosing batch or drain ends), then on every change it read. */
+export function effect(fn: () => void | (() => void)): Effect {
   const w = watcher(fn, true);
-  schedule(w);
+  wake(w);
   flush();
-  return () => stop(w);
+  return w as unknown as Effect;
+}
+
+/** A signal's flags are 0, so one read path serves signals and computeds. */
+export function get<T>(source: Readable<T>): T {
+  return read(raw(source)) as T;
+}
+
+export function set<T>(source: Signal<T>, value: T): void {
+  write(raw(source), value);
+  flush();
+}
+
+export function dispose(target: Computed<unknown> | Effect): void {
+  const n = raw(target);
+  if ((n.flags & WATCH) !== 0) stop(n);
+  else detach(n);
 }

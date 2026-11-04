@@ -28,7 +28,7 @@ export default defineConfig({
   root,
   plugins: mutantSrc ? [redirect] : [],
   resolve: { alias: sourceAliases("runtime") },
-  define: { ...runtimeFlags("source-test"), __QUANT_STATS__: "true" },
+  define: { ...runtimeFlags("source-test"), __STATS__: "true" },
   esbuild: { platform: "node", format: "esm", target: "es2022" } as never,
   test: {
     name: "runtime-quant",

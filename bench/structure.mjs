@@ -39,7 +39,7 @@ const table = [
   "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
   ...rows.map(
     ({ id, quant: q, alien: a }) =>
-      `| ${id} | ${f(q.reads)} | ${f(q.hits)} | ${f(q.skips)} | ${f(q.lookups)} | ${f(q.indexed)} | ${f(q.moves)} | ${f(q.allocations)} | ${f(q.removals)} | ${f(q.executions)} | ${f(q.invalidations)} | ${f(q.validations)} | ${f(a.linksCreated)} | ${f(a.linksUnlinked)} |`,
+      `| ${id} | ${f(q.reads)} | ${f(q.hits)} | ${f(q.scans)} | ${f(q.lookups)} | ${f(q.indexed)} | ${f(q.moves)} | ${f(q.links)} | ${f(q.unlinks)} | ${f(q.runs)} | ${f(q.marks)} | ${f(q.checks)} | ${f(a.linksCreated)} | ${f(a.linksUnlinked)} |`,
   ),
 ].join("\n");
 writeFileSync(path.join(root, ".cache/bench/structure.json"), JSON.stringify(rows, null, 2) + "\n");

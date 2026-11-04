@@ -4,6 +4,7 @@
 //
 // quant         src/index.ts, counters compiled out, esbuild-minified
 // quant-stats   the same with research counters (structure runs only)
+// quant-readable  the quant bundle with original identifiers (shape traces)
 // reflex        the runtime's own production oracle bundle of <commit>
 //               (scripts/build-baseline-oracle.mjs --production: inline
 //               constants, minified like dist) behind bench/adapters/reflex.mjs
@@ -26,7 +27,7 @@ const alienEntry = createRequire(path.join(repo, "packages/reflex/package.json")
 const alienEsm = path.join(alienEntry.slice(0, alienEntry.lastIndexOf(`${path.sep}alien-signals${path.sep}`)), "alien-signals/esm");
 const alienVersion = JSON.parse(readFileSync(path.join(alienEsm, "../package.json"), "utf8")).version;
 
-async function bundle(name, entry, { stats = false, alias = {} } = {}) {
+async function bundle(name, entry, { stats = false, alias = {}, readable = false } = {}) {
   const dir = path.join(out, name);
   mkdirSync(dir, { recursive: true });
   await esbuild.build({
@@ -34,9 +35,11 @@ async function bundle(name, entry, { stats = false, alias = {} } = {}) {
     bundle: true,
     format: "esm",
     platform: "neutral",
-    minify: true,
+    minifySyntax: true,
+    minifyWhitespace: !readable,
+    minifyIdentifiers: !readable,
     target: "es2022",
-    define: { __QUANT_STATS__: String(stats) },
+    define: { __STATS__: String(stats) },
     alias,
     outfile: path.join(dir, "index.mjs"),
     logLevel: "warning",
@@ -47,6 +50,8 @@ async function bundle(name, entry, { stats = false, alias = {} } = {}) {
 const manifest = {};
 
 await bundle("quant", path.join(root, "bench/adapters/quant.mjs"));
+// Same code, original identifiers: for V8 shape traces (bench/shape.mjs).
+await bundle("quant-readable", path.join(root, "bench/adapters/quant.mjs"), { readable: true });
 await bundle("quant-stats", path.join(root, "bench/adapters/quant-stats.mjs"), { stats: true });
 manifest.quant = { source: "packages/reflex-runtime-quant/src", minifier: "esbuild" };
 
