@@ -46,13 +46,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # Install Reflex's workspace first: this repository has a package.json,
+      # and inside packages/ it would otherwise join the frozen install.
+      - uses: ./.github/actions/setup-workspace
+
       - name: Check out this repository into the Reflex workspace
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: packages/reflex-runtime-quant
           persist-credentials: false
 
-      - uses: ./.github/actions/setup-workspace
+      - name: Typecheck, release build and release check
+        working-directory: packages/reflex-runtime-quant
+        run: |
+          node ../../node_modules/typescript/bin/tsc -p tsconfig.json
+          node scripts/build.mjs
+          node scripts/check.mjs
 
       - name: Tests (spec, contract spec, Reflex and quant; invariants)
         working-directory: packages/reflex-runtime-quant

@@ -1,0 +1,52 @@
+name: Release
+
+# Publishes to npm when a version tag (v1.2.3) is pushed and it matches
+# package.json. Standalone: the release build needs only this repository.
+# Provenance links the tarball to this workflow run (npm trusted publishing
+# via OIDC; NPM_TOKEN is used if the package has no trusted publisher yet).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: npm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Tag matches package.json
+        run: |
+          version=$(node -p "require('./package.json').version")
+          [ "v$version" = "$GITHUB_REF_NAME" ] || { echo "::error::tag $GITHUB_REF_NAME != v$version"; exit 1; }
+
+      - name: Install build tools (no lockfile: devDependencies only)
+        run: npm install --no-save --no-package-lock --ignore-scripts esbuild@^0.25.0 typescript@^5.6.0
+
+      - name: Typecheck, build, release check
+        run: |
+          npx tsc -p tsconfig.json
+          node scripts/build.mjs
+          node scripts/check.mjs
+
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public
