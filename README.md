@@ -12,6 +12,11 @@ measure what is left.
   `untracked`; a handle is the node itself). About 2 KB gzip.
 - **Report:** [research/REPORT.md](research/REPORT.md). **Design log**, one
   counterexample per mechanism: [research/LOG.md](research/LOG.md).
+- **Textbook version:** branch
+  [`padawan`](https://github.com/volynetstyle/reflex-quant/tree/padawan), the
+  same semantics without the engineering (recursive push and pull, one
+  exact index, no counters), written as a guided tour. It passes the same
+  differential corpus; this branch is its lowering for speed and stack depth.
 
 ## Results
 
