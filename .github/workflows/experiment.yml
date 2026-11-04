@@ -35,7 +35,7 @@ jobs:
   experiment:
     name: tests, structure, timing
     # Pinned image: a runner image change is not a code change.
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
       # Full history: the Reflex bundle is built from an archived commit.
