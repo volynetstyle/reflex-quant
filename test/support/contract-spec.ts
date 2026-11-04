@@ -9,8 +9,8 @@
 //      "its next demand executes the callback exactly once").
 //
 // Everything else is inherited unchanged from SpecRuntime.
-import { SpecRuntime, type SpecComputed } from "../../../reflex-runtime/test/differential/internal/machine/spec-runtime";
-import { SpecMachine } from "../../../reflex-runtime/test/differential/internal/machine/SpecMachine";
+import { SpecRuntime, type SpecComputed } from "../../bin/reflex-runtime/test/differential/internal/machine/spec-runtime";
+import { SpecMachine } from "../../bin/reflex-runtime/test/differential/internal/machine/SpecMachine";
 
 type Internals = {
   validationCache: boolean;

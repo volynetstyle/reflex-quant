@@ -1,14 +1,14 @@
 // The quant runtime behind the differential testkit's RuntimePort, and a
 // four-way runner: the executable spec, the contract spec (spec + D1/D2),
 // current Reflex and quant execute the same program operation by operation.
-import { resetRuntimeContext } from "../../../reflex-runtime/src";
+import { resetRuntimeContext } from "../../bin/reflex-runtime/src";
 import {
   ReflexMachine,
   SpecMachine,
   observationsEqual,
-} from "../../../reflex-runtime/test/differential/harness";
-import type { Observation, Op, Program } from "../../../reflex-runtime/test/differential/api";
-import { RuntimeMachine } from "../../../reflex-runtime/test/differential/internal/machine/RuntimeMachine";
+} from "../../bin/reflex-runtime/test/differential/harness";
+import type { Observation, Op, Program } from "../../bin/reflex-runtime/test/differential/api";
+import { RuntimeMachine } from "../../bin/reflex-runtime/test/differential/internal/machine/RuntimeMachine";
 import { DIRTY, node, read, write, type Node } from "../../src/kernel";
 import { run, stop, watcher } from "../../src/host";
 import { ContractSpecMachine } from "./contract-spec";

@@ -5,11 +5,11 @@
 // differences are counted, not gated (research/REPORT.md classifies them).
 import { describe, expect, it } from "vitest";
 import fc from "fast-check";
-import type { Op, Program } from "../../reflex-runtime/test/differential/api";
-import { enumerateBoundedPrograms } from "../../reflex-runtime/test/differential/bounded-exhaustive";
-import { enumerateRecoveryPrograms } from "../../reflex-runtime/test/differential/recovery-exhaustive";
-import { historicalFaults } from "../../reflex-runtime/test/differential/catalog/historical";
-import { contractBoundaries } from "../../reflex-runtime/test/differential/catalog/boundaries";
+import type { Op, Program } from "../bin/reflex-runtime/test/differential/api";
+import { enumerateBoundedPrograms } from "../bin/reflex-runtime/test/differential/bounded-exhaustive";
+import { enumerateRecoveryPrograms } from "../bin/reflex-runtime/test/differential/recovery-exhaustive";
+import { historicalFaults } from "../bin/reflex-runtime/test/differential/catalog/historical";
+import { contractBoundaries } from "../bin/reflex-runtime/test/differential/catalog/boundaries";
 import { brief, quantNodes, runThreeWay, type ThreeWay } from "./support/machines";
 import { checkGraph } from "./support/graph";
 import { probes } from "./support/probes";

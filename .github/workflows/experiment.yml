@@ -1,11 +1,8 @@
 name: Experiment
 
-# Tests, structural counters and timing of the quant runtime against Reflex
-# and alien-signals. The suite imports Reflex's spec harness and source, so
-# the job checks out Reflex at the compared commit and places this
-# repository at packages/reflex-runtime-quant inside it. All three runtimes
-# share one runner; compare ratios within a run, never times across runs.
-# Report-only edits (research/, README) do not re-run it.
+# Tests, structural counters and timing compare Quant with the vendored
+# Reflex baseline and alien-signals on one runner. Compare ratios within a
+# run, never times across runs. Report-only edits do not re-run the job.
 
 on:
   push:
@@ -37,51 +34,41 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      # Full history: the Reflex bundle is built from an archived commit.
-      - name: Check out Reflex (compared runtime, spec harness, workspace)
+      - name: Check out this repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: volynetstyle/Reflex
-          ref: bf718774a5bf9c15cda769712d226d9fc4d4da23
-          fetch-depth: 0
           persist-credentials: false
 
-      # Install Reflex's workspace first: this repository has a package.json,
-      # and inside packages/ it would otherwise join the frozen install.
-      - uses: ./.github/actions/setup-workspace
-
-      - name: Check out this repository into the Reflex workspace
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          path: packages/reflex-runtime-quant
-          persist-credentials: false
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Typecheck, release build and release check
-        working-directory: packages/reflex-runtime-quant
         run: |
-          node ../../node_modules/typescript/bin/tsc -p tsconfig.json
-          node scripts/build.mjs
-          node scripts/check.mjs
+          npm run typecheck
+          npm run build
+          npm run check
 
       - name: Tests (spec, contract spec, Reflex and quant; invariants)
-        working-directory: packages/reflex-runtime-quant
         env:
           NODE_OPTIONS: --max-old-space-size=2048
-        run: npx vitest run --config vitest.config.ts
+        run: npm test
 
       - name: Build bundles
-        working-directory: packages/reflex-runtime-quant
         run: node bench/build.mjs
 
       - name: Structural counters
-        working-directory: packages/reflex-runtime-quant
         run: |
           mkdir -p "$GITHUB_WORKSPACE/artifacts"
           node bench/structure.mjs | tee "$GITHUB_WORKSPACE/artifacts/structure.md"
           cp .cache/bench/structure.json "$GITHUB_WORKSPACE/artifacts/"
 
       - name: Timing
-        working-directory: packages/reflex-runtime-quant
         env:
           ROUNDS: ${{ inputs.rounds || '9' }}
         run: |
@@ -97,7 +84,6 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Isolated edge churn probe
-        working-directory: packages/reflex-runtime-quant
         run: |
           node bench/edge-churn.mjs --rounds 3 --out "$GITHUB_WORKSPACE/artifacts/edge-churn.json" | tee "$GITHUB_WORKSPACE/artifacts/edge-churn.md"
           {

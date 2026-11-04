@@ -43,10 +43,7 @@ research/   REPORT.md, LOG.md, mutants.mjs (ablation), versions/ (v0-v3)
 
 ## Running
 
-The tests compare against Reflex's own spec harness and source, so this
-repository lives inside a Reflex checkout, at
-`packages/reflex-runtime-quant` (the local name), with the workspace
-installed (`pnpm install` at the Reflex root). From this directory:
+For development, use Node.js 20.19 or later in the 20.x line, 22.12 or later in the 22.x line, or 24+ and npm (the published library supports Node.js 18+). Install this repository's dependencies with `npm ci`; the Reflex sources, spec harness and fixed production baseline used by the tests and benchmarks are included in `bin/reflex-runtime` and do not require a Reflex checkout. From this directory:
 
 ```sh
 npx vitest run --config vitest.config.ts        # all tests
@@ -58,6 +55,4 @@ node bench/structure.mjs                        # structural work per step
 node bench/run.mjs --rounds 9                   # timing: run it on CI, not locally
 ```
 
-CI (`.github/workflows/experiment.yml`) checks out Reflex at the compared
-commit, places this repository at `packages/reflex-runtime-quant`, and
-runs the tests, the counters and the timing in one job.
+CI (`.github/workflows/experiment.yml`) installs this repository and runs the tests, counters and timing independently. The Reflex benchmark baseline is fixed at commit `bf71877`; see `bin/reflex-runtime/README.md` for its provenance.

@@ -11,23 +11,8 @@ const root = path.resolve(import.meta.dirname, "..");
 const dist = path.join(root, "dist");
 const require = createRequire(path.join(root, "package.json"));
 
-/** Own devDependency first; inside the Reflex workspace, the one vite brings. */
-function load(name) {
-  try {
-    return require(name);
-  } catch {
-    const vite = createRequire(require.resolve("vite", { paths: [path.join(root, "../reflex-runtime")] }));
-    return vite(name);
-  }
-}
-const esbuild = load("esbuild");
-const tsc = (() => {
-  try {
-    return require.resolve("typescript/bin/tsc");
-  } catch {
-    return createRequire(path.join(root, "../../package.json")).resolve("typescript/bin/tsc");
-  }
-})();
+const esbuild = require("esbuild");
+const tsc = require.resolve("typescript/bin/tsc");
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist, { recursive: true });

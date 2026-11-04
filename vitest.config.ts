@@ -5,10 +5,9 @@
 // (research/mutants.mjs).
 import { resolve } from "node:path";
 import { defineConfig, type Plugin } from "vitest/config";
-import { runtimeFlags } from "../../tooling/configs/runtime-flags.ts";
-import { configRoot, sourceAliases } from "../../tooling/configs/source-aliases.ts";
+import { fileURLToPath } from "node:url";
 
-const root = configRoot(import.meta.url);
+const root = fileURLToPath(new URL(".", import.meta.url));
 const slashes = (p: string) => p.split("\\").join("/");
 const srcDir = slashes(resolve(root, "src"));
 const mutantSrc = process.env.QUANT_SRC;
@@ -27,8 +26,8 @@ const redirect: Plugin = {
 export default defineConfig({
   root,
   plugins: mutantSrc ? [redirect] : [],
-  resolve: { alias: sourceAliases("runtime") },
-  define: { ...runtimeFlags("source-test"), __STATS__: "true" },
+  resolve: { alias: { "@runtime": resolve(root, "bin/reflex-runtime/src") } },
+  define: { __DEV__: false, __PROFILE__: false, __TRACKING_ONE_HOP__: true, __TRACKING_TWO_HOP__: true, __TRACKING_LAST_EDGE__: true, __TEST__: true, __PROD__: false, __STATS__: "true" },
   esbuild: { platform: "node", format: "esm", target: "es2022" } as never,
   test: {
     name: "runtime-quant",

@@ -3,7 +3,7 @@
 // conditionals (dynamic dependencies), repeated reads, reordering and
 // conditional throws; actions write, read, flush and dispose.
 import fc from "fast-check";
-import type { Expr, Op, Value } from "../../../reflex-runtime/test/differential/api";
+import type { Expr, Op, Value } from "../../bin/reflex-runtime/test/differential/api";
 
 
 const values: Value[] = [0, 1, 2, true, false];

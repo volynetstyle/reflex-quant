@@ -108,7 +108,7 @@ function runSuite(dir, id) {
   const out = path.join(cache, `${id}.json`);
   const result = spawnSync(
     process.execPath,
-    [path.join(root, "../../node_modules/vitest/vitest.mjs"), "run", "--config", "vitest.config.ts", "--reporter=json", `--outputFile=${out}`],
+    [path.join(root, "node_modules/vitest/vitest.mjs"), "run", "--config", "vitest.config.ts", "--reporter=json", `--outputFile=${out}`],
     { cwd: root, env: { ...process.env, QUANT_SRC: dir, QUANT_RUNS: "3000" }, encoding: "utf8", timeout: 600_000 },
   );
   try {

@@ -1,7 +1,7 @@
 // Greedy operation-level shrinker for three-way verdicts: drop chunks of
 // operations (keeping node declarations referenced by the rest) while the
 // predicate still holds.
-import type { Op, Program } from "../../../reflex-runtime/test/differential/api";
+import type { Op, Program } from "../../bin/reflex-runtime/test/differential/api";
 
 const declares = (op: Op) => op.type === "signal" || op.type === "computed" || op.type === "effect";
 

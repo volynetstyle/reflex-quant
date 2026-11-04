@@ -1,6 +1,6 @@
 // Builds one bench bundle per runtime into .cache/bench/<name>/index.mjs.
 //
-//   node bench/build.mjs [--reflex <commit>]     default: the dev head the experiment was cut from
+//   node bench/build.mjs
 //
 // quant         src/index.ts, counters compiled out, esbuild-minified
 // quant-stats   the same with research counters (structure runs only)
@@ -8,23 +8,19 @@
 // reflex        the runtime's own production oracle bundle of <commit>
 //               (scripts/build-baseline-oracle.mjs --production: inline
 //               constants, minified like dist) behind bench/adapters/reflex.mjs
-// alien         alien-signals 3.2.1 from the workspace, esbuild-minified
+// alien         alien-signals 3.2.1, esbuild-minified
 // alien-stats   alien with link counters (the lab's instrumentation)
-import { execFileSync } from "node:child_process";
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
-const repo = path.resolve(root, "../..");
-const runtimePkg = path.join(repo, "packages/reflex-runtime");
 const out = path.join(root, ".cache/bench");
-const args = process.argv.slice(2);
-const reflexCommit = args.includes("--reflex") ? args[args.indexOf("--reflex") + 1] : "bf71877";
-
-const esbuild = createRequire(createRequire(path.join(runtimePkg, "package.json")).resolve("vite"))("esbuild");
-const alienEntry = createRequire(path.join(repo, "packages/reflex/package.json")).resolve("alien-signals");
-const alienEsm = path.join(alienEntry.slice(0, alienEntry.lastIndexOf(`${path.sep}alien-signals${path.sep}`)), "alien-signals/esm");
+if (process.argv.length > 2) throw new Error("The Reflex baseline is fixed at bf718774a5bf9c15cda769712d226d9fc4d4da23");
+const require = createRequire(path.join(root, "package.json"));
+const esbuild = require("esbuild");
+const alienEntry = require.resolve("alien-signals");
+const alienEsm = path.join(alienEntry.slice(0, alienEntry.lastIndexOf(path.sep + "alien-signals" + path.sep)), "alien-signals/esm");
 const alienVersion = JSON.parse(readFileSync(path.join(alienEsm, "../package.json"), "utf8")).version;
 
 async function bundle(name, entry, { stats = false, alias = {}, readable = false } = {}) {
@@ -53,20 +49,14 @@ await bundle("quant", path.join(root, "bench/adapters/quant.mjs"));
 // Same code, original identifiers: for V8 shape traces (bench/shape.mjs).
 await bundle("quant-readable", path.join(root, "bench/adapters/quant.mjs"), { readable: true });
 await bundle("quant-stats", path.join(root, "bench/adapters/quant-stats.mjs"), { stats: true });
-manifest.quant = { source: "packages/reflex-runtime-quant/src", minifier: "esbuild" };
+manifest.quant = { source: "src", minifier: "esbuild" };
 
-// Reflex: the runtime package builds its own production bundle of the commit.
+// Frozen production oracle built from the Reflex baseline commit.
 const reflexDir = path.join(out, "reflex");
 mkdirSync(reflexDir, { recursive: true });
-const oracle = path.join(out, "reflex-oracle");
-execFileSync(process.execPath, [path.join(runtimePkg, "scripts/build-baseline-oracle.mjs"), "--commit", reflexCommit, "--production", "--out", oracle], {
-  cwd: runtimePkg,
-  stdio: ["ignore", "ignore", "inherit"],
-});
-copyFileSync(path.join(oracle, "runtime.mjs"), path.join(reflexDir, "runtime.mjs"));
+copyFileSync(path.join(root, "bin/reflex-runtime/baseline-runtime.mjs"), path.join(reflexDir, "runtime.mjs"));
 copyFileSync(path.join(root, "bench/adapters/reflex.mjs"), path.join(reflexDir, "index.mjs"));
-const resolved = execFileSync("git", ["rev-parse", reflexCommit], { cwd: repo, encoding: "utf8" }).trim();
-manifest.reflex = { commit: resolved, build: "build-baseline-oracle.mjs --production" };
+manifest.reflex = { commit: "bf718774a5bf9c15cda769712d226d9fc4d4da23", build: "frozen production oracle" };
 
 await bundle("alien", path.join(root, "bench/adapters/alien.mjs"), { alias: { "alien-signals": path.join(alienEsm, "index.mjs") } });
 manifest.alien = { version: alienVersion, minifier: "esbuild" };

@@ -96,13 +96,7 @@ try {
       "export { s };",
     ].join("\n"),
   );
-  const own = createRequire(path.join(root, "package.json"));
-  let tsc;
-  try {
-    tsc = own.resolve("typescript/bin/tsc");
-  } catch {
-    tsc = createRequire(path.join(root, "../../package.json")).resolve("typescript/bin/tsc");
-  }
+  const tsc = createRequire(path.join(root, "package.json")).resolve("typescript/bin/tsc");
   execFileSync(process.execPath, [tsc, "--noEmit", "--strict", "--module", "nodenext", "--moduleResolution", "nodenext", "--target", "es2022", "--skipLibCheck", "false", consumer], { stdio: "inherit" });
 } finally {
   rmSync(tmp, { recursive: true, force: true });

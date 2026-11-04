@@ -24,7 +24,9 @@ const median = (xs) => {
 if (args.includes("--worker")) {
   const fields = Number(option("--fields", "8"));
   const mode = option("--mode", "full");
-  if (![7, 8, 9].includes(fields) || !["allocate", "source", "consumer", "full", "pool", "replace", "replace-pool"].includes(mode)) throw new Error("invalid worker case");
+  if (![7, 8, 9].includes(fields) || !["allocate", "source", "consumer", "full", "pool", "replace", "replace-pool", "replace-defer", "replace-old-store", "replace-pool-defer"].includes(mode)) throw new Error("invalid worker case");
+  const isReplace = mode.startsWith("replace");
+  const isReplacePool = mode === "replace-pool" || mode === "replace-pool-defer";
   // The 7-field shape omits gen and is a layout probe, not a proposed
   // equivalent implementation. The 9-field shape adds an initialized Smi.
   const make = fields === 7
@@ -45,15 +47,15 @@ if (args.includes("--worker")) {
   const prefix = make({ ver: 0 }, consumer, null, null, null);
   const replaceEdges = [new Array(size), new Array(size)];
   let side = 0;
-  if (mode === "replace" || mode === "replace-pool") {
+  if (isReplace) {
     consumer.deps = prefix;
     for (let group = 0; group < 2; group++) {
-      if (group === 1 && mode === "replace") continue;
+      if (group === 1 && !isReplacePool) continue;
       let last = prefix;
       for (let i = 0; i < size; i++) {
         const s = replaceSources[group * size + i];
         const e = make(s, consumer, last, null, null);
-        if (mode === "replace-pool") replaceEdges[group][i] = e;
+        if (isReplacePool) replaceEdges[group][i] = e;
         if (group === 0) { last.next = e; s.subs = e; s.lastSub = e; }
         last = e;
       }
@@ -68,21 +70,25 @@ if (args.includes("--worker")) {
     for (let i = 0; i < size; i++) {
       const s = replaceSources[side * size + i];
       const tail = s.lastSub;
-      const e = mode === "replace-pool" ? replaceEdges[side][i] : make(s, consumer, last, next, tail);
-      if (mode === "replace-pool") {
+      const e = isReplacePool ? replaceEdges[side][i] : make(s, consumer, last, next, tail);
+      if (isReplacePool) {
         e.from = s; e.to = consumer; e.ver = s.ver;
         if (fields !== 7) e.gen = (consumer.gen + 1) & 0x3fffffff;
         e.prev = last; e.next = next; e.prevSub = tail; e.nextSub = null;
         if (fields === 9) e.extra = 0;
       }
       last.next = e;
-      next.prev = e;
+      if (mode === "replace-old-store") next.prev = prefix;
+      else if (mode !== "replace-defer" && mode !== "replace-pool-defer") next.prev = e;
       if (tail !== null) tail.nextSub = e;
       else s.subs = e;
       s.lastSub = e;
       consumer.last = e;
       last = e;
     }
+    // Diagnostic variants temporarily leave next.prev stale (or point it at
+    // the retained prefix). Repair it before leaving this synthetic loop.
+    if (mode === "replace-defer" || mode === "replace-pool-defer" || mode === "replace-old-store") next.prev = last;
     last.next = null;
     for (let e = next; e !== null; e = e.next) {
       const s = e.from, before = e.prevSub, after = e.nextSub;
@@ -137,7 +143,6 @@ if (args.includes("--worker")) {
   }
 
   // Check actual shape and the post-step topology before taking timings.
-  const isReplace = mode === "replace" || mode === "replace-pool";
   const run = isReplace ? replace : step;
   assert.equal(run(), isReplace ? 0 : size - 1);
   if (isReplace) {
@@ -191,7 +196,7 @@ if (args.includes("--worker")) {
   const rounds = Number(option("--rounds", "5"));
   if (!Number.isInteger(rounds) || rounds < 1) throw new Error("--rounds must be a positive integer");
   const only = new RegExp(option("--only", "."));
-  const cases = [7, 8, 9].flatMap((fields) => ["allocate", "source", "consumer", "full", "pool", "replace", "replace-pool"].map((mode) => ({ fields, mode, id: `${fields}.${mode}` }))).filter((c) => only.test(c.id));
+  const cases = [7, 8, 9].flatMap((fields) => ["allocate", "source", "consumer", "full", "pool", "replace", "replace-pool", "replace-defer", "replace-old-store", "replace-pool-defer"].map((mode) => ({ fields, mode, id: `${fields}.${mode}` }))).filter((c) => only.test(c.id));
   if (!cases.length) throw new Error("no cases selected");
   let seed = 0x2545f491;
   const random = () => ((seed = (Math.imul(seed ^ (seed >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0) / 2 ** 32);
