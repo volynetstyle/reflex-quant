@@ -168,7 +168,7 @@ feedback, grow-store and benchmark-sink deopts, none repeating.
 ## Q3. What is fundamentally necessary
 
 Every remaining mechanism has a counterexample: removing it fails a test.
-22 of 23 ablations are killed (`research/mutants.mjs`, `mutants.json`): 17
+23 of 24 ablations are killed (`research/mutants.mjs`, `mutants.json`): 18
 by semantic tests, 4 only by structural bounds (the optimizations of Q4), 1
 only by tests that assert sibling order (the convention of Q4). The
 survivor, `no-fresh-source`, is a pure constant factor that only CI timing
@@ -191,7 +191,7 @@ sees (LOG 22).
 | universal watcher validation | P10 (`existential-watcher`) |
 | STALE, not WOKEN, for a running watcher | "a write to a not-yet-read source during the run adds no rerun" (`woken-when-running`) |
 | repeat check before the scans | bounded language (`no-repeat-check`: a duplicate relation) |
-| drain-loop-only effects | "effects created inside a batch or another effect run after it" (`run-direct`) |
+| drain-loop-only effects | "effects created inside a batch or another effect run after it" (`run-direct`, `start-outside-drain`) |
 | iterative push and pull | "push and pull are not bounded by the call stack" (the recursive v2 kernel overflows) |
 
 ## Q4. Optimization versus semantics
@@ -212,7 +212,7 @@ dev, profiling, projection and domains. Quant: the three production files.
 
 | | Reflex | Quant |
 | --- | --- | --- |
-| implementation lines (code lines) | 5,610 (3,671) in 42 files | 644 (494) in 3 files: kernel 486 (378), host 98 (74), index 60 (42) |
+| implementation lines (code lines) | 5,610 (3,671) in 42 files | 666 (507) in 3 files: kernel 486 (378), host 121 (88), index 59 (41) |
 | of which tracking and graph shape | 1,881 (1,114) | 103 code lines (miss path, index, scans, links) |
 | minified bundle, gzip | 8,980 B (whole internal surface) | 2,019 B (kernel + host + API) |
 | node fields | 8 | 10 |
@@ -280,8 +280,10 @@ the last column is the recursive v2, run 41824417430:
   per read; Reflex's tape and finger are 1.39× faster here. alien-signals
   is 6.4× slower than quant, with one allocation per out-of-place read.
 - **lifecycle.mount-100** creates and disposes 100 effects; alien runs an
-  effect inline at creation, while quant and Reflex route it through the
-  host queue. Quant is faster than Reflex here.
+  effect inline at creation, while quant and Reflex routed it through the
+  host queue. Quant is faster than Reflex here. Since LOG 24 a new effect
+  outside a drain or batch opens the drain itself and runs without the
+  queue (locally 11.3 µs vs alien 12.1 µs; CI timing pending).
 
 Structural work per step (`bench/structure.mjs`, kernel v4; alien-signals'
 link counters from the same sources, instrumented as in the lab):

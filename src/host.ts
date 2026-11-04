@@ -70,8 +70,31 @@ export function stop(w: Node): void {
 export function flush(): void {
   if (draining || depth !== 0 || size === 0) return;
   draining = true;
-  let failed = false;
-  let first: unknown;
+  drain(false, undefined);
+}
+
+/**
+ * A new scheduled watcher's first run. With no drain open, no batch and an
+ * empty queue this is `wake(w); flush()` with the queue slot skipped: the
+ * drain opens on `w` (so its run stays inside the drain loop, LOG 11), and a
+ * fresh watcher has no sources to check and no cleanup, so `run` is `exec`.
+ */
+export function start(w: Node): void {
+  if (draining || depth !== 0 || size !== 0) {
+    wake(w);
+    return flush();
+  }
+  draining = true;
+  try {
+    exec(w);
+  } catch (error) {
+    return drain(true, error);
+  }
+  drain(false, undefined);
+}
+
+/** The drain loop, opened by the caller: FIFO, the first error rethrown at the end. */
+function drain(failed: boolean, first: unknown): void {
   for (let i = 0; i < size; i++) {
     const w = queue[i]!;
     queue[i] = null;

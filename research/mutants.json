@@ -192,6 +192,14 @@
     ]
   },
   {
+    "id": "start-outside-drain",
+    "mechanism": "an effect's unqueued first run opens the drain",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > effects created inside a batch or another effect run after it"
+    ]
+  },
+  {
     "id": "prepend-subs",
     "mechanism": "subscribers kept in birth order (lastSub append)",
     "killed": true,

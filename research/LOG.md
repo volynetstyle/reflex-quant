@@ -299,3 +299,28 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   for the cursor, `ver`, `pull`, `mark`, `exec`, `check`, `miss`, `link`,
   `move`, `cut`, `unsub`, BUSY, INDEX; host AUTO, QUEUED, RETRY, `wake`.
 - **Size:** kernel 542 → 486 lines (423 → 378 code), host 113 → 98.
+
+### 24. An effect's first run opens the drain itself
+
+- **Measurement:** lifecycle.mount-100 was the one CI miss with no measured
+  cause (1.36× alien, run 41826712831). Per effect, created and disposed
+  (local, Node 25; timing stays on CI): allocation is not it (signal 16 vs
+  17.5 ns, computed 28 vs 30, alien pays `bind`), nor first evaluation of
+  computeds (equal or faster). An effect with no sources cost 39.8 vs
+  32.0 ns: the host route `wake` → queue slot → `flush` → `run` → `check`
+  of an empty list → `exec`.
+- **Repair:** `start(w)`. With no drain open, no batch and an empty queue,
+  `wake(w); flush()` is a drain that opens on `w`; a fresh watcher has no
+  sources and no cleanup, so its `run` is `exec`. The drain flag is set
+  first, so the run stays inside the drain loop (item 11); otherwise it
+  falls back to `wake(w); flush()`. `flush` and `start` share `drain`.
+- **Result (local):** effect with no sources 39.8 → 32.4 ns (alien 32.4);
+  mount-100 13.16 → 11.32 µs (alien 12.10), median of 5 fresh processes.
+- **Status:** mutant `start-outside-drain` (the flag not set) fails the
+  same test as `run-direct`.
+- **Rejected:** a `subs === null` shortcut from `read` straight to `link`
+  (skipping `miss`). Within noise on effects (62.4 vs 63.0 ns, 8 alternating
+  runs), as item 23 predicts: `miss` and `link` already inline. The
+  remaining 5–8 ns per effect with a source is the first edge and its
+  removal: 10-field nodes and 8-field edges (`gen`, `slot` carry exact
+  failure and membership) against alien's 7 and 7.

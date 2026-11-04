@@ -1,7 +1,7 @@
 // Public API: signal, computed, effect, get, set, dispose, batch, untracked.
 // A handle is the node itself: nothing is allocated besides the node.
 import { DIRTY, WATCH, dispose as detach, node, read, write, type Node } from "./kernel";
-import { flush, stop, wake, watcher } from "./host";
+import { flush, start, stop, watcher } from "./host";
 
 export { batch } from "./host";
 export { untracked } from "./kernel";
@@ -38,8 +38,7 @@ export function computed<T>(fn: (prev: T | undefined) => T): Computed<T> {
 /** Runs now (or when the enclosing batch or drain ends), then on every change it read. */
 export function effect(fn: () => void | (() => void)): Effect {
   const w = watcher(fn, true);
-  wake(w);
-  flush();
+  start(w);
   return w as unknown as Effect;
 }
 
