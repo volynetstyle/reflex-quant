@@ -1,6 +1,14 @@
 // Public API: signal, computed, effect, get, set, dispose, batch, untracked.
 // A handle is the node itself: nothing is allocated besides the node.
-import { DIRTY, WATCH, dispose as detach, node, read, write, type Node } from "./kernel";
+import {
+  DIRTY,
+  WATCH,
+  dispose as detach,
+  node,
+  read,
+  write,
+  type Node,
+} from "./kernel";
 import { flush, start, stop, watcher } from "./host";
 
 export { batch } from "./host";

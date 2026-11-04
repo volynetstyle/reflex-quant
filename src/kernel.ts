@@ -103,7 +103,18 @@ export function idle(): boolean {
 }
 
 export function node(fn: Node["fn"], value: unknown, flags: number): Node {
-  return { flags, value, ver: 0, fn, deps: null, last: null, subs: null, lastSub: null, slot: null, gen: 0 };
+  return {
+    flags,
+    value,
+    ver: 0,
+    fn,
+    deps: null,
+    last: null,
+    subs: null,
+    lastSub: null,
+    slot: null,
+    gen: 0,
+  };
 }
 
 // ------------------------------------------------------------------- write
@@ -374,7 +385,8 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
       p.ver = s.ver;
       return;
     }
-    if ((e === null && p === null) || absent(s, c) === true) return link(c, s, last, next, false);
+    if ((e === null && p === null) || absent(s, c) === true)
+      return link(c, s, last, next, false);
     index(c, next);
   }
   if (__STATS__) stats.lookups++;
@@ -395,7 +407,8 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 /** No edge to `c` among the source's few subscribers. */
 function absent(s: Node, c: Node): boolean {
   let budget = SCAN;
-  for (let e = s.subs; e !== null; e = e.nextSub) if (e.to === c || --budget === 0) return false;
+  for (let e = s.subs; e !== null; e = e.nextSub)
+    if (e.to === c || --budget === 0) return false;
   return true;
 }
 
@@ -444,10 +457,25 @@ function move(c: Node, e: Edge, last: Edge | null, next: Edge): void {
 }
 
 /** A new edge at the cursor, appended to the source's subscribers. */
-function link(c: Node, s: Node, last: Edge | null, next: Edge | null, indexed: boolean): void {
+function link(
+  c: Node,
+  s: Node,
+  last: Edge | null,
+  next: Edge | null,
+  indexed: boolean,
+): void {
   if (__STATS__) stats.links++;
   const tail = s.lastSub;
-  const e: Edge = { from: s, to: c, ver: s.ver, gen: (c.gen + 1) & MASK, prev: last, next, prevSub: tail, nextSub: null };
+  const e: Edge = {
+    from: s,
+    to: c,
+    ver: s.ver,
+    gen: (c.gen + 1) & MASK,
+    prev: last,
+    next,
+    prevSub: tail,
+    nextSub: null,
+  };
   if (last !== null) last.next = e;
   else c.deps = e;
   if (next !== null) next.prev = e;

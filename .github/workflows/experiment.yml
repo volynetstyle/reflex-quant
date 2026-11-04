@@ -96,6 +96,16 @@ jobs:
             cat "$GITHUB_WORKSPACE/artifacts/structure.md"
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Isolated edge churn probe
+        working-directory: packages/reflex-runtime-quant
+        run: |
+          node bench/edge-churn.mjs --rounds 3 --out "$GITHUB_WORKSPACE/artifacts/edge-churn.json" | tee "$GITHUB_WORKSPACE/artifacts/edge-churn.md"
+          {
+            echo "## Isolated edge churn (ns per edge)"
+            echo
+            cat "$GITHUB_WORKSPACE/artifacts/edge-churn.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:

@@ -1,6 +1,18 @@
 // Policy around the kernel: the watcher lifecycle (check, consume the
 // cleanup, run), a FIFO queue for scheduled watchers, and batching.
-import { DIRTY, STALE, WATCH, WOKEN, check, dispose, exec, node, onWake, untracked, type Node } from "./kernel";
+import {
+  DIRTY,
+  STALE,
+  WATCH,
+  WOKEN,
+  check,
+  dispose,
+  exec,
+  node,
+  onWake,
+  untracked,
+  type Node,
+} from "./kernel";
 
 /** Run by this host's queue; other watchers are run by their owner. */
 const AUTO = 64;
