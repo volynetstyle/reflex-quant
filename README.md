@@ -1,58 +1,48 @@
-# reflex-quant
+# reflex-quant — padawan (textbook branch)
 
-An experiment: derive the smallest reactive runtime that the invariants of
-[Reflex](https://github.com/volynetstyle/Reflex) imply, from its semantic
-contract and executable spec rather than from its implementation, and
-measure what is left.
+The smallest reactive runtime that the invariants of
+[Reflex](https://github.com/volynetstyle/Reflex) imply, written to be read.
+This branch keeps the semantics of `main` and drops its engineering.
 
-- **Production code:** three files, [`src/kernel.ts`](src/kernel.ts) (graph,
-  tracking, invalidation, validation), [`src/host.ts`](src/host.ts)
-  (watcher lifecycle, queue, batch), [`src/index.ts`](src/index.ts)
-  (`signal`, `computed`, `effect`, `get`, `set`, `dispose`, `batch`,
-  `untracked`; a handle is the node itself). About 2 KB gzip.
-- **Report:** [research/REPORT.md](research/REPORT.md). **Design log**, one
-  counterexample per mechanism: [research/LOG.md](research/LOG.md).
+The whole idea:
+
+```text
+push says "maybe"                        STALE, marked down the subscriber lists
+versions say "actually"                  source.ver against edge.ver
+an execution makes a new observation     edges re-read in order, under a cursor
+a generation commits dependency history  node.gen against edge.gen
+```
+
+- [`src/kernel.ts`](src/kernel.ts): graph, recursive push and pull, tracking
+  (cursor, then one exact index through source slots; nested indexes chain
+  through `edge.slotPrev`), failure by generations.
+- [`src/host.ts`](src/host.ts): watcher lifecycle, FIFO queue, batch.
+- [`src/index.ts`](src/index.ts): `signal`, `computed`, `effect`, `get`,
+  `set`, `dispose`, `batch`, `untracked`.
+
+What `main` adds on top, without changing any observation: iterative push
+and pull over one work stack, bounded scans and absence proofs before
+indexing, direct-DIRTY writes, WOKEN watchers, an unqueued first effect run,
+SMI-masked counters, research counters, benchmarks and mutant ablation.
+Recursion here means a very deep chain overflows the JS stack.
 
 ## Results
 
-- Equal to Reflex's executable spec, with two documented choices applied,
-  on all 27,061 bounded and 18,660 recovery programs and on 100,000
-  generated ones, with graph integrity checked after every operation.
-- Current Reflex is that contract plus three failure-path choices, on the
-  same corpus. One of them drops an execution obligation that the contract
-  (R2) says survives a failure.
-- 23 of 24 mechanism ablations fail a test; the survivor is a constant
-  factor only timing sees.
-- On CI: within 25 % of the better of Reflex and alien-signals on 14 of 18
-  scenarios, faster than both on 8. Reorders allocate nothing.
-
-## Layout
-
-```text
-src/        kernel.ts, host.ts, index.ts
-test/       differential (spec, contract spec, Reflex, quant), tracking,
-            semantics, structural bounds; tools/ (QUANT_TOOLS=1)
-bench/      scenarios, adapters, build, timing (CI only), structure counters
-research/   REPORT.md, LOG.md, mutants.mjs (ablation), versions/ (v0-v3)
-```
+Equal to Reflex's executable spec, with two documented choices applied, on
+all 27,061 bounded and 18,660 recovery programs and on 100,000 generated
+ones, with graph integrity checked after every operation.
 
 ## Running
 
 The tests compare against Reflex's own spec harness and source, so this
 repository lives inside a Reflex checkout, at
-`packages/reflex-runtime-quant` (the local name), with the workspace
-installed (`pnpm install` at the Reflex root). From this directory:
+`packages/reflex-runtime-quant`, with the workspace installed (`pnpm install`
+at the Reflex root). From this directory:
 
 ```sh
-npx vitest run --config vitest.config.ts        # all tests
+npx vitest run --config vitest.config.ts        # differential corpus + semantics
+QUANT_RUNS=100000 npx vitest run --config vitest.config.ts
 npx tsc -p tsconfig.json                        # typecheck src
-node research/mutants.mjs                       # ablation -> research/mutants.json
-node bench/build.mjs                            # bundles: quant, Reflex bf71877, alien-signals
-node bench/run.mjs --verify-only                # same answers on all three runtimes
-node bench/structure.mjs                        # structural work per step
-node bench/run.mjs --rounds 9                   # timing: run it on CI, not locally
 ```
 
-CI (`.github/workflows/experiment.yml`) checks out Reflex at the compared
-commit, places this repository at `packages/reflex-runtime-quant`, and
-runs the tests, the counters and the timing in one job.
+The design log and report in `research/` describe `main`.

@@ -1,7 +1,20 @@
-// Public API: signal, computed, effect, get, set, dispose, batch, untracked.
-// A handle is the node itself: nothing is allocated besides the node.
+// =============================================================================
+// Public API: signal, computed, effect, get, set, dispose, batch, untracked
+// =============================================================================
+//
+// A thin layer: every function is one kernel or host call. A handle is the
+// node itself, typed by a compile-time brand, so nothing is allocated
+// besides the node.
+//
+//   const a = signal(1);
+//   const b = computed(() => get(a) * 2);   // lazy: runs on first read
+//   effect(() => console.log(get(b)));      // runs now: logs 2
+//   set(a, 2);                              // push marks b and the effect;
+//                                           // the drain pulls b, logs 4
+//
+// Where to read next: kernel.ts sections 1-3 (the model), then host.ts.
 import { DIRTY, WATCH, dispose as detach, node, read, write, type Node } from "./kernel";
-import { flush, start, stop, watcher } from "./host";
+import { flush, stop, wake, watcher } from "./host";
 
 export { batch } from "./host";
 export { untracked } from "./kernel";
@@ -38,7 +51,8 @@ export function computed<T>(fn: (prev: T | undefined) => T): Computed<T> {
 /** Runs now (or when the enclosing batch or drain ends), then on every change it read. */
 export function effect(fn: () => void | (() => void)): Effect {
   const w = watcher(fn, true);
-  start(w);
+  wake(w);
+  flush();
   return w as unknown as Effect;
 }
 

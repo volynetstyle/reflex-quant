@@ -1,7 +1,7 @@
 // Structural checks over the quant graph. Failures throw plain Errors with
 // indices and counts only: never hand a node or edge to an assertion library
 // (inspecting one walks the whole cyclic graph).
-import { BUSY, stats, type Edge, type Node } from "../../src/kernel";
+import { BUSY, type Edge, type Node } from "../../src/kernel";
 
 export function check(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -76,12 +76,4 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
   }
   check(inDeps.size === inSubs.size, `${label}: ${inDeps.size} deps edges vs ${inSubs.size} subs edges`);
   for (const e of inDeps) check(inSubs.has(e), `${label}: edge ${id(e.from)} -> ${id(e.to)} missing from subs`);
-}
-
-export function resetStats(): void {
-  for (const key of Object.keys(stats) as (keyof typeof stats)[]) stats[key] = 0;
-}
-
-export function snapshotStats(): typeof stats {
-  return { ...stats };
 }

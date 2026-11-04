@@ -68,38 +68,3 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=2048
         run: npx vitest run --config vitest.config.ts
-
-      - name: Build bundles
-        working-directory: packages/reflex-runtime-quant
-        run: node bench/build.mjs
-
-      - name: Structural counters
-        working-directory: packages/reflex-runtime-quant
-        run: |
-          mkdir -p "$GITHUB_WORKSPACE/artifacts"
-          node bench/structure.mjs | tee "$GITHUB_WORKSPACE/artifacts/structure.md"
-          cp .cache/bench/structure.json "$GITHUB_WORKSPACE/artifacts/"
-
-      - name: Timing
-        working-directory: packages/reflex-runtime-quant
-        env:
-          ROUNDS: ${{ inputs.rounds || '9' }}
-        run: |
-          node bench/run.mjs --rounds "$ROUNDS" --out "$GITHUB_WORKSPACE/artifacts/timing.json"
-          {
-            echo "## Quant vs Reflex vs alien-signals"
-            echo
-            cat "$GITHUB_WORKSPACE/artifacts/timing.md"
-            echo
-            echo "## Structural work per step"
-            echo
-            cat "$GITHUB_WORKSPACE/artifacts/structure.md"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: always()
-        with:
-          name: experiment
-          path: artifacts/
-          if-no-files-found: warn
-          retention-days: 30

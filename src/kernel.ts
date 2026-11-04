@@ -1,262 +1,283 @@
-// Reactive kernel: nodes, edges, tracking, push, pull, failure.
+// =============================================================================
+// Reactive kernel: a guided tour
+// =============================================================================
 //
-// A node is a signal (fn === null), a computed, or a watcher (WATCH). An edge
-// is one relation in two doubly linked lists: `to.deps` in the order `to`
-// last read its sources (prev/next) and `from.subs` in birth order
-// (prevSub/nextSub). Change is a version fact: a node bumps `ver` when its
-// value changes; an edge keeps the `ver` its reader saw.
+// This file is meant to be read top to bottom. It keeps every observable
+// behaviour of the production kernel (the differential corpus checks that)
+// but none of its performance engineering: recursion instead of explicit
+// stacks, one exact index instead of bounded scans, no counters. Where the
+// production code would be faster, a note says so; nothing here depends on
+// it.
 //
-// Written for V8: one node shape and one edge shape, each built at a single
-// site; numeric fields are SMI counters (masked); conditions are explicit
-// comparisons, so no ToBoolean runs on mixed values; no recursion, no array
-// methods, and no allocation besides nodes and new edges.
+// -----------------------------------------------------------------------------
+// 1. The model
+// -----------------------------------------------------------------------------
+//
+// There are three kinds of node:
+//
+//   signal    holds a value that the outside world writes   (fn === null)
+//   computed  derives a value from what it reads           (fn !== null)
+//   watcher   runs a side effect from what it reads         (WATCH flag)
+//
+// A node that reads another is its *consumer*; the node read is its
+// *source*. Each (source, consumer) pair that currently matters is one
+// *edge*. An edge sits in two lists at once:
+//
+//   consumer.deps   its sources, in the order the last run read them
+//   source.subs     its consumers, in the order they first subscribed
+//
+//        signal A ──edge──▶ computed B ──edge──▶ watcher C
+//                    │                     │
+//          A.subs ───┘           B.deps ───┘  (and B.subs, C.deps)
+//
+// -----------------------------------------------------------------------------
+// 2. The whole idea, in four sentences
+// -----------------------------------------------------------------------------
+//
+//   Push says "maybe".
+//     A write marks everything downstream STALE. Nothing is recomputed yet;
+//     the mark only means "a source below may have changed".
+//
+//   Versions say "actually".
+//     Every node has a version `ver`, bumped when its value really changes.
+//     Every edge remembers the source version its consumer last saw. A STALE
+//     node compares the two, source by source, and runs only if one differs.
+//     Equal values stop propagation here (cutoff), and glitches cannot
+//     happen: a node is brought up to date only after its sources are.
+//
+//   An execution makes a new observation.
+//     Running a node re-reads its sources. The reads are matched in order
+//     against the previous run's edges, under a cursor: same order means no
+//     work, a new source means a new edge, a source not read again is cut.
+//
+//   A generation commits dependency history.
+//     Every node counts its successful runs in `gen`. An edge born during a
+//     run is *tentative* until that run succeeds. If the run throws, the
+//     tentative edges it read stay (they are what the failure depended on),
+//     but no version comparison trusts them: the node simply owes a run.
+//
+// -----------------------------------------------------------------------------
+// 3. The invariants the rest of the file relies on
+// -----------------------------------------------------------------------------
+//
+//   I1  One edge per (source, consumer) pair, in both lists.
+//   I2  A STALE node has STALE consumers (or is a watcher the host knows
+//       about). So marking can stop at the first node already STALE.
+//   I3  A node that is not STALE, DIRTY or BUSY is up to date: its value is
+//       what its function would return now.
+//   I4  At rest, no node is BUSY and no source holds a slot (section 7).
+//
+// =============================================================================
 
-declare const __STATS__: boolean;
+// -----------------------------------------------------------------------------
+// 4. State
+// -----------------------------------------------------------------------------
+//
+// Four causal states plus one kind. Each is a bit in `flags`.
 
-/** A source below may have changed. For a watcher: validate before running. */
+/** "A source below may have changed." Set by push; resolved by pull. */
 export const STALE = 1;
-/** Must run: first run, failed run, or a direct source changed. */
+/** "Must run, no questions": first run, a failed run, or a change proved. */
 export const DIRTY = 2;
-/** Its run is on the stack. */
+/** "Its run is on the call stack." Reading a BUSY node is a cycle. */
 export const BUSY = 4;
-/** Its run put its edges into the sources' slots. */
+/** "Its run has put its edges into the sources' slots" (section 7). */
 const INDEX = 8;
-/** A watcher: handed to the host, never read. */
+/** Not a state but a kind: a watcher is handed to the host, never read. */
 export const WATCH = 16;
-/** A watcher woken by signals only: its computed sources are clean, so no validation. */
-export const WOKEN = 32;
-// Bits from 64 up belong to the host.
+// Bits from 32 up belong to the host (host.ts).
 
-/** edge.ver of an edge the indexed run has not read yet. */
+/** An edge's `ver` while its consumer is indexed and has not re-read it yet. */
 const UNREAD = -1;
-/** Counters wrap inside the SMI range. */
-const MASK = 0x3fffffff;
-/** Scan budget before indexing: a constant keeps a run linear. */
-const SCAN = 8;
 
 export interface Node {
   flags: number;
+  /** For a watcher: the cleanup its last run returned. */
   value: unknown;
-  /** Bumps on every Object.is-visible change of value. */
+  /** Bumps on every change of `value` that Object.is can see. */
   ver: number;
+  /** The function a computed or watcher runs; null for a signal or once disposed. */
   fn: ((prev: unknown) => unknown) | null;
-  /** Sources, in read order. */
+  /** First edge to a source, in read order. */
   deps: Edge | null;
-  /** The running pass's last accepted source edge. */
+  /** During a run: the cursor, the last source edge this run has accepted. */
   last: Edge | null;
+  /** First edge to a consumer, in birth order. */
   subs: Edge | null;
   lastSub: Edge | null;
-  /** While a reader indexes: this node's edge into that reader. */
+  /** While some consumer is indexed: that consumer's edge from this node. */
   slot: Edge | null;
-  /** Successful runs; edges born since the last one are tentative. */
+  /** Number of successful runs. */
   gen: number;
 }
 
 export interface Edge {
   from: Node;
   to: Node;
-  /** from.ver when `to` read it; UNREAD while indexed and not yet read. */
+  /** The `from.ver` that `to` saw when it last read `from`. */
   ver: number;
-  /** to.gen + 1 at birth: tentative while it still equals to.gen + 1. */
+  /** `to.gen + 1` at birth: tentative while that run has not succeeded. */
   gen: number;
+  /** Neighbours in `to.deps`. */
   prev: Edge | null;
   next: Edge | null;
+  /** Neighbours in `from.subs`. */
   prevSub: Edge | null;
   nextSub: Edge | null;
+  /** The slot this edge covered when it was put into `from.slot`. */
+  slotPrev: Edge | null;
 }
 
-export const stats = {
-  reads: 0,
-  hits: 0,
-  repeats: 0,
-  scans: 0,
-  lookups: 0,
-  dups: 0,
-  moves: 0,
-  links: 0,
-  unlinks: 0,
-  indexes: 0,
-  indexed: 0,
-  runs: 0,
-  marks: 0,
-  checks: 0,
-};
-
+/** The node whose run is executing now: reads are recorded on it. */
 let active: Node | null = null;
-/**
- * One LIFO work stack shared by all walks: sibling edges to resume (mark),
- * edges to climb back through (pull), and (source, cell) pairs an indexed run
- * displaced. Every walk pops back to its own base before returning.
- */
-const stack: (Node | Edge | null)[] = [];
-let top = 0;
+
+/** How the kernel tells the host "this watcher may need to run". */
 let wake: (w: Node) => void = () => {};
 
-/** The host is told about every watcher that becomes STALE or WOKEN. */
 export function onWake(fn: (w: Node) => void): void {
   wake = fn;
 }
 
-/** Nothing running, the work stack empty (tests). */
+/** Nothing is running (used by tests). */
 export function idle(): boolean {
-  return active === null && top === 0;
+  return active === null;
 }
 
+/**
+ * A signal starts clean (flags 0); a computed starts DIRTY (it has never
+ * run); a watcher starts STALE | DIRTY (host.ts).
+ */
 export function node(fn: Node["fn"], value: unknown, flags: number): Node {
-  return { flags, value, ver: 0, fn, deps: null, last: null, subs: null, lastSub: null, slot: null, gen: 0 };
+  return {
+    flags,
+    value,
+    ver: 0,
+    fn,
+    deps: null,
+    last: null,
+    subs: null,
+    lastSub: null,
+    slot: null,
+    gen: 0,
+  };
 }
 
-// ------------------------------------------------------------------- write
+// -----------------------------------------------------------------------------
+// 5. Push: a write says "maybe"
+// -----------------------------------------------------------------------------
+//
+// A write changes the value and the version, then marks the consumers below
+// STALE. It does not compute anything: the graph may never be read again,
+// and a consumer may turn out not to care (cutoff, section 6).
 
 export function write(s: Node, value: unknown): void {
+  // Writing the same value is not a change: versions stay, nobody is marked.
   if (Object.is(s.value, value)) return;
   s.value = value;
-  s.ver = (s.ver + 1) & MASK;
-  for (let e = s.subs; e !== null; e = e.nextSub) {
-    const n = e.to;
-    const f = n.flags;
-    if (__STATS__) stats.marks++;
-    if ((f & BUSY) !== 0) {
-      // Running: it may not have read s yet, so versions decide.
-      if ((f & STALE) === 0) {
-        n.flags = f | STALE;
-        if ((f & WATCH) !== 0) wake(n);
-        else if (n.subs !== null) mark(n.subs);
-      }
-    } else if ((f & WATCH) !== 0) {
-      n.flags = f | DIRTY | WOKEN;
-      if ((f & (STALE | WOKEN)) === 0) wake(n);
-    } else if ((f & STALE) !== 0) {
-      n.flags = f | DIRTY;
-    } else {
-      n.flags = f | DIRTY | STALE;
-      if (n.subs !== null) mark(n.subs);
-    }
-  }
-}
-
-/** Mark everything below the subscriber list `first` STALE, depth first. */
-function mark(first: Edge): void {
-  const base = top;
-  let e: Edge | null = first;
-  for (;;) {
-    while (e !== null) {
-      const n: Node = e.to;
-      const f = n.flags;
-      if (__STATS__) stats.marks++;
-      // A STALE node has STALE subscribers, or is a watcher the host has.
-      if ((f & STALE) === 0) {
-        n.flags = f | STALE;
-        if ((f & WATCH) !== 0) {
-          if ((f & WOKEN) === 0) wake(n);
-        } else if (n.subs !== null) {
-          if (e.nextSub !== null) stack[top++] = e.nextSub;
-          e = n.subs;
-          continue;
-        }
-      }
-      e = e.nextSub;
-    }
-    if (top === base) return;
-    e = stack[--top] as Edge;
-    stack[top] = null;
-  }
-}
-
-// -------------------------------------------------------------------- read
-
-/** Bring `n` up to date if it is a stale computed, then track it. */
-export function read(n: Node): unknown {
-  if ((n.flags & (STALE | DIRTY | BUSY)) !== 0) pull(n);
-  const c = active;
-  if (c !== null) {
-    if (__STATS__) stats.reads++;
-    const last = c.last;
-    const next = last === null ? c.deps : last.next;
-    if (next !== null && next.from === n) {
-      if (__STATS__) stats.hits++;
-      c.last = next;
-      next.ver = n.ver;
-    } else miss(c, n, last, next);
-  }
-  return n.value;
+  s.ver++;
+  mark(s.subs);
 }
 
 /**
- * Pull a computed up to date. Existential, in read order: sources are
- * checked first to last and the first changed one makes the node run. A
- * STALE source is descended into (the stack keeps the edge to climb back
- * through); a DIRTY one runs. A throw leaves every node still checking DIRTY.
+ * Mark every consumer reachable from this subscriber list STALE.
+ *
+ * Stops at a node already STALE (I2: everything below it is already
+ * marked), so each node is visited once per wave. A watcher is not
+ * descended into; it is handed to the host, which will validate and maybe
+ * run it.
+ *
+ * A BUSY node is marked like any other. Its run may already have read the
+ * changed source, or not; it cannot know which. After the run, the STALE
+ * mark makes the next read compare versions, and the versions decide.
+ *
+ * (Production: the same walk as a loop over an explicit stack, so depth is
+ * not limited by the JS call stack.)
  */
-function pull(root: Node): void {
-  const f = root.flags;
-  if ((f & BUSY) !== 0) throw new Error("Cycle detected");
-  if ((f & DIRTY) !== 0) return exec(root);
-  root.flags = f & ~STALE;
-  const base = top;
-  let n = root;
-  let e = root.deps;
-  try {
-    for (;;) {
-      let changed = false;
-      while (e !== null) {
-        const s: Node = e.from;
-        const sf = s.flags;
-        if (__STATS__) stats.checks++;
-        if ((sf & (STALE | DIRTY)) !== 0) {
-          if ((sf & BUSY) !== 0) throw new Error("Cycle detected");
-          if ((sf & DIRTY) === 0) {
-            s.flags = sf & ~STALE;
-            stack[top++] = e;
-            n = s;
-            e = s.deps;
-            continue;
-          }
-          exec(s);
-        }
-        if (s.ver !== e.ver) {
-          changed = true;
-          break;
-        }
-        e = e.next;
-      }
-      if (changed) exec(n);
-      // Climb; a parent whose child changed runs as well.
-      for (;;) {
-        if (top === base) return;
-        const up = stack[--top] as Edge;
-        stack[top] = null;
-        n = up.to;
-        if (up.from.ver === up.ver) {
-          e = up.next;
-          break;
-        }
-        exec(n);
-      }
-    }
-  } catch (error) {
-    n.flags |= DIRTY;
-    while (top > base) {
-      (stack[--top] as Edge).to.flags |= DIRTY;
-      stack[top] = null;
-    }
-    throw error;
+function mark(e: Edge | null): void {
+  for (; e !== null; e = e.nextSub) {
+    const n = e.to;
+    if ((n.flags & STALE) !== 0) continue;
+    n.flags |= STALE;
+    if ((n.flags & WATCH) !== 0) wake(n);
+    else mark(n.subs);
   }
 }
 
+// -----------------------------------------------------------------------------
+// 6. Pull: versions say "actually"
+// -----------------------------------------------------------------------------
+//
+// Reading a computed first makes it up to date (I3), and only then returns
+// its value. Three cases:
+//
+//   DIRTY   it must run: run it.
+//   STALE   it may have to: check its sources in read order; the first one
+//           whose version differs from the edge's makes it run. If none
+//           differs, the STALE mark was a false alarm: nothing runs.
+//   neither it is up to date.
+//
+// Checking a source may first require bringing that source up to date: the
+// same procedure, one level down. That recursion is what orders updates
+// from the top of the graph to the bottom and makes them glitch-free.
+
+/** Bring `n` up to date: run it if it must, or if a source actually changed. */
+function refresh(n: Node): void {
+  const f = n.flags;
+  // We are inside n's own run and asked for n again: a cycle.
+  if ((f & BUSY) !== 0) throw new Error("Cycle detected");
+  if ((f & DIRTY) === 0) {
+    if ((f & STALE) === 0) return;
+    // Clear STALE before checking, not after: a write that happens during
+    // the check marks n again and is not lost.
+    n.flags = f & ~STALE;
+    let any: boolean;
+    try {
+      any = changed(n);
+    } catch (error) {
+      // A source failed while we were checking. We learned nothing about n,
+      // so n must run next time: DIRTY. Every node on the way up does the
+      // same as the error passes through it.
+      n.flags |= DIRTY;
+      throw error;
+    }
+    if (!any) return;
+  }
+  exec(n);
+}
+
 /**
- * Universal check of a watcher: pull every committed source, so a throwing
- * one surfaces before any irreversible step. Marks DIRTY on change. Tentative
- * edges (reads of a failed run) only wake; they exist only while a run is
- * owed, and then versions need no comparison.
+ * Did any source of `n` change since `n` last read it? In read order, and
+ * the first change decides: the sources after it are not refreshed, because
+ * the run that follows may not read them at all (it is the run, not this
+ * check, that decides what `n` depends on now).
+ */
+function changed(n: Node): boolean {
+  for (let e = n.deps; e !== null; e = e.next) {
+    const s = e.from;
+    if ((s.flags & (STALE | DIRTY)) !== 0) refresh(s);
+    if (s.ver !== e.ver) return true;
+  }
+  return false;
+}
+
+/**
+ * A watcher's check differs from a computed's in one way: it refreshes
+ * *every* committed source, not only up to the first change. A watcher's
+ * run is a side effect that cannot be undone, so every source that is going
+ * to throw must throw before it, not after.
+ *
+ * Tentative edges (read by a failed run) are not refreshed: while they
+ * exist the watcher already owes a run (DIRTY), so they have nothing to
+ * decide; they are only there so that a change to them wakes it.
+ *
+ * (Production adds a shortcut for a watcher woken by signals alone.)
  */
 export function check(w: Node): void {
-  const tentative = (w.gen + 1) & MASK;
+  const tentative = w.gen + 1;
   let owed = (w.flags & DIRTY) !== 0;
   for (let e = w.deps; e !== null; e = e.next) {
     const s = e.from;
-    if (__STATS__) stats.checks++;
-    if ((s.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) pull(s);
+    if ((s.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) refresh(s);
     if (!owed && s.ver !== e.ver) {
       owed = true;
       w.flags |= DIRTY;
@@ -264,6 +285,18 @@ export function check(w: Node): void {
   }
 }
 
+/**
+ * The one read path, for signals and computeds alike (a signal's flags are
+ * 0, so it is never refreshed): bring the node up to date, record the read
+ * on the running consumer, return the value.
+ */
+export function read(n: Node): unknown {
+  if ((n.flags & (STALE | DIRTY | BUSY)) !== 0) refresh(n);
+  if (active !== null) track(active, n);
+  return n.value;
+}
+
+/** Run `fn` without recording its reads on the current consumer. */
 export function untracked<T>(fn: () => T): T {
   const prev = active;
   active = null;
@@ -274,50 +307,68 @@ export function untracked<T>(fn: () => T): T {
   }
 }
 
-// --------------------------------------------------------------------- run
+// -----------------------------------------------------------------------------
+// 7. Run: an execution makes a new observation
+// -----------------------------------------------------------------------------
+//
+// A run calls the node's function with `active` set to the node, so every
+// read inside lands in `track` (section 8). The run either succeeds or
+// throws, and the two endings are deliberately asymmetric:
+//
+//   success  commit: edges not read this time are cut, the generation
+//            closes (all edges become committed), and the version bumps if
+//            the value changed.
+//   failure  nothing is committed. The node keeps its old value and owes a
+//            run (DIRTY). Its edges are the *wake set*: committed edges and
+//            everything this run read, so that any of them changing can
+//            retry it.
 
 /** Run `n.fn` as a tracking pass; commit value and edges on success. */
 export function exec(n: Node): void {
   const prev = active;
-  const base = top;
-  if (__STATS__) stats.runs++;
-  // Cleared before the run: a push during it marks the node again.
+  // Cleared before the run, for the same reason as in refresh: a write
+  // during the run marks the node again, and that mark must survive.
   n.flags = (n.flags & ~(STALE | DIRTY)) | BUSY;
-  n.last = null;
+  n.last = null; // the cursor starts before the first edge
   active = n;
   let value: unknown;
   try {
     value = n.fn!(n.value);
   } catch (error) {
     active = prev;
-    fail(n, base);
+    fail(n);
     throw error;
   }
   active = prev;
-  const f = n.flags;
-  if ((f & INDEX) !== 0) unindex(n, base);
-  n.flags = f & ~(BUSY | INDEX);
+  settle(n);
+  // Disposed during its own run (section 9): it ends now, nothing commits.
   if (n.fn === null) return detach(n);
-  // Commit: drop the unread suffix, close the generation, publish the value.
-  const last = n.last as Edge | null;
-  if ((last === null ? n.deps : last.next) !== null) cut(n, last);
-  n.gen = (n.gen + 1) & MASK;
-  if (Object.is(value, n.value) === false) {
+  // Commit. Everything after the cursor was not read by this run: cut it.
+  cut(n, n.last);
+  n.gen++;
+  if (!Object.is(value, n.value)) {
     n.value = value;
-    n.ver = (n.ver + 1) & MASK;
+    n.ver++;
   }
 }
 
-/**
- * A failed run: keep committed edges and this run's reads as the wake set,
- * drop unread edges earlier failed runs left behind, owe a run.
- */
-function fail(n: Node, base: number): void {
-  if ((n.flags & INDEX) !== 0) unindex(n, base);
+/** The run is over, either way: give the slots back, leave BUSY. */
+function settle(n: Node): void {
+  if ((n.flags & INDEX) !== 0) unindex(n);
   n.flags &= ~(BUSY | INDEX);
+}
+
+/**
+ * A failed run. Keep: committed edges, and every edge this run read (they
+ * are before the cursor). Drop: unread edges that are still tentative, i.e.
+ * left behind by an *earlier* failed run. Without that, repeated failures
+ * reading different sources would grow the wake set forever.
+ */
+function fail(n: Node): void {
+  settle(n);
   if (n.fn === null) return detach(n);
   n.flags |= DIRTY;
-  const tentative = (n.gen + 1) & MASK;
+  const tentative = n.gen + 1;
   const last = n.last;
   for (let e = last === null ? n.deps : last.next; e !== null; ) {
     const after: Edge | null = e.next;
@@ -332,104 +383,85 @@ function fail(n: Node, base: number): void {
   }
 }
 
-/** Detach `n` from its sources for good; inside its own run, at its end. */
-export function dispose(n: Node): void {
-  if (n.fn === null) return;
-  n.fn = null;
-  if ((n.flags & BUSY) === 0) detach(n);
-}
+// -----------------------------------------------------------------------------
+// 8. Tracking: matching this run's reads against the last run's edges
+// -----------------------------------------------------------------------------
+//
+// The cursor `c.last` walks `c.deps` as the run reads. Before it: edges this
+// run has read. After it: edges it has not read (yet). For every read of a
+// source `s` there are three possible truths:
+//
+//   (a) s is the next edge after the cursor     -> accept it, advance
+//   (b) s has an edge, but somewhere else       -> already read: a duplicate
+//                                                  not read yet: move it up
+//   (c) s has no edge                           -> link a new one at the cursor
+//
+// (a) is the common case: a run that reads the same sources in the same
+// order as last time does no list work at all.
+//
+// Telling (b) from (c) exactly is the hard part (I1 forbids guessing). The
+// answer here: on the first read that is not (a), *index* the consumer. Put
+// each of its edges into its source's `slot` and mark the unread ones
+// UNREAD. From then on, `s.slot` answers every read of the run in one step:
+//
+//   s.slot is c's edge, ver === UNREAD   -> (b), not read yet: move it
+//   s.slot is c's edge, ver !== UNREAD   -> (b), a duplicate read
+//   anything else                        -> (c), no edge: link one
+//
+// Runs nest (a computed read during a run runs inside it), and an inner run
+// may index the same sources. So a slot is a small stack: an edge put into
+// `s.slot` remembers the edge it covered in `slotPrev`, and gives it back
+// when its run ends. Inner runs end first, so the stack unwinds in order.
+// The graph itself holds the stack; nothing else is allocated.
+//
+// (Production first tries a few cheap exact answers before indexing:
+// an immediate repeat, short scans of the list, a source with few
+// consumers. Same answers, less work on large reorders.)
 
-function detach(n: Node): void {
-  cut(n, null);
-  n.flags &= ~(STALE | DIRTY | WOKEN);
-}
-
-// ---------------------------------------------------------------- tracking
-
-/** A read that is not the next edge in read order. Every answer is exact. */
-function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
-  if (last !== null && last.from === s) {
-    if (__STATS__) stats.repeats++;
-    last.ver = s.ver;
+/** Record that the running consumer `c` read the source `s`. */
+function track(c: Node, s: Node): void {
+  const last = c.last;
+  const next = last === null ? c.deps : last.next;
+  // (a) The same source as last time, at the same place.
+  if (next !== null && next.from === s) {
+    next.ver = s.ver;
+    c.last = next;
     return;
   }
-  if ((c.flags & INDEX) === 0) {
-    // A source without subscribers is absent.
-    if (s.subs === null) return link(c, s, last, next, false);
-    // An edge found by a scan is the pair's only one; absence needs one side
-    // scanned completely (this reader's list, or the source's subscribers).
-    let e = next !== null ? next.next : null;
-    let budget = SCAN;
-    while (e !== null && e.from !== s && --budget !== 0) e = e.next;
-    if (e !== null && e.from === s) {
-      if (__STATS__) stats.scans++;
-      e.ver = s.ver;
-      return move(c, e, last, next!);
-    }
-    let p = last !== null ? last.prev : null;
-    budget = SCAN;
-    while (p !== null && p.from !== s && --budget !== 0) p = p.prev;
-    if (p !== null && p.from === s) {
-      if (__STATS__) stats.dups++;
-      p.ver = s.ver;
-      return;
-    }
-    if ((e === null && p === null) || absent(s, c) === true) return link(c, s, last, next, false);
-    index(c, next);
+  // (b) or (c): ask the slots.
+  if ((c.flags & INDEX) === 0) index(c, next);
+  const e = s.slot;
+  if (e !== null && e.to === c) {
+    const unread = e.ver === UNREAD;
+    e.ver = s.ver;
+    if (unread) move(c, e, last, next!);
+    return;
   }
-  if (__STATS__) stats.lookups++;
-  const cell = s.slot;
-  if (cell !== null && cell.to === c) {
-    if (cell.ver !== UNREAD) {
-      if (__STATS__) stats.dups++;
-      cell.ver = s.ver;
-      return;
-    }
-    if (__STATS__) stats.moves++;
-    cell.ver = s.ver;
-    return move(c, cell, last, next!);
-  }
-  link(c, s, last, next, true);
+  link(c, s, last, next);
 }
 
-/** No edge to `c` among the source's few subscribers. */
-function absent(s: Node, c: Node): boolean {
-  let budget = SCAN;
-  for (let e = s.subs; e !== null; e = e.nextSub) if (e.to === c || --budget === 0) return false;
-  return true;
-}
-
-/** Put every edge of `c` into its source's slot; mark the unread ones. */
+/** Put every edge of `c` into its source's slot; edges after the cursor are UNREAD. */
 function index(c: Node, next: Edge | null): void {
-  if (__STATS__) stats.indexes++;
   c.flags |= INDEX;
   let unread = false;
   for (let e = c.deps; e !== null; e = e.next) {
-    if (__STATS__) stats.indexed++;
     if (e === next) unread = true;
     if (unread) e.ver = UNREAD;
     const s = e.from;
-    if (s.slot !== null) {
-      stack[top++] = s;
-      stack[top++] = s.slot;
-    }
+    e.slotPrev = s.slot;
     s.slot = e;
   }
 }
 
-/** Clear the run's slots, give back the cells it displaced. */
-function unindex(n: Node, base: number): void {
-  for (let e = n.deps; e !== null; e = e.next) e.from.slot = null;
-  while (top > base) {
-    const cell = stack[--top] as Edge;
-    stack[top] = null;
-    const s = stack[--top] as Node;
-    stack[top] = null;
-    s.slot = cell;
+/** Give every slot back to whatever this run's edge covered (I4 at rest). */
+function unindex(c: Node): void {
+  for (let e = c.deps; e !== null; e = e.next) {
+    e.from.slot = e.slotPrev;
+    e.slotPrev = null;
   }
 }
 
-/** Move an unread edge (strictly after `next`) up to the cursor. */
+/** Move an unread edge (somewhere after `next`) up to the cursor. */
 function move(c: Node, e: Edge, last: Edge | null, next: Edge): void {
   const before = e.prev!;
   const after = e.next;
@@ -443,31 +475,38 @@ function move(c: Node, e: Edge, last: Edge | null, next: Edge): void {
   c.last = e;
 }
 
-/** A new edge at the cursor, appended to the source's subscribers. */
-function link(c: Node, s: Node, last: Edge | null, next: Edge | null, indexed: boolean): void {
-  if (__STATS__) stats.links++;
+/**
+ * A new edge: at the cursor in `c.deps`, at the end of `s.subs` (birth
+ * order), and in `s.slot` (the consumer is indexed whenever we get here).
+ * Its generation is the one the current run will commit: tentative until
+ * then.
+ */
+function link(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   const tail = s.lastSub;
-  const e: Edge = { from: s, to: c, ver: s.ver, gen: (c.gen + 1) & MASK, prev: last, next, prevSub: tail, nextSub: null };
+  const e: Edge = {
+    from: s,
+    to: c,
+    ver: s.ver,
+    gen: c.gen + 1,
+    prev: last,
+    next,
+    prevSub: tail,
+    nextSub: null,
+    slotPrev: s.slot,
+  };
   if (last !== null) last.next = e;
   else c.deps = e;
   if (next !== null) next.prev = e;
   if (tail !== null) tail.nextSub = e;
   else s.subs = e;
   s.lastSub = e;
+  s.slot = e;
   c.last = e;
-  if (indexed) {
-    if (s.slot !== null) {
-      stack[top++] = s;
-      stack[top++] = s.slot;
-    }
-    s.slot = e;
-  }
 }
 
 /** Remove every edge of `c` after `last` (all of them when null). */
 function cut(c: Node, last: Edge | null): void {
   let e = last === null ? c.deps : last.next;
-  if (e === null) return;
   if (last === null) c.deps = null;
   else last.next = null;
   for (; e !== null; e = e.next) unsub(e);
@@ -475,7 +514,6 @@ function cut(c: Node, last: Edge | null): void {
 
 /** Take an edge out of its source's subscriber list. */
 function unsub(e: Edge): void {
-  if (__STATS__) stats.unlinks++;
   const s = e.from;
   const before = e.prevSub;
   const after = e.nextSub;
@@ -483,4 +521,24 @@ function unsub(e: Edge): void {
   else s.subs = after;
   if (after !== null) after.prevSub = before;
   else s.lastSub = before;
+}
+
+// -----------------------------------------------------------------------------
+// 9. Disposal
+// -----------------------------------------------------------------------------
+//
+// Disposing a node clears its function and removes all its source edges.
+// If the node is running, it cannot lose its edges in the middle of its own
+// run (the cursor points into them), so disposal only clears `fn` and the
+// run detaches at its end (exec and fail check `fn === null`).
+
+export function dispose(n: Node): void {
+  if (n.fn === null) return;
+  n.fn = null;
+  if ((n.flags & BUSY) === 0) detach(n);
+}
+
+function detach(n: Node): void {
+  cut(n, null);
+  n.flags &= ~(STALE | DIRTY);
 }
