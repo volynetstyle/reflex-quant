@@ -1,0 +1,97 @@
+name: Experiment
+
+# Tests, structural counters and timing of the quant runtime against Reflex
+# and alien-signals. The suite imports Reflex's spec harness and source, so
+# the job checks out Reflex at the compared commit and places this
+# repository at packages/reflex-runtime-quant inside it. All three runtimes
+# share one runner; compare ratios within a run, never times across runs.
+# Report-only edits (research/, README) do not re-run it.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "research/**"
+      - "README.md"
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: Timing rounds (fresh process per runtime and scenario per round)
+        required: false
+        default: "9"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: experiment-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  experiment:
+    name: tests, structure, timing
+    # Pinned image: a runner image change is not a code change.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # Full history: the Reflex bundle is built from an archived commit.
+      - name: Check out Reflex (compared runtime, spec harness, workspace)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: volynetstyle/Reflex
+          ref: bf718774a5bf9c15cda769712d226d9fc4d4da23
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check out this repository into the Reflex workspace
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: packages/reflex-runtime-quant
+          persist-credentials: false
+
+      - uses: ./.github/actions/setup-workspace
+
+      - name: Tests (spec, contract spec, Reflex and quant; invariants)
+        working-directory: packages/reflex-runtime-quant
+        env:
+          NODE_OPTIONS: --max-old-space-size=2048
+        run: npx vitest run --config vitest.config.ts
+
+      - name: Build bundles
+        working-directory: packages/reflex-runtime-quant
+        run: node bench/build.mjs
+
+      - name: Structural counters
+        working-directory: packages/reflex-runtime-quant
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/artifacts"
+          node bench/structure.mjs | tee "$GITHUB_WORKSPACE/artifacts/structure.md"
+          cp .cache/bench/structure.json "$GITHUB_WORKSPACE/artifacts/"
+
+      - name: Timing
+        working-directory: packages/reflex-runtime-quant
+        env:
+          ROUNDS: ${{ inputs.rounds || '9' }}
+        run: |
+          node bench/run.mjs --rounds "$ROUNDS" --out "$GITHUB_WORKSPACE/artifacts/timing.json"
+          {
+            echo "## Quant vs Reflex vs alien-signals"
+            echo
+            cat "$GITHUB_WORKSPACE/artifacts/timing.md"
+            echo
+            echo "## Structural work per step"
+            echo
+            cat "$GITHUB_WORKSPACE/artifacts/structure.md"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: experiment
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
