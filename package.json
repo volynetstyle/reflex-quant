@@ -2,11 +2,23 @@
   "name": "reflex-quant",
   "version": "0.1.0",
   "description": "The smallest reactive runtime the invariants of Reflex imply: signals, computeds, effects; exact dependency tracking, no recursion, ~2 KB gzip.",
-  "keywords": ["signals", "reactivity", "reactive", "computed", "effect", "fine-grained"],
+  "keywords": [
+    "signals",
+    "reactivity",
+    "reactive",
+    "computed",
+    "effect",
+    "fine-grained"
+  ],
   "license": "MIT",
   "author": "Andrii Volynets",
-  "repository": { "type": "git", "url": "git+https://github.com/volynetstyle/reflex-quant.git" },
-  "bugs": { "url": "https://github.com/volynetstyle/reflex-quant/issues" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/volynetstyle/reflex-quant.git"
+  },
+  "bugs": {
+    "url": "https://github.com/volynetstyle/reflex-quant/issues"
+  },
   "homepage": "https://github.com/volynetstyle/reflex-quant#readme",
   "type": "module",
   "sideEffects": false,
@@ -15,14 +27,28 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" },
-  "publishConfig": { "access": "public", "provenance": true },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
