@@ -31,14 +31,15 @@ export const mutants = [
   ["no-suffix-scan", "O1: bounded scan of the unread suffix before indexing (optimization)",
     [K, "    if (e !== null && e.from === s) {\n      if (__STATS__) stats.scans++;", "    if (false) {\n      if (__STATS__) stats.scans++;"]],
   ["no-absence-proof", "O1: bounded absence proofs, consumer or source side, before indexing (optimization)",
-    [K, "    if ((e === null && p === null) || absent(s, c) === true) return link(c, s, last, next, false);\n", ""]],
+    [K, "    if ((e === null && p === null) || absent(s, c) === true)\n      return link(c, s, last, next, false);\n", ""]],
   ["no-displaced", "save/restore of an enclosing run's slot cells",
     [K, "    const s = e.from;\n    if (s.slot !== null) {\n      stack[top++] = s;\n      stack[top++] = s.slot;\n    }\n    s.slot = e;", "    const s = e.from;\n    s.slot = e;"],
     [K, "  if (indexed) {\n    if (s.slot !== null) {\n      stack[top++] = s;\n      stack[top++] = s.slot;\n    }\n    s.slot = e;", "  if (indexed) {\n    s.slot = e;"]],
   ["no-unread", "UNREAD marking of the suffix while indexing",
     [K, "    if (unread) e.ver = UNREAD;\n", ""]],
   ["validate-tentative", "tentative edges excluded from watcher validation",
-    [K, "!== 0 && e.gen !== tentative) pull(s);", "!== 0) pull(s);"]],
+    [K, "      if ((s.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) pull(s);", "      if ((s.flags & (STALE | DIRTY)) !== 0) pull(s);"],
+    [K, "\n    if ((s.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) pull(s);", "\n    if ((s.flags & (STALE | DIRTY)) !== 0) pull(s);"]],
   ["keep-tentative", "removal of earlier failed runs' unread edges",
     [K, "    if (e.gen === tentative) {\n      const before", "    if (false) {\n      const before"]],
   ["cut-on-failure", "committed edges kept after a failure (wake set)",
@@ -56,8 +57,8 @@ export const mutants = [
   ["idle-after-failure", "a failed watcher keeps its execution obligation (R2)",
     [K, "  n.flags |= DIRTY;\n  const tentative", "  if ((n.flags & WATCH) === 0) n.flags |= DIRTY;\n  const tentative"]],
   ["existential-watcher", "watcher validation covers every committed source (V3)",
-    [K, "  let owed = (w.flags & DIRTY) !== 0;\n", "  let owed = (w.flags & DIRTY) !== 0;\n  if (owed) return;\n"],
-    [K, "      owed = true;\n      w.flags |= DIRTY;\n", "      w.flags |= DIRTY;\n      return;\n"]],
+    [K, "  if ((w.flags & DIRTY) === 0) {", "  if ((w.flags & DIRTY) !== 0) return;\n  if ((w.flags & DIRTY) === 0) {"],
+    [K, "        w.flags |= DIRTY;\n        e = e.next;\n        break;", "        w.flags |= DIRTY;\n        return;"]],
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & BUSY) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
   ["no-cycle-check", "BUSY checked on read (cycle detection)",
@@ -65,12 +66,12 @@ export const mutants = [
   ["no-repeat-check", "immediate repeat recognised before the scans",
     [K, "  if (last !== null && last.from === s) {\n    if (__STATS__) stats.repeats++;", "  if (false) {\n    if (__STATS__) stats.repeats++;"]],
   ["run-direct", "effects run inside the host's drain loop",
-    [I, "  start(w);", "  run(w);"],
+    [I, "  start(effectNode);", "  run(effectNode);"],
     [I, "import { flush, start, stop, watcher } from \"./host\";", "import { flush, run, stop, watcher } from \"./host\";"]],
   ["start-outside-drain", "an effect's unqueued first run opens the drain",
     [H, "  draining = true;\n  try {\n    exec(w);", "  try {\n    exec(w);"]],
   ["prepend-subs", "subscribers kept in birth order (lastSub append)",
-    [K, "prevSub: tail, nextSub: null };", "prevSub: null, nextSub: s.subs };"],
+    [K, "prevSub: tail,\n    nextSub: null,", "prevSub: null,\n    nextSub: s.subs,"],
     [K, "  if (tail !== null) tail.nextSub = e;\n  else s.subs = e;\n  s.lastSub = e;",
       "  if (s.subs !== null) s.subs.prevSub = e;\n  else s.lastSub = e;\n  s.subs = e;"]],
 ];
@@ -96,7 +97,9 @@ function build(id, edits) {
   cpSync(path.join(root, "src"), dir, { recursive: true });
   for (const [file, find, replace] of edits) {
     const target = path.join(dir, file);
-    const text = readFileSync(target, "utf8");
+    // Mutants are written against compact source; the real files carry blank
+    // lines for reading, so drop them in this throwaway copy.
+    const text = readFileSync(target, "utf8").replace(/\r?\n([ \t]*\r?\n)+/g, "\n");
     const at = text.indexOf(find);
     if (at < 0 || text.indexOf(find, at + 1) >= 0) throw new Error(`${id}: edit not found once in ${file}: ${find.slice(0, 60)}`);
     writeFileSync(target, text.slice(0, at) + replace + text.slice(at + find.length));
