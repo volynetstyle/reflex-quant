@@ -43,9 +43,12 @@ research/   REPORT.md, LOG.md, mutants.mjs (ablation), versions/ (v0-v3)
 
 ## Running
 
-For development, use Node.js 20.19 or later in the 20.x line, 22.12 or later in the 22.x line, or 24+ and npm (the published library supports Node.js 18+). Install this repository's dependencies with `npm ci`; the Reflex sources, spec harness and fixed production baseline used by the tests and benchmarks are included in `bin/reflex-runtime` and do not require a Reflex checkout. From this directory:
+For development, use Node.js 20.19 or later in the 20.x line, 22.13 or later in the 22.x line, or 24+ and npm (the published library supports Node.js 18+). Install this repository's dependencies with `npm ci`; the Reflex sources, spec harness and fixed production baseline used by the tests and benchmarks are included in `bin/reflex-runtime` and do not require a Reflex checkout. From this directory:
 
 ```sh
+npm run lint                                    # lint production TypeScript
+npm run format:check                            # check production formatting
+npm run format                                  # format production code and tool config
 npx vitest run --config vitest.config.ts        # all tests
 npx tsc -p tsconfig.json                        # typecheck src
 node research/mutants.mjs                       # ablation -> research/mutants.json

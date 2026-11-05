@@ -30,6 +30,7 @@ let draining = false;
 /** Queue a scheduled watcher once; the kernel calls this when it wakes one. */
 export function wake(w: Node): void {
   if ((w.flags & (AUTO | QUEUED)) !== AUTO) return;
+
   w.flags |= QUEUED;
   queue[size++] = w;
 }
@@ -48,10 +49,13 @@ export function watcher(fn: Fn, auto: boolean): Node {
  * Precondition: its own run is not on the stack (flush is not reentrant).
  */
 export function run(w: Node): void {
-  const f = w.flags;
-  if (w.fn === null || (f & (STALE | WOKEN | RETRY)) === 0) return;
-  w.flags = f & ~(STALE | WOKEN | RETRY);
-  if ((f & (STALE | RETRY)) !== 0) {
+  const flags = w.flags;
+
+  if (w.fn === null || (flags & (STALE | WOKEN | RETRY)) === 0) return;
+
+  w.flags = flags & ~(STALE | WOKEN | RETRY);
+
+  if ((flags & (STALE | RETRY)) !== 0) {
     try {
       check(w);
     } catch (error) {
@@ -59,11 +63,15 @@ export function run(w: Node): void {
       throw error;
     }
   }
+
   if ((w.flags & DIRTY) === 0 || w.fn === null) return;
+
   const cleanup = w.value;
+
   if (typeof cleanup === "function") {
     w.value = undefined;
     untracked(cleanup as Fn);
+
     if (w.fn === null) return;
   }
   exec(w);
@@ -72,15 +80,18 @@ export function run(w: Node): void {
 /** Terminal: detach, then run the last cleanup outside tracking. */
 export function stop(w: Node): void {
   if (w.fn === null) return;
+
   const cleanup = w.value;
   w.value = undefined;
   dispose(w);
+
   if (typeof cleanup === "function") untracked(cleanup as Fn);
 }
 
 /** Run queued watchers until the queue drains; rethrow the first error. */
 export function flush(): void {
   if (draining || depth !== 0 || size === 0) return;
+
   draining = true;
   drain(false, undefined);
 }
@@ -97,6 +108,7 @@ export function start(w: Node): void {
     return flush();
   }
   draining = true;
+
   try {
     exec(w);
   } catch (error) {
@@ -108,23 +120,27 @@ export function start(w: Node): void {
 /** The drain loop, opened by the caller: FIFO, the first error rethrown at the end. */
 function drain(failed: boolean, first: unknown): void {
   for (let i = 0; i < size; i++) {
-    const w = queue[i]!;
+    const queuedWatcher = queue[i]!;
     queue[i] = null;
-    w.flags &= ~QUEUED;
+    queuedWatcher.flags &= ~QUEUED;
+
     try {
-      run(w);
+      run(queuedWatcher);
     } catch (error) {
       if (!failed) first = error;
+
       failed = true;
     }
   }
   size = 0;
   draining = false;
+
   if (failed) throw first;
 }
 
 export function batch<T>(fn: () => T): T {
   depth++;
+
   try {
     return fn();
   } finally {

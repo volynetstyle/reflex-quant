@@ -45,9 +45,9 @@ export function computed<T>(fn: (prev: T | undefined) => T): Computed<T> {
 
 /** Runs now (or when the enclosing batch or drain ends), then on every change it read. */
 export function effect(fn: () => void | (() => void)): Effect {
-  const w = watcher(fn, true);
-  start(w);
-  return w as unknown as Effect;
+  const effectNode = watcher(fn, true);
+  start(effectNode);
+  return effectNode as unknown as Effect;
 }
 
 /** A signal's flags are 0, so one read path serves signals and computeds. */
@@ -61,7 +61,11 @@ export function set<T>(source: Signal<T>, value: T): void {
 }
 
 export function dispose(target: Computed<unknown> | Effect): void {
-  const n = raw(target);
-  if ((n.flags & WATCH) !== 0) stop(n);
-  else detach(n);
+  const targetNode = raw(target);
+
+  if ((targetNode.flags & WATCH) !== 0) {
+    stop(targetNode);
+  } else {
+    detach(targetNode);
+  }
 }
