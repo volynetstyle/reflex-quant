@@ -405,6 +405,8 @@ function fail(n: Node, base: number): void {
       if (after !== null) after.prev = before;
 
       unsub(e);
+      e.prev = null;
+      e.next = null;
     }
     e = after;
   }
@@ -601,6 +603,9 @@ function cut(c: Node, last: Edge | null): void {
 
   if (last === null) c.deps = null;
   else last.next = null;
+  // The cut head's back pointer would tie this garbage to the live list, and
+  // so to garbage cut later: old garbage keeps newer garbage alive.
+  e.prev = null;
 
   for (; e !== null; e = e.next) unsub(e);
 }
