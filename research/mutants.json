@@ -120,8 +120,8 @@
     ]
   },
   {
-    "id": "retry-as-stale",
-    "mechanism": "a watcher whose validation threw is marked RETRY, not left STALE (re-delivery)",
+    "id": "wake-guard",
+    "mechanism": "the kernel wakes a watcher only when it is neither STALE nor WOKEN (re-delivery after a failed validation)",
     "killed": true,
     "failed": [
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes"

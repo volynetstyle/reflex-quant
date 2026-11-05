@@ -17,8 +17,6 @@ import {
 /** Run by this host's queue; other watchers are run by their owner. */
 const AUTO = 64;
 const QUEUED = 128;
-/** Its check threw: run() checks again although no push marked it (V1). */
-const RETRY = 256;
 
 type Fn = () => unknown;
 
@@ -45,21 +43,23 @@ export function watcher(fn: Fn, auto: boolean): Node {
 /**
  * Check every committed source unless only signals woke it, then, if a run
  * is owed, consume the previous cleanup and run. A watcher neither STALE,
- * WOKEN nor RETRY is clean, or cold after a failure until a source changes.
+ * WOKEN is clean, or cold after a failure until a source changes. A failed
+ * check leaves it STALE, so the next run checks again (V1) and the next push
+ * finds it queued or delivers it again.
  * Precondition: its own run is not on the stack (flush is not reentrant).
  */
 export function run(w: Node): void {
   const flags = w.flags;
 
-  if (w.fn === null || (flags & (STALE | WOKEN | RETRY)) === 0) return;
+  if (w.fn === null || (flags & (STALE | WOKEN)) === 0) return;
 
-  w.flags = flags & ~(STALE | WOKEN | RETRY);
+  w.flags = flags & ~(STALE | WOKEN);
 
-  if ((flags & (STALE | RETRY)) !== 0) {
+  if ((flags & STALE) !== 0) {
     try {
       check(w);
     } catch (error) {
-      w.flags |= RETRY;
+      w.flags |= STALE;
       throw error;
     }
   }

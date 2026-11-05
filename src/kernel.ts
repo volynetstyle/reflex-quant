@@ -103,7 +103,11 @@ const stack: (Node | Edge | null)[] = [];
 let top = 0;
 let wake: (w: Node) => void = () => {};
 
-/** The host is told about every watcher that becomes STALE or WOKEN. */
+/**
+ * The host is told about every watcher a write or mark reaches. It owns the
+ * deduplication (a queued watcher is not queued again), so a watcher left
+ * STALE by a failed check is delivered again by the next push.
+ */
 export function onWake(fn: (w: Node) => void): void {
   wake = fn;
 }
@@ -153,7 +157,7 @@ export function write(s: Node, value: unknown): void {
     } else if ((f & WATCH) !== 0) {
       n.flags = f | DIRTY | WOKEN;
 
-      if ((f & (STALE | WOKEN)) === 0) wake(n);
+      wake(n);
     } else if ((f & STALE) !== 0) {
       n.flags = f | DIRTY;
     } else {
@@ -175,13 +179,14 @@ function mark(first: Edge): void {
       const f = n.flags;
 
       if (__STATS__) stats.marks++;
-      // A STALE node has STALE subscribers, or is a watcher the host has.
-      if ((f & STALE) === 0) {
+      // A watcher has no subscribers; the host deduplicates, so it is always told.
+      if ((f & WATCH) !== 0) {
+        n.flags = f | STALE;
+        wake(n);
+      } else if ((f & STALE) === 0) {
         n.flags = f | STALE;
 
-        if ((f & WATCH) !== 0) {
-          if ((f & WOKEN) === 0) wake(n);
-        } else if (n.subs !== null) {
+        if (n.subs !== null) {
           if (e.nextSub !== null) stack[top++] = e.nextSub;
 
           e = n.subs;

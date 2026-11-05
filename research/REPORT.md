@@ -100,7 +100,7 @@ after its failure, the spec does.
 **Kernel bits:** STALE (may be out of date; for a watcher: validate), DIRTY
 (must run), BUSY (run on the stack), INDEX (run uses slot cells), WATCH
 (watcher), WOKEN (watcher woken by signals only: run without validating).
-**Host bits:** AUTO, QUEUED, RETRY. **Mutable globals:** kernel `active`,
+**Host bits:** AUTO, QUEUED. **Mutable globals:** kernel `active`,
 `wake`, one work stack with `top`; host `queue` with `size`, `depth`,
 `draining`. **API:** `signal`, `computed`, `effect`, `get`, `set`,
 `dispose`, `batch`, `untracked`; a handle is the node itself, so a signal
@@ -178,6 +178,9 @@ feedback, grow-store and benchmark-sink deopts, none repeating.
 ## Q3. What is fundamentally necessary
 
 Every remaining mechanism has a counterexample: removing it fails a test.
+This is a Level 1 claim about this architecture, not a necessity proof; see
+[WITNESS-AUDIT.md](./WITNESS-AUDIT.md), which merges the ablations into ten
+obligations and classifies each witness.
 23 of 24 ablations are killed (`research/mutants.mjs`, `mutants.json`): 18
 by semantic tests, 4 only by structural bounds (the optimizations of Q4), 1
 only by tests that assert sibling order (the convention of Q4). The
@@ -194,7 +197,7 @@ sees (LOG 22).
 | relation/node generations | P3 (`validate-tentative`), P4 (`keep-tentative`) |
 | DIRTY after any failure | P9 (`idle-after-failure`) |
 | DIRTY after a failed validation | "after a failed validation the effect is re-delivered" (`validation-stale`) |
-| RETRY host bit | historical fault `validation-history-dependence`, recovery language (`no-retry`); re-delivery test (`retry-as-stale`) |
+| failed watcher stays STALE; host-side deduplication | historical fault `validation-history-dependence`, recovery language (`no-retry`); re-delivery test (`wake-guard`) |
 | clear STALE before the pass | "an effect writing a source it read converges", F1 test (`clear-after`) |
 | deferred disposal | "dispose inside the callback, then more reads: no ghost relation" (`eager-dispose`) |
 | RUNNING on read | "cycles throw" (`no-cycle-check`) |
@@ -209,7 +212,7 @@ sees (LOG 22).
 | Class | Mechanisms |
 | --- | --- |
 | correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; RUNNING (cycles, deferred disposal); WATCH delivery |
-| failure semantics | prune on success only; generations (tentative relations); DIRTY after failure and after failed validation; RETRY; universal watcher validation (V3) |
+| failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3) |
 | asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack) |
 | constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; `readSignal`; delivery on the STALE transition; no version compares once owed |
 | convention | `subsTail` (FIFO sibling order; only order-asserting tests fail without it) |

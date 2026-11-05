@@ -324,3 +324,27 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   remaining 5–8 ns per effect with a source is the first edge and its
   removal: 10-field nodes and 8-field edges (`gen`, `slot` carry exact
   failure and membership) against alien's 7 and 7.
+
+### 25. RETRY replaced by STALE and host-side deduplication (Level 2)
+
+- **Question:** is the RETRY bit forced, or a lemma of the encoding
+  (`research/WITNESS-AUDIT.md`)? It exists because the kernel's wake guard
+  (`(f & (STALE | WOKEN)) === 0` in `write` and `mark`) treated a failed
+  watcher that kept STALE as already handed to the host (item 17).
+- **Observation:** the host already deduplicates with QUEUED, so the guard
+  restated a fact the host keeps.
+- **Repair:** drop RETRY. A failed `check` leaves the watcher STALE, so the
+  next `run` checks again (V1). `write` and `mark` call `wake` for every
+  watcher they reach; `wake` returns at the QUEUED check. The early-out in
+  `mark` stays for computeds.
+- **Result:** tests 48/48, differential suites included; one host bit and one
+  flag test fewer. Local A/B against the previous kernel (interleaved, 5
+  rounds; noise about ±5 %): fan-in.1024 1.00, diamond.8x8 1.03,
+  fan-out.computeds-1000 1.02, batch.writes-32 1.00. Timing stays on CI.
+- **Status:** mutant `retry-as-stale` is replaced by `wake-guard` (the old
+  guard restored); `no-retry` now removes the STALE set after a failed check.
+  Both fail the same tests as before. 23 of 24 ablations are killed.
+- **Not applied:** replacing `start` by `wake(w); flush()` also passes every
+  test, but is the repair of item 24, which measured it; a local A/B agrees
+  (lifecycle.mount-100 1.08 and 1.17 slower without it).
+

@@ -271,6 +271,8 @@ Every nontrivial change should be classified as one of:
 - **structural mechanism** — required by a graph/resource/asymptotic bound;
 - **optimization** — semantics-preserving constant-factor improvement;
 - **convention** — deterministic representation choice not required by the contract;
+- **implementation lemma** — needed only by the chosen construction, not by the contract;
+- **safety contract** — chosen guarantee against lost execution, graph corruption, or stack death;
 - **host policy** — scheduling or single-watcher lifecycle realization outside graph semantics;
 - **surface API** — exposes existing semantics only;
 - **framework/application policy** — ownership or behavior not implied by the selected contract;
