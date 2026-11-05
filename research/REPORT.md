@@ -1,7 +1,9 @@
-# The smallest runtime Reflex's invariants imply
+# The smallest known runtime implied by the Quant contract
 
-Experiment: derive a reactive runtime from Reflex's semantic contract and
-executable spec, not from its implementation; keep every mechanism a test
+Experiment: derive a reactive runtime from a frozen contract (invariants
+T1–W4, bounds S1–S7, decisions D1–D2 in [SPEC.md](../SPEC.md)) that was
+extracted from Reflex's semantic contract and executable spec, not from its
+implementation; Reflex is provenance, not authority; keep every mechanism a test
 forces and nothing else; compare it with the spec, current Reflex (`dev`
 `bf71877`) and alien-signals 3.2.1. Code: `src/kernel.ts`, `src/host.ts`,
 `src/index.ts`. Design history: [LOG.md](./LOG.md) (20 entries, each with
@@ -19,6 +21,14 @@ Reflex and alien-signals on 14 of 18 scenarios and faster than both on 8
 (section 6).
 
 ## 1. Contract inventory (phase 0)
+
+**Provenance and ID map.** The contract was extracted from the Reflex
+material listed below. The comparison snapshot is Reflex `dev` `bf71877`;
+no separate extraction snapshot was recorded when the contract was selected.
+Source IDs in the tables (V, C, R, W, L) are Reflex's; SPEC.md IDs are
+Quant's: tracking T1–T3 (exact tracking, uniqueness, nesting); change P1–P4
+(version fact, cutoff, glitch freedom, V3); failure F1–F4 (C1–C3, C4/R3,
+W2, R2); watchers W1–W4 (W1, L1–L5, disposal, batching).
 
 Sources: `test/differential/docs/SEMANTIC_CONTRACT.md`, the spec runtime
 (`internal/machine/spec-runtime.ts`), `docs/RUNTIME.md`, `docs/DISPOSE.md`,
@@ -323,7 +333,7 @@ hides.**
   a running bit, a read-order cursor, prune-on-success, a per-relation
   birth generation (exact failure semantics, MODEL LB2), the `Unknown` /
   `Changed` split for watchers, and explicit walker stacks. These parts of
-  Reflex are not historical; its invariants imply them.
+  Reflex are not historical; the contract implies them.
 - *Exposed:* Reflex = contract + D3 + D4 + D5 on 100,000 generated programs,
   and none of the existing corpora reaches those regions. D5 contradicts R2:
   a failed watcher drops an execution obligation the contract says survives.

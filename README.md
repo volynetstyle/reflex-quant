@@ -1,9 +1,11 @@
 # reflex-quant
 
-An experiment: derive the smallest reactive runtime that the invariants of
-[Reflex](https://github.com/volynetstyle/Reflex) imply, from its semantic
-contract and executable spec rather than from its implementation, and
-measure what is left.
+An experiment: derive the smallest known reactive runtime implied by a
+frozen contract (semantic invariants and structural bounds, see
+[SPEC.md](SPEC.md)), and measure what is left. The contract was extracted
+from the executable spec of [Reflex](https://github.com/volynetstyle/Reflex)
+(provenance in [research/REPORT.md](research/REPORT.md)); it does not follow
+later changes of Reflex.
 
 - **Production code:** three files, [`src/kernel.ts`](src/kernel.ts) (graph,
   tracking, invalidation, validation), [`src/host.ts`](src/host.ts)
