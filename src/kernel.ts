@@ -623,4 +623,8 @@ function unsub(e: Edge): void {
 
   if (after !== null) after.prevSub = before;
   else s.lastSub = before;
+  // Subscribers are in birth order, so an old removed edge would point at a
+  // much younger one and keep it (and its watcher) alive across scavenges.
+  e.prevSub = null;
+  e.nextSub = null;
 }
