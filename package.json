@@ -1,6 +1,6 @@
 {
   "name": "reflex-quant",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "The smallest reactive runtime the invariants of Reflex imply: signals, computeds, effects; exact dependency tracking, no recursion, ~2 KB gzip.",
   "keywords": [
     "signals",
