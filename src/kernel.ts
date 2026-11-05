@@ -224,6 +224,11 @@ function pull(root: Node): void {
 
   if ((f & DIRTY) !== 0) return exec(root);
 
+  verify(root, f);
+}
+
+/** The walk of `pull` for a STALE, not DIRTY, not BUSY node; kept apart so `pull` stays small. */
+function verify(root: Node, f: number): void {
   root.flags = f & ~STALE;
   const base = top;
   let n = root;
@@ -231,8 +236,6 @@ function pull(root: Node): void {
 
   try {
     for (;;) {
-      let changed = false;
-
       while (e !== null) {
         const s: Node = e.from;
         const sf = s.flags;
@@ -253,13 +256,12 @@ function pull(root: Node): void {
         }
 
         if (s.ver !== e.ver) {
-          changed = true;
+          exec(n);
           break;
         }
         e = e.next;
       }
 
-      if (changed) exec(n);
       // Climb; a parent whose child changed runs as well.
       for (;;) {
         if (top === base) return;
@@ -294,19 +296,31 @@ function pull(root: Node): void {
  */
 export function check(w: Node): void {
   const tentative = (w.gen + 1) & MASK;
-  let owed = (w.flags & DIRTY) !== 0;
+  let e = w.deps;
 
-  for (let e = w.deps; e !== null; e = e.next) {
-    const s = e.from;
+  // Until a run is owed, versions decide; then only the pulls remain.
+  if ((w.flags & DIRTY) === 0) {
+    for (; e !== null; e = e.next) {
+      const s = e.from;
 
+      if (__STATS__) stats.checks++;
+
+      if ((s.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) pull(s);
+
+      if (s.ver !== e.ver) {
+        w.flags |= DIRTY;
+        e = e.next;
+        break;
+      }
+    }
+  }
+
+  for (; e !== null; e = e.next) {
     if (__STATS__) stats.checks++;
 
-    if ((s.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) pull(s);
+    const s = e.from;
 
-    if (!owed && s.ver !== e.ver) {
-      owed = true;
-      w.flags |= DIRTY;
-    }
+    if ((s.flags & (STALE | DIRTY)) !== 0 && e.gen !== tentative) pull(s);
   }
 }
 
