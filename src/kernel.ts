@@ -6,6 +6,17 @@
 // (prevSub/nextSub). Change is a version fact: a node bumps `ver` when its
 // value changes; an edge keeps the `ver` its reader saw.
 //
+// Removal invariant: an edge taken out of a list must not keep a pointer into
+// either list, because garbage that points at live or younger edges is kept
+// alive by the scavenger once it is old (an old dead edge pins newer ones, and
+// through `to` their watchers and closures, until a major GC). Removal is
+// therefore two steps: unlink the neighbours, then clear the edge's own
+// links. `unsub` clears prevSub/nextSub; `cut` clears the head's `prev`, and
+// `fail` clears `prev`/`next`. In `cut` the interior of a removed run keeps
+// its `next` chain, which only reaches other garbage of the same cut and
+// is read by `unsub` while the run is walked. Any new removal path must
+// do the same.
+//
 // Written for V8: one node shape and one edge shape, each built at a single
 // site; numeric fields are SMI counters (masked); conditions are explicit
 // comparisons, so no ToBoolean runs on mixed values; no recursion, no array
