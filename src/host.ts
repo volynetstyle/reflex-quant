@@ -5,9 +5,15 @@ import type { Cleanup, Fn, Node } from "./model";
 import { check, dispose, exec, node, onWake, untracked } from "./kernel";
 
 const queue: (Node | null)[] = [];
-let size = 0;
-let depth = 0;
-let draining = false;
+// The host's registers. Exported so a write's caller can test for work
+// without a call into the host; ES bindings are read-only to importers, so
+// only this module writes them.
+/** Queued watchers. */
+export let size = 0;
+/** Open batches. */
+export let depth = 0;
+/** A drain loop is open. */
+export let draining = false;
 
 /** Queue a scheduled watcher once; the kernel calls this when it wakes one. */
 export function wake(w: Node): void {
@@ -80,6 +86,16 @@ export function stop(w: Node): void {
 export function flush(): void {
   if (draining || depth !== 0 || size === 0) return;
 
+  draining = true;
+  drain(false, undefined);
+}
+
+/**
+ * `flush` with its guard at the call site: a write's caller tests
+ * `size !== 0 && !draining && depth === 0` first (the queue first, so a write
+ * that woke nothing costs one load), and calls this only when there is work.
+ */
+export function drainNow(): void {
   draining = true;
   drain(false, undefined);
 }

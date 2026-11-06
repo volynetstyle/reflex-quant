@@ -4,7 +4,7 @@
 // runtime wrapper). Every operation here exposes existing kernel and host
 // semantics; none adds state.
 import { Flag } from "./flags";
-import { flush, start, stop, watcher } from "./host";
+import { depth, drainNow, draining, size, start, stop, watcher } from "./host";
 import {
   dispose as detach,
   node,
@@ -56,9 +56,11 @@ export function peek<T>(source: Readable<T>): T {
   return refresh(source as unknown as Node) as T;
 }
 
+/** Writes, then runs what the write scheduled; a write that woke nothing stops at one load. */
 export function set<T>(source: Signal<T>, value: T): void {
   write(source as unknown as Node, value);
-  flush();
+
+  if (size !== 0 && !draining && depth === 0) drainNow();
 }
 
 /**
@@ -73,7 +75,8 @@ export function update<T>(source: Signal<T>, fn: (value: T) => T): void {
     sourceNode,
     untracked(() => fn(sourceNode.value as T)),
   );
-  flush();
+
+  if (size !== 0 && !draining && depth === 0) drainNow();
 }
 
 export function dispose(target: Computed<unknown> | Effect): void {

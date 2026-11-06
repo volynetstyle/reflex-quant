@@ -14,7 +14,12 @@
 //                lookups, moves) and their interaction
 //   leaf         get / set by stage, next to the adapters and alien-signals
 //   lower-bound  reverse / shuffle / insert-one on quant variants with one
-//                constant-factor mechanism removed (bench/cost/build.mjs)
+//                constant-factor mechanism removed (bench/cost/build.mjs);
+//                `identity` is the same bytes as quant: the noise of a cell
+//   surface      A/B of the public write and read paths (surfaceVariants in
+//                bench/cost/build.mjs): leaf get/set, and the mechanisms
+//                where a write has work to deliver, so a win on the empty
+//                path cannot hide a loss on the full one
 //
 // Protocol of bench/run.mjs: every cell (bundle, scenario, flags) runs in a
 // fresh process per round, cells in a random order per round, and the value
@@ -26,7 +31,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { arch, cpus, platform, release } from "node:os";
 import path from "node:path";
-import { variants } from "./build.mjs";
+import { surfaceVariants, variants } from "./build.mjs";
 import { DECOMPOSE_SIZES, LAYOUT_SIZES, LOWER_SIZES, OPS, REGIME_SIZES } from "./scenarios.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
@@ -41,7 +46,9 @@ const structureWorker = path.join(root, "bench/cost/structure-worker.mjs");
 
 const RUNTIMES = { quant: "bench/quant", reflex: "bench/reflex", alien: "bench/alien" };
 const INTERNALS = "cost/quant-internals";
-const cell = (label, bundle, id, flags = []) => ({ label, bundle, id, flags, key: `${label}|${id}|${flags.join(" ")}` });
+const cell = (label, bundle, id, flags = [], suite = "cost") => ({ label, bundle, id, flags, suite, key: `${label}|${id}|${flags.join(" ")}` });
+/** Mechanisms (bench/mechanisms.mjs) for the surface A/B: empty and full write paths. */
+const SURFACE_WORK = ["read.signal", "write.no-subscribers", "write.same-value", "effect.rerun-1", "effect.through-computed", "batch.coalesce-64", "push.effects-1000"];
 const sizeOf = (id) => Number(id.split("@")[1]);
 const perRuntime = (id) => Object.entries(RUNTIMES).map(([r, b]) => cell(r, b, id));
 
@@ -100,6 +107,15 @@ const probes = {
       ),
     report: lowerReport,
   },
+  surface: {
+    strict: true,
+    cells: () =>
+      Object.keys(surfaceVariants).flatMap((v) => [
+        ...["leaf.write.E-set", "leaf.read.E-get"].map((id) => cell(v, `cost/surface-${v}`, id)),
+        ...SURFACE_WORK.map((id) => cell(v, `cost/surface-${v}-api`, id, [], "mechanisms")),
+      ]),
+    report: surfaceReport,
+  },
 };
 
 const probe = probes[probeName];
@@ -112,7 +128,7 @@ const json = (script, extra) =>
       .split("\n")
       .pop(),
   );
-const runCell = (c, extra = []) => json(worker, [path.join(root, ".cache", c.bundle), c.id, "--suite", "cost", ...c.flags, ...extra]);
+const runCell = (c, extra = []) => json(worker, [path.join(root, ".cache", c.bundle), c.id, "--suite", c.suite, ...c.flags, ...extra]);
 
 let seed = 0x2545f491;
 const random = () => ((seed = (Math.imul(seed ^ (seed >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0) / 2 ** 32);
@@ -147,6 +163,8 @@ if (!probe.independent) {
     return ok;
   });
   if (excluded.length) process.stderr.write(`excluded (checksum differs): ${excluded.map((x) => `${x.label} ${x.id}`).join(", ")}\n`);
+  // A candidate that changes an answer is a bug, not a lower bound.
+  if (excluded.length && probe.strict) throw new Error(`${probeName}: a candidate changes answers: ${excluded.map((x) => `${x.label} ${x.id}`).join(", ")}`);
 }
 if (args.includes("--verify-only")) {
   console.log(`${probeName}: ${cells.length} cells agree; ${excluded.length} excluded`);
@@ -183,6 +201,7 @@ const summary = Object.fromEntries(
       ns: median(s.ns),
       min: Math.min(...s.ns),
       max: Math.max(...s.ns),
+      rounds: s.ns,
       gcPer1k: median(s.gcPer1k),
       gcCostShare: median(s.gcCostShare),
       newSpace: median(s.newSpace),
@@ -282,6 +301,23 @@ function leafReport() {
     lines.push(row([c.label, num(ns), delta]));
   }
   return [...lines, ""];
+}
+
+function surfaceReport() {
+  const labels = Object.keys(surfaceVariants);
+  const ids = [...new Set(cells.map((c) => c.id))];
+  const unit = (id) => (id.startsWith("leaf.") || id === "read.signal" || id === "write.no-subscribers" || id === "write.same-value" ? OPS : 1);
+  const lines = ["ns per operation for the 1000-operation steps (leaf, read.signal, write.*), ns per step otherwise; range is min..max of the round medians.", ""];
+  lines.push(...head(["scenario", ...labels]));
+  for (const id of ids) lines.push(row([id, ...labels.map((l) => num(at(l, id)?.ns / unit(id)))]));
+  lines.push("", "Ratio to current, and the range of current itself (its spread is the noise floor):", "");
+  lines.push(...head(["scenario", "current range", ...labels.slice(1)]));
+  for (const id of ids) {
+    const base = at("current", id);
+    lines.push(row([id, base ? `${num(base.min / unit(id))}..${num(base.max / unit(id))}` : "—", ...labels.slice(1).map((l) => num(at(l, id)?.ns / base?.ns))]));
+  }
+  lines.push("", "Candidates:", "", ...Object.entries(surfaceVariants).map(([v, [what]]) => `- ${v}: ${what}`), "");
+  return lines;
 }
 
 function lowerReport() {

@@ -69,7 +69,7 @@ export const mutants = [
     [T, "  if (last !== null && last.from === s) {\n    if (__STATS__) stats.repeats++;", "  if (false) {\n    if (__STATS__) stats.repeats++;"]],
   ["run-direct", "effects run inside the host's drain loop",
     [I, "  start(effectNode);", "  run(effectNode);"],
-    [I, "import { flush, start, stop, watcher } from \"./host\";", "import { flush, run, stop, watcher } from \"./host\";"]],
+    [I, "import { depth, drainNow, draining, size, start, stop, watcher } from \"./host\";", "import { depth, drainNow, draining, size, run, stop, watcher } from \"./host\";"]],
   ["start-outside-drain", "an effect's unqueued first run opens the drain",
     [H, "  draining = true;\n  try {\n    exec(w);", "  try {\n    exec(w);"]],
   ["prepend-subs", "subscribers kept in birth order (lastSub append)",

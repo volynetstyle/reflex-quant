@@ -4,12 +4,16 @@
 //
 // quant-internals  raw-handle API, kernel/graph primitives (decompose, leaf)
 // lb-<variant>     quant behind the neutral adapter, with one constant-factor
-//                  mechanism removed or replaced (lower bounds, not proposals)
+//                  mechanism removed or replaced (lower bounds, not proposals);
+//                  lb-identity has no edit, as a control for cell noise
+// surface-<v>      host/surface A/B candidates: raw API (surface-<v>) and the
+//                  neutral adapter (surface-<v>-api); semantics unchanged
 //
 // Lower-bound variants are exact on the lb.* workloads (one consumer, no
 // nesting), which run.mjs checks by checksum before timing; elsewhere they may
 // be wrong. Edits use the convention of research/mutants.mjs: blank lines are
-// dropped first, and each `find` must occur exactly once.
+// dropped first, and each `find` must occur exactly once. Source copies stay
+// in .cache/cost/src/<id> (QUANT_SRC=<dir> runs the test suite against one).
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -20,6 +24,8 @@ const esbuild = createRequire(path.join(root, "package.json"))("esbuild");
 const F = "flags.ts";
 const T = "tracking.ts";
 const K = "kernel.ts";
+const H = "host.ts";
+const I = "index.ts";
 
 const prefixScan =
   "    let p = last !== null ? last.prev : null;\n    budget = SCAN;\n    while (p !== null && p.from !== s && --budget !== 0) p = p.prev;\n    if (p !== null && p.from === s) {\n      if (__STATS__) stats.dups++;\n      p.ver = s.ver;\n      return;\n    }\n";
@@ -33,12 +39,48 @@ const firstMiss = [
 
 /** variant -> [what it removes, ...edits] */
 export const variants = {
+  identity: ["no edit: the same bytes as quant (control for the noise of one cell)"],
   "scan-1": ["bounded scans look at one edge (SCAN = 8 -> 1)", [F, "export const SCAN = 8;", "export const SCAN = 1;"]],
   "no-absent": ["no source-side absence proof: an unproven miss indexes", [T, "    if ((e === null && p === null) || absent(s, c) === true)", "    if (e === null && p === null)"]],
   "no-prefix-scan": ["no backward scan for a repeated read: repeats go to the index", [T, prefixScan, "    const p = last;\n"]],
   "index-first-miss": ["the first miss indexes at once: no fresh-source, scan or absence steps", ...firstMiss],
   "no-displaced": ["no save/restore of displaced slot cells (nesting unsupported)", ...displaced],
-  "lean": ["index-first-miss and no-displaced together", ...firstMiss, ...displaced],
+  lean: ["index-first-miss and no-displaced together", ...firstMiss, ...displaced],
+};
+
+const setGuard = "  write(source as unknown as Node, value);\n  if (size !== 0 && !draining && depth === 0) drainNow();";
+const hostImport = 'import { depth, drainNow, draining, size, start, stop, watcher } from "./host";';
+const withFlush = 'import { depth, drainNow, draining, flush, size, start, stop, watcher } from "./host";';
+const setFlush = [
+  [I, hostImport, withFlush],
+  [I, setGuard, "  write(source as unknown as Node, value);\n  flush();"],
+];
+
+/**
+ * Candidates for the public write and read paths, against the release
+ * (current: set tests the queue at the call site, LOG 27). flush-call is the
+ * previous release's set; size-first is that set with flush's guard
+ * reordered (queue first), so flush-call -> size-first is the guard order
+ * and size-first -> current the call. commit moves the same guard into one
+ * host function; get-alias removes the surface function around kernel read.
+ * None changes an answer: run.mjs requires equal checksums, and the test
+ * suite runs against each source copy (QUANT_SRC=.cache/cost/src/surface-<v>).
+ */
+export const surfaceVariants = {
+  current: ["set tests the queue at the call site: as released"],
+  "flush-call": ["set calls flush() (previous release)", ...setFlush],
+  "size-first": ["set calls flush(), whose guard tests the queue first", ...setFlush, [H, "  if (draining || depth !== 0 || size === 0) return;", "  if (size === 0 || draining || depth !== 0) return;"]],
+  commit: [
+    "one host function: write, then the queue guard",
+    [H, 'import { check, dispose, exec, node, onWake, untracked } from "./kernel";', 'import { check, dispose, exec, node, onWake, untracked, write } from "./kernel";'],
+    [H, "export function flush(): void {", "export function commit(n: Node, value: unknown): void {\n  write(n, value);\n  if (size !== 0 && !draining && depth === 0) drainNow();\n}\nexport function flush(): void {"],
+    [I, hostImport, 'import { commit, depth, drainNow, draining, size, start, stop, watcher } from "./host";'],
+    [I, setGuard, "  commit(source as unknown as Node, value);"],
+  ],
+  "get-alias": [
+    "get is kernel read itself, under the public type",
+    [I, "export function get<T>(source: Readable<T>): T {\n  return read(source as unknown as Node) as T;\n}", "export const get = read as unknown as <T>(source: Readable<T>) => T;"],
+  ],
 };
 
 async function bundle(name, entry, plugins = []) {
@@ -72,11 +114,11 @@ function variantSource(id, edits) {
   return dir;
 }
 
-/** Resolve the adapter's `../../src/index.ts` to a variant's copy. */
+/** Resolve an adapter's `../../src/<file>.ts` imports to a variant's copy. */
 const redirect = (dir) => ({
   name: "variant-src",
   setup(build) {
-    build.onResolve({ filter: /[\\/]src[\\/]index\.ts$/ }, () => ({ path: path.join(dir, "index.ts") }));
+    build.onResolve({ filter: /[\\/]src[\\/][\w-]+\.ts$/ }, (args) => ({ path: path.join(dir, path.basename(args.path)) }));
   },
 });
 
@@ -86,5 +128,11 @@ if (import.meta.main ?? process.argv[1] === import.meta.filename) {
   for (const [id, [, ...edits]] of Object.entries(variants)) {
     await bundle(`lb-${id}`, path.join(root, "bench/adapters/quant.mjs"), [redirect(variantSource(id, edits))]);
   }
-  console.log(`cost bundles: quant-internals, ${Object.keys(variants).map((v) => `lb-${v}`).join(", ")}`);
+  for (const [id, [, ...edits]] of Object.entries(surfaceVariants)) {
+    const dir = variantSource(`surface-${id}`, edits);
+    await bundle(`surface-${id}`, path.join(root, "bench/adapters/quant-internals.ts"), [redirect(dir)]);
+    await bundle(`surface-${id}-api`, path.join(root, "bench/adapters/quant.mjs"), [redirect(dir)]);
+  }
+  const names = [...Object.keys(variants).map((v) => `lb-${v}`), ...Object.keys(surfaceVariants).map((v) => `surface-${v}`)];
+  console.log(`cost bundles: quant-internals, ${names.join(", ")}`);
 }

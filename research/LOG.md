@@ -388,3 +388,29 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
     framework policy (SPEC), and the fields would change meaning by node kind.
   - `isDisposed`, `pending`: readable from `fn` and the flags; no witness
     asks for them.
+
+### 27. The write path tests the queue at the call site (host policy, optimization)
+
+- **Observation:** CI run 42252842592, probe `leaf` (`research/COST-MODEL.md`):
+  kernel `write` 1.38 ns per write, alien-signals 1.39; public `set` 2.75.
+  The 1.37 ns difference is all `flush()`: a call and three register loads
+  (draining, depth, size, in that order) after every write, also when the
+  write woke nothing.
+- **Change:** the host exports its registers (`size`, `depth`, `draining`;
+  ES bindings are read-only to importers, so only the host writes them) and
+  `drainNow()`. `set` and `update` test `size !== 0 && !draining && depth === 0`
+  and call into the host only when there is work. The queue is tested first,
+  so a write that woke nothing costs one load and one branch. `flush` keeps
+  its guard for `batch`.
+- **Classification:** optimization of the host's realization of delivery
+  (SPEC: semantics-preserving constant factor). No state, flag or lifecycle
+  rule is added. Layering holds: kernel → host → surface; the surface reads
+  host state, the host alone writes it.
+- **Evidence:** tests 62/62; checksums equal on every suite; mutant verdicts
+  unchanged (23 of 24 killed; `run-direct`'s anchor follows the new import).
+  Release bundle 2068 → 2086 bytes gzip, `update` carrying the guard too.
+- **Status:** adopted on the decision that the guard is host
+  implementation. Probe `surface` is the repeated measurement: it times the
+  release (`current`) against the previous `set` (`flush-call`), the guard
+  order alone (`size-first`) and a host `commit`, on the empty write path
+  and on writes that have work to deliver.

@@ -12,7 +12,7 @@ name: Benchmark
 #               job per family so all sizes of a family share a runner;
 #               scaling-report merges them into growth exponents
 #   cost        cost-model probes (bench/cost/run.mjs), one job per probe:
-#               regime, layout, decompose, leaf, lower-bound
+#               regime, layout, decompose, leaf, lower-bound, surface
 #   structure   counters for all suites (counting, not timing)
 #   edge-churn  isolated Edge allocation probe
 
@@ -235,7 +235,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        probe: [regime, layout, decompose, leaf, lower-bound]
+        probe: [regime, layout, decompose, leaf, lower-bound, surface]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
