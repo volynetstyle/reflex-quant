@@ -83,7 +83,100 @@ export const surfaceVariants = {
   ],
 };
 
-async function bundle(name, entry, plugins = []) {
+/**
+ * Representation candidates for global reorders (exact everywhere: the whole
+ * test suite runs against each copy). subs-lookup replaces the slot index by
+ * a mark of the unread suffix (edges only) and a source-side lookup through
+ * `s.subs` within the scan budget. The pass decides at its first unresolved
+ * miss: if that source's first subscribers hold the pair, mark; if the budget
+ * runs out, index as before (sources with many subscribers). A marked pass
+ * that meets such a source later falls back to the index. A marked pass walks
+ * no source to index it and none to unindex it.
+ *
+ * Shape: `miss` must stay under V8's inlining limit for bytecode, or every
+ * read that misses the cursor (repeats included) pays a call. A first draft
+ * that put this logic inline in `miss` crossed it ("exceeds bytecode limit"
+ * under --trace-turbo-inlining) and lost 1.8x on track.duplicate-64 with
+ * identical structural work. So the decision keeps the shape of the old
+ * `absent(s, c) === true` call, and the lookup is its own function.
+ */
+const findSub = [
+  "/** The pair's edge among the source's first SCAN subscribers: null when the",
+  " * list ends first (absent), undefined when the budget runs out (unknown). */",
+  "function findSub(s: Node, c: Node): Edge | null | undefined {",
+  "  let budget = SCAN;",
+  "  for (let e = s.subs; e !== null; e = e.nextSub) {",
+  "    if (e.to === c) return e;",
+  "    if (--budget === 0) return undefined;",
+  "  }",
+  "  return null;",
+  "}",
+  "/**",
+  " * The pass's first unresolved miss decides its lookup: through the",
+  " * subscribers (mark the unread suffix) when this source's first ones hold",
+  " * the pair, the slot index when the budget runs out. True: absent.",
+  " */",
+  "function begin(c: Node, s: Node, next: Edge | null): boolean {",
+  "  const first = findSub(s, c);",
+  "  if (first === null) return true;",
+  "  if (first === undefined) index(c, next);",
+  "  else {",
+  "    if (__STATS__) stats.indexes++;",
+  "    c.flags |= Flag.Marked;",
+  "    for (let e = next; e !== null; e = e.next) {",
+  "      if (__STATS__) stats.indexed++;",
+  "      e.ver = UNREAD;",
+  "    }",
+  "  }",
+  "  return false;",
+  "}",
+  "/** A marked pass's lookup. True: resolved; false: indexed, the slot decides. */",
+  "function viaSubs(c: Node, s: Node, last: Edge | null, next: Edge | null): boolean {",
+  "  if (__STATS__) stats.lookups++;",
+  "  const pair = findSub(s, c);",
+  "  if (pair === null) {",
+  "    link(c, s, last, next, false);",
+  "    return true;",
+  "  }",
+  "  if (pair === undefined) {",
+  "    index(c, next);",
+  "    return false;",
+  "  }",
+  "  if (pair.ver !== UNREAD) {",
+  "    if (__STATS__) stats.dups++;",
+  "    pair.ver = s.ver;",
+  "    return true;",
+  "  }",
+  "  if (__STATS__) stats.moves++;",
+  "  pair.ver = s.ver;",
+  "  move(c, pair, last, next!);",
+  "  return true;",
+  "}",
+].join("\n");
+
+export const reorderVariants = {
+  "subs-lookup": [
+    "mark the unread suffix, find the pair through the source's first subscribers; the slot index for sources with many",
+    [F, "  Queued = 1 << 7,\n}", "  Queued = 1 << 7,\n  /** Its run marked the unread suffix UNREAD (source-side lookups). */\n  Marked = 1 << 8,\n}"],
+    [T, "  if ((c.flags & Flag.Indexed) === 0) {\n    // A source without subscribers is absent.", "  if ((c.flags & (Flag.Indexed | Flag.Marked)) === 0) {\n    // A source without subscribers is absent."],
+    [
+      T,
+      "    if ((e === null && p === null) || absent(s, c) === true)\n      return link(c, s, last, next, false);\n    index(c, next);\n  }\n",
+      [
+        "    if ((e === null && p === null) || begin(c, s, next) === true)",
+        "      return link(c, s, last, next, false);",
+        "  }",
+        "  if ((c.flags & Flag.Indexed) === 0 && viaSubs(c, s, last, next) === true) return;",
+        "",
+      ].join("\n"),
+    ],
+    [T, "/** No edge to `c` among the source's few subscribers. */\nfunction absent(s: Node, c: Node): boolean {\n  let budget = SCAN;\n  for (let e = s.subs; e !== null; e = e.nextSub)\n    if (e.to === c || --budget === 0) return false;\n  return true;\n}", findSub],
+    [K, "  n.flags = f & ~(Flag.Busy | Flag.Indexed);", "  n.flags = f & ~(Flag.Busy | Flag.Indexed | Flag.Marked);"],
+    [K, "  n.flags &= ~(Flag.Busy | Flag.Indexed);", "  n.flags &= ~(Flag.Busy | Flag.Indexed | Flag.Marked);"],
+  ],
+};
+
+async function bundle(name, entry, plugins = [], stats = false) {
   const dir = path.join(out, name);
   mkdirSync(dir, { recursive: true });
   await esbuild.build({
@@ -93,7 +186,7 @@ async function bundle(name, entry, plugins = []) {
     platform: "neutral",
     minify: true,
     target: "es2022",
-    define: { __STATS__: "false" },
+    define: { __STATS__: String(stats) },
     plugins,
     outfile: path.join(dir, "index.mjs"),
     logLevel: "warning",
@@ -133,6 +226,15 @@ if (import.meta.main ?? process.argv[1] === import.meta.filename) {
     await bundle(`surface-${id}`, path.join(root, "bench/adapters/quant-internals.ts"), [redirect(dir)]);
     await bundle(`surface-${id}-api`, path.join(root, "bench/adapters/quant.mjs"), [redirect(dir)]);
   }
-  const names = [...Object.keys(variants).map((v) => `lb-${v}`), ...Object.keys(surfaceVariants).map((v) => `surface-${v}`)];
+  for (const [id, [, ...edits]] of Object.entries(reorderVariants)) {
+    const dir = variantSource(`rv-${id}`, edits);
+    await bundle(`rv-${id}`, path.join(root, "bench/adapters/quant.mjs"), [redirect(dir)]);
+    await bundle(`rv-${id}-stats`, path.join(root, "bench/adapters/quant-stats.mjs"), [redirect(dir)], true);
+  }
+  const names = [
+    ...Object.keys(variants).map((v) => `lb-${v}`),
+    ...Object.keys(surfaceVariants).map((v) => `surface-${v}`),
+    ...Object.keys(reorderVariants).map((v) => `rv-${v}`),
+  ];
   console.log(`cost bundles: quant-internals, ${names.join(", ")}`);
 }

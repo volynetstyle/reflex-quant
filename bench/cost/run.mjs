@@ -20,6 +20,10 @@
 //                bench/cost/build.mjs): leaf get/set, and the mechanisms
 //                where a write has work to deliver, so a win on the empty
 //                path cannot hide a loss on the full one
+//   reorder      representation candidates for global reorders
+//                (reorderVariants in bench/cost/build.mjs) on reorders and
+//                on the local paths they must not slow, with quant's and each
+//                variant's structural work per step
 //
 // Protocol of bench/run.mjs: every cell (bundle, scenario, flags) runs in a
 // fresh process per round, cells in a random order per round, and the value
@@ -31,7 +35,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { arch, cpus, platform, release } from "node:os";
 import path from "node:path";
-import { surfaceVariants, variants } from "./build.mjs";
+import { reorderVariants, surfaceVariants, variants } from "./build.mjs";
 import { DECOMPOSE_SIZES, LAYOUT_SIZES, LOWER_SIZES, OPS, REGIME_SIZES } from "./scenarios.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
@@ -47,6 +51,12 @@ const structureWorker = path.join(root, "bench/cost/structure-worker.mjs");
 const RUNTIMES = { quant: "bench/quant", reflex: "bench/reflex", alien: "bench/alien" };
 const INTERNALS = "cost/quant-internals";
 const cell = (label, bundle, id, flags = [], suite = "cost") => ({ label, bundle, id, flags, suite, key: `${label}|${id}|${flags.join(" ")}` });
+/** Global reorders, where a variant should win, and local paths, where it must not lose. */
+const REORDER_WORK = [
+  ...["lb.shuffle@256", "lb.shuffle@1024", "lb.shuffle@4096", "lb.reverse@256", "lb.reverse@1024", "lb.reverse@4096", "regime.shuffle@8192", "lb.insert-one@1024"].map((id) => [id, "cost"]),
+  ...["long-reorder.256", "shared-chaotic.64x32", "reorder.reverse-8", "reorder.rotate-256", "value-sort.256x32", "replace-half.256", "edit.insert-one-256", "branch.switch-100"].map((id) => [id, "scenarios"]),
+  ...["track.stable-64", "track.swap-32", "track.duplicate-64"].map((id) => [id, "mechanisms"]),
+];
 /** Mechanisms (bench/mechanisms.mjs) for the surface A/B: empty and full write paths. */
 const SURFACE_WORK = ["read.signal", "write.no-subscribers", "write.same-value", "effect.rerun-1", "effect.through-computed", "batch.coalesce-64", "push.effects-1000"];
 const sizeOf = (id) => Number(id.split("@")[1]);
@@ -106,6 +116,19 @@ const probes = {
         }),
       ),
     report: lowerReport,
+  },
+  reorder: {
+    strict: true,
+    structureBundles: { quant: "bench/quant-stats", ...Object.fromEntries(Object.keys(reorderVariants).map((v) => [v, `cost/rv-${v}-stats`])) },
+    cells: () =>
+      REORDER_WORK.flatMap(([id, suite]) => [
+        cell("quant", RUNTIMES.quant, id, [], suite),
+        cell("identity", "cost/lb-identity", id, [], suite),
+        ...Object.keys(reorderVariants).map((v) => cell(v, `cost/rv-${v}`, id, [], suite)),
+        cell("reflex", RUNTIMES.reflex, id, [], suite),
+        cell("alien", RUNTIMES.alien, id, [], suite),
+      ]),
+    report: reorderReport,
   },
   surface: {
     strict: true,
@@ -176,6 +199,13 @@ if (args.includes("--verify-only")) {
 const structure = {};
 if (probe.structure) {
   for (const id of new Set(cells.filter((c) => c.label === "quant").map((c) => c.id))) structure[id] = json(structureWorker, [id]);
+}
+if (probe.structureBundles) {
+  for (const c of cells) {
+    const bundle = probe.structureBundles[c.label];
+    if (bundle === undefined || structure[`${c.label}|${c.id}`]) continue;
+    structure[`${c.label}|${c.id}`] = json(structureWorker, [c.id, "--bundle", path.join(root, ".cache", bundle), "--suite", c.suite]);
+  }
 }
 
 // 3. Timing.
@@ -301,6 +331,40 @@ function leafReport() {
     lines.push(row([c.label, num(ns), delta]));
   }
   return [...lines, ""];
+}
+
+function reorderReport() {
+  const vs = Object.keys(reorderVariants);
+  const labels = ["quant", "identity", ...vs, "reflex", "alien"];
+  const ids = [...new Set(cells.map((c) => c.id))];
+  const per = (id) => (Number.isFinite(sizeOf(id)) ? sizeOf(id) : 1);
+  const unit = (id) => (Number.isFinite(sizeOf(id)) ? "ns/N" : "ns/step");
+  const lines = ["Time (ns per N for sized ids, ns per step otherwise); then ratios to quant. identity is the same bytes as quant: its ratio is the noise of one cell.", ""];
+  lines.push(...head(["scenario", "unit", ...labels]));
+  for (const id of ids) lines.push(row([id, unit(id), ...labels.map((l) => num(at(l, id)?.ns / per(id)))]));
+  lines.push("", ...head(["scenario", "quant range", "identity", ...vs, "reflex", ...vs.map((v) => `${v} / reflex`)]));
+  for (const id of ids) {
+    const q = at("quant", id);
+    lines.push(
+      row([
+        id,
+        q ? `${num(q.min / per(id))}..${num(q.max / per(id))}` : "—",
+        ...["identity", ...vs, "reflex"].map((l) => num(at(l, id)?.ns / q?.ns)),
+        ...vs.map((v) => num(at(v, id)?.ns / at("reflex", id)?.ns)),
+      ]),
+    );
+  }
+  lines.push("", "Structural work per step (quant | variants): lookups, moves, index or mark walks, edges walked.", "");
+  lines.push(...head(["scenario", ...["quant", ...vs].map((l) => `${l}: lookups / moves / walks / walked`)]));
+  for (const id of ids) {
+    const cellsOf = ["quant", ...vs].map((l) => {
+      const p = structure[`${l}|${id}`]?.perStep;
+      return p ? `${num(p.lookups, 1)} / ${num(p.moves, 1)} / ${num(p.indexes, 1)} / ${num(p.indexed, 1)}` : "—";
+    });
+    lines.push(row([id, ...cellsOf]));
+  }
+  lines.push("", "Variants:", "", ...Object.entries(reorderVariants).map(([v, [what]]) => `- ${v}: ${what}`), "");
+  return lines;
 }
 
 function surfaceReport() {

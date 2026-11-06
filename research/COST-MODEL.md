@@ -206,3 +206,47 @@ effect.through-computed, batch.coalesce-64, push.effects-1000), so a win on
 the empty path cannot hide a loss on the full one. The release should stay
 if, over repeated CI runs, it is no slower than `flush-call` beyond the
 `current` cell's own spread on the full paths.
+
+## Reorder candidate: subs-lookup (pending CI)
+
+`decompose` puts the largest part of a global reorder in the index: two
+walks over the source set in list order, which is random in memory (fill the
+slots, then clear them). Yet for a source with few subscribers the pair's
+edge is already in `s.subs`, and the read loads the source anyway.
+
+`subs-lookup` (`reorderVariants` in `bench/cost/build.mjs`) keeps the
+algorithm and changes the representation of the pass's lookup:
+
+- the first unresolved miss decides: if that source's first `SCAN`
+  subscribers hold the pair, mark the unread suffix `UNREAD` (a walk over
+  edges, no source) and look pairs up through `s.subs`; if the budget runs
+  out, index as before;
+- a marked pass that meets a source with more subscribers than the budget
+  falls back to the index (one extra suffix walk in that pass);
+- `UNREAD` tells an unread edge from a repeated read exactly as the index's
+  marks do; a marked pass has no slots, so nothing is cleared at its end.
+
+Evidence so far:
+
+- **Exact.** 61 of 62 tests against its source copy, the differential
+  suites included; the failure pins an exact count (`indexed = n + 1`, the
+  index walk), where the mark walks only the suffix. Allocation and
+  linearity bounds hold. Checksums equal on all 95 cells of the probe.
+- **Same structural work.** Lookups, moves and walks per step equal quant's
+  on every reorder workload, shared-chaotic included (32 walks, the pass
+  decides the index for consumers deep in the subscriber lists).
+- **The inlining budget is part of the cost model.** The first draft, with
+  the lookup inline in `miss`, made `miss` exceed V8's bytecode limit for
+  inlining (`--trace-turbo-inlining`: "exceeds bytecode limit"). With
+  identical structural work it lost 1.8x on `track.duplicate-64` and 8–20 %
+  on small reorders: every read that misses the cursor paid a call. Keeping
+  `miss` at its old shape (the decision has the form of the old
+  `absent(s, c) === true`, the lookup is its own function) removes it.
+- **Local indication** (3 rounds on a developer machine, not evidence):
+  global reorders 0.81–0.94 of quant at every N, long-reorder.256 0.91;
+  local paths within the `identity` control's own spread (up to 1.20 there).
+
+Adoption needs repeated CI runs of `reorder` with global reorders faster
+and no local path slower than `identity`'s spread; then it is classified as
+an optimization (a transient per-pass flag, `Marked`, no persistent state)
+and the count-pinning test is rewritten as the bound it stands for.

@@ -1,19 +1,24 @@
-// Structural work of one cost scenario on quant, in a fresh process (the stack
-// high-water mark is cumulative, so one scenario per process).
+// Structural work of one scenario on a quant stats bundle, in a fresh process
+// (the stack high-water mark is cumulative, so one scenario per process).
 //
-//   node --expose-gc bench/cost/structure-worker.mjs <scenario-id>
+//   node --expose-gc bench/cost/structure-worker.mjs <scenario-id> [--bundle <dir>] [--suite <name>]
 //
-// Prints one JSON line: kernel counters per step (mean over 256 steps after 64
-// warm-up steps), the work stack's high-water mark, and the heap after setup.
+// Defaults: the quant-stats bundle (.cache/bench/quant-stats) and the cost
+// suite. Prints one JSON line: kernel counters per step (mean over 256 steps
+// after 64 warm-up steps), the work stack's high-water mark, and the heap
+// after setup.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { scenarios } from "./scenarios.mjs";
+import { suiteOf } from "../suites.mjs";
 
 const root = path.resolve(import.meta.dirname, "../..");
-const [id] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const [id] = args;
+const bundle = args.includes("--bundle") ? args[args.indexOf("--bundle") + 1] : path.join(root, ".cache/bench/quant-stats");
+const { scenarios } = suiteOf(args.includes("--suite") ? args : [...args, "--suite", "cost"]);
 const scenario = scenarios.find((s) => s.id === id);
 if (scenario === undefined) throw new Error(`unknown scenario ${id}`);
-const api = await import(pathToFileURL(path.join(root, ".cache/bench/quant-stats/index.mjs")).href);
+const api = await import(pathToFileURL(path.join(path.resolve(bundle), "index.mjs")).href);
 
 // Two full collections each side: one is not always enough to settle the heap.
 const settle = () => (globalThis.gc?.(), globalThis.gc?.(), process.memoryUsage().heapUsed);
