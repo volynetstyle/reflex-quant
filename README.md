@@ -14,8 +14,9 @@ later changes of Reflex.
   [`src/kernel.ts`](src/kernel.ts) (execution context, stack-dependent tracking,
   invalidation and validation), [`src/host.ts`](src/host.ts)
   (watcher lifecycle, queue, batch), [`src/index.ts`](src/index.ts)
-  (`signal`, `computed`, `effect`, `get`, `set`, `dispose`, `batch`,
-  `untracked`; a handle is the node itself). Research counters live in
+  (`signal`, `computed`, `effect`, `get`, `peek`, `set`, `update`, `dispose`,
+  `batch`, `untracked`; a handle is the node itself; see [Surface](#surface)).
+  Research counters live in
   [`src/instrumentation.ts`](src/instrumentation.ts) and are eliminated from
   the release. The ESM and CJS bundles are each standalone; ESM is about 2 KB gzip.
 - **Report:** [research/REPORT.md](research/REPORT.md). **Design log**, one
@@ -38,6 +39,33 @@ later changes of Reflex.
   factor only timing sees.
 - On CI: within 25 % of the better of Reflex and alien-signals on 14 of 18
   scenarios, faster than both on 8. Reorders allocate nothing.
+
+## Surface
+
+Every operation exposes semantics the kernel and host already have; none adds
+a field, a flag or a branch on a hot path ([research/LOG.md](research/LOG.md) item 26).
+
+```ts
+const a = signal(1);
+const total = computed((prev) => prev + get(a), 0); // prev: last committed value
+get(total);                                         // refresh and observe
+peek(total);                                        // refresh, do not observe
+set(a, 2);
+update(a, (v) => v + 1);                            // untracked fn, then set
+dispose(total);                                     // detach; the value stays readable
+```
+
+- `computed(fn, initial?)`: `prev` is the last **successfully committed** value
+  (`initial` before the first commit; a failed run leaves it unchanged). It
+  advances per execution, not per write: writes coalesced by a batch or by
+  laziness are one step. Returning `prev` itself is a cutoff, so custom
+  equality needs no comparator: `(prev) => (equal(prev, next) ? prev : next)`.
+  Sources keep `Object.is`.
+- `peek(x)`: `get` without its tracking half; equal to
+  `untracked(() => get(x))`, without the closure.
+- `update(s, fn)`: a write, not an observation. `fn` runs untracked, so
+  neither `s` nor what `fn` reads becomes a dependency of the running
+  consumer; if `fn` throws, nothing is written.
 
 ## Layout
 

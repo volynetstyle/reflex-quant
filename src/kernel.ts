@@ -152,6 +152,13 @@ export function read(n: Node): unknown {
   return n.value;
 }
 
+/** `read` without its tracking half: bring `s` up to date, record no relation. */
+export function peek(s: Node): unknown {
+  if ((s.flags & (Flag.Stale | Flag.Dirty | Flag.Busy)) !== 0) pull(s);
+
+  return s.value;
+}
+
 /**
  * Pull a computed up to date. Existential, in read order: sources are
  * checked first to last and the first changed one makes the node run. A

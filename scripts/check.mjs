@@ -154,7 +154,7 @@ try {
     const consumer = path.join(tmp, `use.${extension}`);
     consumers.push(consumer);
     writeFileSync(consumer, [
-      `import { signal, computed, effect, get, set, dispose, type Signal, type Computed, type Readable } from ${JSON.stringify(path.join(root, "dist", entry).replaceAll("\\", "/"))};`,
+      `import { signal, computed, effect, get, peek, set, update, dispose, type Signal, type Computed, type Readable } from ${JSON.stringify(path.join(root, "dist", entry).replaceAll("\\", "/"))};`,
       "const a: Signal<number> = signal(1);",
       "const b: Computed<string> = computed(() => String(get(a)));",
       "const s: string = get(b);",
@@ -167,6 +167,15 @@ try {
       "// @ts-expect-error a signal is written, so it is invariant",
       "const w: Signal<number | string> = a;",
       "export { r, w };",
+      "// Seeded computed: prev is T, not T | undefined.",
+      "const total: Computed<number> = computed((prev) => prev + get(a), 0);",
+      "const p: number = peek(total);",
+      "update(a, (v) => v + 1);",
+      "// @ts-expect-error update needs a signal",
+      "update(total, (v) => v);",
+      "// @ts-expect-error without a seed, prev may be undefined",
+      "computed((prev: number) => prev + 1);",
+      "export { p };",
       "export { s };",
     ].join("\n"));
   }

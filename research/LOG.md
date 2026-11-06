@@ -348,3 +348,43 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   test, but is the repair of item 24, which measured it; a local A/B agrees
   (lifecycle.mount-100 1.08 and 1.17 slower without it).
 
+
+### 26. Surface: seeded computed, peek, update (surface API, no mechanism)
+
+- **Question:** which operations does the machine already carry that the
+  surface does not expose? Classified as **surface API** (SPEC): no field,
+  flag, relation, traversal phase or lifecycle rule is added, and no
+  invariant changes.
+- **Seeded computed:** `exec` already calls `fn(n.value)` and commits only
+  after success, so `n.value` is the last committed value and survives a
+  failed run (F1). `computed(fn, initial)` only changes the second argument
+  of `node`. Returning `prev` reaches the existing `Object.is` cutoff (P2),
+  so equality on a derived value needs no comparator field; sources keep
+  P1 as is. A seed is safe for versions: no relation can observe a computed
+  before its first commit, because `read` pulls before it tracks.
+- **peek:** the refresh half of `read`; the same answers as
+  `untracked(() => get(x))` (`surface.test.ts`), without the closure and
+  the context swap. Its parameter is named `s`, so the `read` line that
+  mutant `no-cycle-check` edits stays unique.
+- **update:** `write(s, fn(s.value))`, then `flush`. Decision: `fn` runs
+  untracked. An update is a write; with a tracked `fn`, `update(counter, ...)`
+  inside a computation would silently subscribe it to whatever `fn` reads.
+  Pinned by `surface.test.ts`.
+- **Result:** tests 62/62; mutant verdicts unchanged (23 of 24 killed, the
+  survivor is still `no-fresh-source`); `read` and every mutant anchor are
+  untouched. Bundle 2022 → 2068 bytes gzip.
+- **Not exposed:**
+  - `materialize(c)` (= `peek`, then `dispose`): the freeze already exists
+    and is tested; two calls express it.
+  - Manual watcher (`watcher(fn, false)` + `run`): the state exists
+    (`Auto`), but `run` outside the drain would change the ordering of the
+    watchers it creates (item 11). It needs its own host-policy entry, not a
+    surface one.
+  - `touch(signal)`, a signal comparator: a change that is not an
+    `Object.is`-visible commit is a different P1; manual invalidation of
+    mutable containers is outside the boundary (SPEC).
+  - Scheduler, priority or owner in a watcher's unused slots (`subs`,
+    `lastSub`, `slot`): free in memory, but scheduling and ownership are
+    framework policy (SPEC), and the fields would change meaning by node kind.
+  - `isDisposed`, `pending`: readable from `fn` and the flags; no witness
+    asks for them.

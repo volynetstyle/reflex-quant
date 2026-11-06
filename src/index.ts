@@ -1,9 +1,18 @@
-// Public API: signal, computed, effect, get, set, dispose, batch, untracked.
-// A handle is the node itself: nothing is allocated besides the node, and
-// handle <-> node conversions are type assertions only (no runtime wrapper).
+// Public API: signal, computed, effect, get, peek, set, update, dispose,
+// batch, untracked. A handle is the node itself: nothing is allocated besides
+// the node, and handle <-> node conversions are type assertions only (no
+// runtime wrapper). Every operation here exposes existing kernel and host
+// semantics; none adds state.
 import { Flag } from "./flags";
 import { flush, start, stop, watcher } from "./host";
-import { dispose as detach, node, read, write } from "./kernel";
+import {
+  dispose as detach,
+  node,
+  peek as refresh,
+  read,
+  untracked,
+  write,
+} from "./kernel";
 import type { Fn, Node } from "./model";
 import type { Computed, Effect, Readable, Signal } from "./types";
 
@@ -15,8 +24,19 @@ export function signal<T>(value: T): Signal<T> {
   return node(null, value, 0) as unknown as Signal<T>;
 }
 
-export function computed<T>(fn: (prev: T | undefined) => T): Computed<T> {
-  return node(fn as Fn, undefined, Flag.Dirty) as unknown as Computed<T>;
+/**
+ * `fn` receives `prev`, the last successfully committed value: `initial`
+ * (or undefined) before the first commit, unchanged by a failed run.
+ * Returning `prev` itself is a cutoff: consumers do not rerun, so custom
+ * equality is `(prev) => (equal(prev, next) ? prev : next)`.
+ */
+export function computed<T>(fn: (prev: T | undefined) => T): Computed<T>;
+export function computed<T>(fn: (prev: T) => T, initial: T): Computed<T>;
+export function computed<T>(
+  fn: (prev: T | undefined) => T,
+  initial?: T,
+): Computed<T> {
+  return node(fn as Fn, initial, Flag.Dirty) as unknown as Computed<T>;
 }
 
 /** Runs now (or when the enclosing batch or drain ends), then on every change it read. */
@@ -31,8 +51,28 @@ export function get<T>(source: Readable<T>): T {
   return read(source as unknown as Node) as T;
 }
 
+/** `get` without observation: up to date, but the running consumer does not depend on it. */
+export function peek<T>(source: Readable<T>): T {
+  return refresh(source as unknown as Node) as T;
+}
+
 export function set<T>(source: Signal<T>, value: T): void {
   write(source as unknown as Node, value);
+  flush();
+}
+
+/**
+ * `set(source, fn(current))`. An update is a write, not an observation:
+ * `fn` runs untracked, so neither `source` nor what `fn` reads becomes a
+ * dependency of the running consumer. If `fn` throws, nothing is written.
+ */
+export function update<T>(source: Signal<T>, fn: (value: T) => T): void {
+  const sourceNode = source as unknown as Node;
+
+  write(
+    sourceNode,
+    untracked(() => fn(sourceNode.value as T)),
+  );
   flush();
 }
 
