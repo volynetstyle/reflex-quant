@@ -8,10 +8,10 @@
 
 export const SIZES = [16, 64, 256, 1024, 4096];
 
-const range = (n) => Array.from({ length: n }, (_, i) => i);
-const SMI = 0x3fffffff;
+export const range = (n) => Array.from({ length: n }, (_, i) => i);
+export const SMI = 0x3fffffff;
 
-function permutation(n, seed) {
+export function permutation(n, seed) {
   const order = range(n);
   let s = seed >>> 0 || 1;
   for (let i = n - 1; i > 0; i--) {

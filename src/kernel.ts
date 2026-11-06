@@ -57,6 +57,14 @@ export function idle(): boolean {
   return active === null && top === 0;
 }
 
+/**
+ * Deepest work-stack top reached so far (research). Walks null the slots
+ * they pop but never shrink the array, so its length is the high-water mark.
+ */
+export function stackHighWater(): number {
+  return stack.length;
+}
+
 // ------------------------------------------------------------------- write
 
 export function write(s: Node, value: unknown): void {

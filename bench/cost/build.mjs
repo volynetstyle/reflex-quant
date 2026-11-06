@@ -1,0 +1,90 @@
+// Bundles for the cost probes, into .cache/cost/<name>/index.mjs.
+//
+//   node bench/build.mjs && node bench/cost/build.mjs
+//
+// quant-internals  raw-handle API, kernel/graph primitives (decompose, leaf)
+// lb-<variant>     quant behind the neutral adapter, with one constant-factor
+//                  mechanism removed or replaced (lower bounds, not proposals)
+//
+// Lower-bound variants are exact on the lb.* workloads (one consumer, no
+// nesting), which run.mjs checks by checksum before timing; elsewhere they may
+// be wrong. Edits use the convention of research/mutants.mjs: blank lines are
+// dropped first, and each `find` must occur exactly once.
+import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
+import path from "node:path";
+
+const root = path.resolve(import.meta.dirname, "../..");
+const out = path.join(root, ".cache/cost");
+const esbuild = createRequire(path.join(root, "package.json"))("esbuild");
+const F = "flags.ts";
+const T = "tracking.ts";
+const K = "kernel.ts";
+
+const prefixScan =
+  "    let p = last !== null ? last.prev : null;\n    budget = SCAN;\n    while (p !== null && p.from !== s && --budget !== 0) p = p.prev;\n    if (p !== null && p.from === s) {\n      if (__STATS__) stats.dups++;\n      p.ver = s.ver;\n      return;\n    }\n";
+const displaced = [
+  [K, "    const s = e.from;\n    if (s.slot !== null) {\n      stack[top++] = s;\n      stack[top++] = s.slot;\n    }\n    s.slot = e;", "    const s = e.from;\n    s.slot = e;"],
+  [K, "  if (indexed) {\n    if (s.slot !== null) {\n      stack[top++] = s;\n      stack[top++] = s.slot;\n    }\n    s.slot = e;", "  if (indexed) {\n    s.slot = e;"],
+];
+const firstMiss = [
+  [T, "  if ((c.flags & Flag.Indexed) === 0) {\n    // A source without subscribers is absent.", "  if ((c.flags & Flag.Indexed) === 0) index(c, next);\n  if (false) {\n    // A source without subscribers is absent."],
+];
+
+/** variant -> [what it removes, ...edits] */
+export const variants = {
+  "scan-1": ["bounded scans look at one edge (SCAN = 8 -> 1)", [F, "export const SCAN = 8;", "export const SCAN = 1;"]],
+  "no-absent": ["no source-side absence proof: an unproven miss indexes", [T, "    if ((e === null && p === null) || absent(s, c) === true)", "    if (e === null && p === null)"]],
+  "no-prefix-scan": ["no backward scan for a repeated read: repeats go to the index", [T, prefixScan, "    const p = last;\n"]],
+  "index-first-miss": ["the first miss indexes at once: no fresh-source, scan or absence steps", ...firstMiss],
+  "no-displaced": ["no save/restore of displaced slot cells (nesting unsupported)", ...displaced],
+  "lean": ["index-first-miss and no-displaced together", ...firstMiss, ...displaced],
+};
+
+async function bundle(name, entry, plugins = []) {
+  const dir = path.join(out, name);
+  mkdirSync(dir, { recursive: true });
+  await esbuild.build({
+    entryPoints: [entry],
+    bundle: true,
+    format: "esm",
+    platform: "neutral",
+    minify: true,
+    target: "es2022",
+    define: { __STATS__: "false" },
+    plugins,
+    outfile: path.join(dir, "index.mjs"),
+    logLevel: "warning",
+  });
+}
+
+function variantSource(id, edits) {
+  const dir = path.join(out, "src", id);
+  rmSync(dir, { recursive: true, force: true });
+  cpSync(path.join(root, "src"), dir, { recursive: true });
+  for (const [file, find, replace] of edits) {
+    const target = path.join(dir, file);
+    const text = readFileSync(target, "utf8").replace(/\r?\n([ \t]*\r?\n)+/g, "\n");
+    const at = text.indexOf(find);
+    if (at < 0 || text.indexOf(find, at + 1) >= 0) throw new Error(`${id}: edit not found once in ${file}: ${find.slice(0, 60)}`);
+    writeFileSync(target, text.slice(0, at) + replace + text.slice(at + find.length));
+  }
+  return dir;
+}
+
+/** Resolve the adapter's `../../src/index.ts` to a variant's copy. */
+const redirect = (dir) => ({
+  name: "variant-src",
+  setup(build) {
+    build.onResolve({ filter: /[\\/]src[\\/]index\.ts$/ }, () => ({ path: path.join(dir, "index.ts") }));
+  },
+});
+
+if (import.meta.main ?? process.argv[1] === import.meta.filename) {
+  rmSync(out, { recursive: true, force: true });
+  await bundle("quant-internals", path.join(root, "bench/adapters/quant-internals.ts"));
+  for (const [id, [, ...edits]] of Object.entries(variants)) {
+    await bundle(`lb-${id}`, path.join(root, "bench/adapters/quant.mjs"), [redirect(variantSource(id, edits))]);
+  }
+  console.log(`cost bundles: quant-internals, ${Object.keys(variants).map((v) => `lb-${v}`).join(", ")}`);
+}
