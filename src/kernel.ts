@@ -319,7 +319,7 @@ export function exec(n: Node): void {
 
   if ((f & Flag.Indexed) !== 0) unindex(n, base);
 
-  n.flags = f & ~(Flag.Busy | Flag.Indexed);
+  n.flags = f & ~(Flag.Busy | Flag.Indexed | Flag.Marked);
 
   if (n.fn === null) return detach(n);
   // Commit only after a successful run. Dropping the unread suffix removes
@@ -343,7 +343,7 @@ export function exec(n: Node): void {
 function fail(n: Node, base: number): void {
   if ((n.flags & Flag.Indexed) !== 0) unindex(n, base);
 
-  n.flags &= ~(Flag.Busy | Flag.Indexed);
+  n.flags &= ~(Flag.Busy | Flag.Indexed | Flag.Marked);
 
   if (n.fn === null) return detach(n);
 

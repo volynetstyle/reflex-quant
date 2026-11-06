@@ -48,10 +48,25 @@
   },
   {
     "id": "no-absence-proof",
-    "mechanism": "O1: bounded absence proofs, consumer or source side, before indexing (optimization)",
+    "mechanism": "O1: a completely scanned reader list proves absence before the subscribers are asked (optimization)",
     "killed": true,
     "failed": [
-      "structure.test.ts > O1: sources with a few other subscribers are proven absent without indexing"
+      "structure.test.ts > O1: a completely scanned reader list proves absence where the subscribers cannot"
+    ]
+  },
+  {
+    "id": "index-always",
+    "mechanism": "LOG 28: a pair found among the subscribers marks the pass instead of indexing it (optimization)",
+    "killed": false,
+    "failed": []
+  },
+  {
+    "id": "no-mark",
+    "mechanism": "LOG 28: a marked pass sets UNREAD on its unread suffix",
+    "killed": true,
+    "failed": [
+      "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
+      "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index"
     ]
   },
   {
@@ -68,8 +83,6 @@
     "killed": true,
     "failed": [
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
-      "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
-      "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
       "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)"
     ]
   },
@@ -205,7 +218,8 @@
     "killed": true,
     "failed": [
       "semantics.test.ts > failing effect does not stop the others; the error reaches the writer",
-      "semantics.test.ts > disposing a sibling sharing the sources during a run leaves the others intact"
+      "semantics.test.ts > disposing a sibling sharing the sources during a run leaves the others intact",
+      "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation"
     ]
   }
 ]

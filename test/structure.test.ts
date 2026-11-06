@@ -125,6 +125,17 @@ describe("structural bounds", () => {
     expect(stats.links).toBe(10 * 50);
   });
 
+  it("O1: a completely scanned reader list proves absence where the subscribers cannot", () => {
+    // Each source has more subscribers than the scan budget, so only the new
+    // reader's own short list proves that its first reads are new relations.
+    const ps = range(4).map(signal);
+    range(10).forEach(() => read(computed(() => ps.reduce((s, p) => s + (read(p) as number), 0))));
+    resetStats();
+    read(computed(() => ps.reduce((s, p) => s + (read(p) as number), 0)));
+    expect(stats.links).toBe(4);
+    expect(stats.indexes).toBe(0);
+  });
+
   it("random reorder of wide sources: one linear index walk per pass, no allocation", () => {
     const n = 128;
     const ps = range(n).map(signal);

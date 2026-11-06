@@ -414,3 +414,47 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   release (`current`) against the previous `set` (`flush-call`), the guard
   order alone (`size-first`) and a host `commit`, on the empty write path
   and on writes that have work to deliver.
+
+### 28. Pairs through subscribers: a marked pass instead of the slot index (optimization)
+
+- **Observation:** `research/COST-MODEL.md`, probe `decompose`: in a global
+  reorder the index is the largest cost (25.5 of 59.2 ns per relation at
+  N = 4096): two walks over the source set in list order, which is random in
+  memory, to fill the slots and to clear them. For a source with few
+  subscribers the pair's edge is already in `s.subs`, and the read loads the
+  source anyway.
+- **Change:** proofs run cheapest first and each result is used once:
+  cursor (`read`), previous read, a source nobody reads, the bounded scans of
+  the reader's list, then the source's first `SCAN` subscribers (`pair`). A
+  completely scanned reader list proves absence without asking the
+  subscribers. At the pass's first miss no scan resolved, a pair found among
+  the subscribers marks the unread suffix `UNREAD` (`unread`: a walk over
+  edges, not sources; flag `Marked`) and is taken at once; the rest of the
+  pass finds pairs the same way. Only a source whose budget runs out indexes
+  the pass, as before; a marked pass then falls back to the index. A found
+  edge, by subscribers or by slot, is classified by one function (`take`): an
+  unread edge moves to the cursor, a repeated read keeps its place.
+- **Inlining:** `miss` stays under V8's limit for an inlined function (460
+  bytes of bytecode): 409 bytes, against 389 before and 447 for a draft that
+  kept the slot path inline (13 bytes from the limit). A first research draft
+  with the lookup inline in `miss` crossed it (`--trace-turbo-inlining`:
+  "exceeds bytecode limit") and, with identical structural work, lost 1.8x on
+  track.duplicate-64: every read that misses the cursor paid a call. The
+  indexed pass goes to `slot` (67 bytes) at once and after a fallback;
+  `pair` 51, `take` 45, `unread` 40 bytes. No inlining refusal on duplicate,
+  stable, local-edit, rotate, long-reorder or shared-chaotic workloads.
+- **Classification:** optimization (SPEC): same answers, same structural
+  work per step on every reorder workload, shared-chaotic included; a
+  transient per-pass flag, no persistent state. Flag values are unchanged
+  (`Marked = 1 << 8`).
+- **Evidence:** tests 63/63. The count-pinning test of 64 shared sources now
+  states its bound (at most one walk over the list per pass). New structural
+  test: a reader's fully scanned list proves absence where 10 subscribers
+  per source exceed the budget (it kills `no-absence-proof`, which the
+  subscriber lookup would otherwise have made untested). Mutants: `no-mark`
+  is killed by exactness tests (unread edges would be taken for repeats and
+  cut); `index-always` (this change undone) survives, a constant factor only
+  timing sees. 24 of 26 ablations are killed. Release 2086 → 2162 bytes gzip.
+- **Status:** adopted. The repeated measurement is probe `reorder` against
+  `index-always` (the previous release): global reorders must be faster, and
+  local paths no slower than the `identity` control's spread.

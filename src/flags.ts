@@ -8,6 +8,8 @@ export const enum Flag {
   Busy = 1 << 2,
   /** Its run put its edges into the sources' slots. */
   Indexed = 1 << 3,
+  /** Its run marked its unread edges UNREAD; pairs are found through subscribers. */
+  Marked = 1 << 8,
   /** A watcher: handed to the host, never read. */
   Watch = 1 << 4,
   /** Woken by signals only; computed sources need no validation. */
@@ -18,9 +20,9 @@ export const enum Flag {
   Queued = 1 << 7,
 }
 
-/** edge.ver of an edge the indexed run has not read yet. */
+/** edge.ver of an edge the marked or indexed run has not read yet. */
 export const UNREAD = -1;
 /** Counters wrap inside the SMI range. */
 export const MASK = 0x3fffffff;
-/** Scan budget before indexing: a constant keeps a run linear. */
+/** Scan budget of every bounded search: a constant keeps a run linear. */
 export const SCAN = 8;

@@ -181,11 +181,11 @@ Every remaining mechanism has a counterexample: removing it fails a test.
 This is a Level 1 claim about this architecture, not a necessity proof; see
 [WITNESS-AUDIT.md](./WITNESS-AUDIT.md), which merges the ablations into ten
 obligations and classifies each witness.
-23 of 24 ablations are killed (`research/mutants.mjs`, `mutants.json`): 18
+24 of 26 ablations are killed (`research/mutants.mjs`, `mutants.json`): 19
 by semantic tests, 4 only by structural bounds (the optimizations of Q4), 1
-only by tests that assert sibling order (the convention of Q4). The
-survivor, `no-fresh-source`, is a pure constant factor that only CI timing
-sees (LOG 22).
+only by tests that assert sibling order (the convention of Q4). The two
+survivors are pure constant factors that only CI timing sees:
+`no-fresh-source` (LOG 22) and `index-always` (LOG 28).
 
 | Mechanism | Smallest counterexample (test or probe) |
 | --- | --- |
@@ -211,10 +211,10 @@ sees (LOG 22).
 
 | Class | Mechanisms |
 | --- | --- |
-| correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; RUNNING (cycles, deferred disposal); WATCH delivery |
+| correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD on an indexed or marked pass, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; RUNNING (cycles, deferred disposal); WATCH delivery |
 | failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3) |
 | asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack) |
-| constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; `readSignal`; delivery on the STALE transition; no version compares once owed |
+| constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; a marked pass finds pairs through subscribers instead of the slot index (LOG 28); `readSignal`; delivery on the STALE transition; no version compares once owed |
 | convention | `subsTail` (FIFO sibling order; only order-asserting tests fail without it) |
 | removed as unnecessary | the run() guard against a watcher on the stack (no API path reaches it) |
 

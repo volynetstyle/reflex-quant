@@ -34,14 +34,14 @@ const displaced = [
   [K, "  if (indexed) {\n    if (s.slot !== null) {\n      stack[top++] = s;\n      stack[top++] = s.slot;\n    }\n    s.slot = e;", "  if (indexed) {\n    s.slot = e;"],
 ];
 const firstMiss = [
-  [T, "  if ((c.flags & Flag.Indexed) === 0) {\n    // A source without subscribers is absent.", "  if ((c.flags & Flag.Indexed) === 0) index(c, next);\n  if (false) {\n    // A source without subscribers is absent."],
+  [T, "  if ((f & Flag.Marked) === 0) {\n    // A source without subscribers is absent.", "  index(c, next);\n  return slot(c, s, last, next);\n  if ((f & Flag.Marked) === 0) {\n    // A source without subscribers is absent."],
 ];
 
 /** variant -> [what it removes, ...edits] */
 export const variants = {
   identity: ["no edit: the same bytes as quant (control for the noise of one cell)"],
   "scan-1": ["bounded scans look at one edge (SCAN = 8 -> 1)", [F, "export const SCAN = 8;", "export const SCAN = 1;"]],
-  "no-absent": ["no source-side absence proof: an unproven miss indexes", [T, "    if ((e === null && p === null) || absent(s, c) === true)", "    if (e === null && p === null)"]],
+  "no-absent": ["no source-side absence proof: an unproven miss indexes", [T, "  return null;\n}", "  return undefined;\n}"]],
   "no-prefix-scan": ["no backward scan for a repeated read: repeats go to the index", [T, prefixScan, "    const p = last;\n"]],
   "index-first-miss": ["the first miss indexes at once: no fresh-source, scan or absence steps", ...firstMiss],
   "no-displaced": ["no save/restore of displaced slot cells (nesting unsupported)", ...displaced],
@@ -84,95 +84,16 @@ export const surfaceVariants = {
 };
 
 /**
- * Representation candidates for global reorders (exact everywhere: the whole
- * test suite runs against each copy). subs-lookup replaces the slot index by
- * a mark of the unread suffix (edges only) and a source-side lookup through
- * `s.subs` within the scan budget. The pass decides at its first unresolved
- * miss: if that source's first subscribers hold the pair, mark; if the budget
- * runs out, index as before (sources with many subscribers). A marked pass
- * that meets such a source later falls back to the index. A marked pass walks
- * no source to index it and none to unindex it.
- *
- * Shape: `miss` must stay under V8's inlining limit for bytecode, or every
- * read that misses the cursor (repeats included) pays a call. A first draft
- * that put this logic inline in `miss` crossed it ("exceeds bytecode limit"
- * under --trace-turbo-inlining) and lost 1.8x on track.duplicate-64 with
- * identical structural work. So the decision keeps the shape of the old
- * `absent(s, c) === true` call, and the lookup is its own function.
+ * Representation candidates for global reorders, against the release (LOG 28:
+ * a pass whose first unresolved miss finds the pair among the source's first
+ * subscribers marks its unread suffix and finds pairs through subscribers).
+ * index-always is the previous release: such a pass indexes. Exact
+ * everywhere; the test suite runs against each copy.
  */
-const findSub = [
-  "/** The pair's edge among the source's first SCAN subscribers: null when the",
-  " * list ends first (absent), undefined when the budget runs out (unknown). */",
-  "function findSub(s: Node, c: Node): Edge | null | undefined {",
-  "  let budget = SCAN;",
-  "  for (let e = s.subs; e !== null; e = e.nextSub) {",
-  "    if (e.to === c) return e;",
-  "    if (--budget === 0) return undefined;",
-  "  }",
-  "  return null;",
-  "}",
-  "/**",
-  " * The pass's first unresolved miss decides its lookup: through the",
-  " * subscribers (mark the unread suffix) when this source's first ones hold",
-  " * the pair, the slot index when the budget runs out. True: absent.",
-  " */",
-  "function begin(c: Node, s: Node, next: Edge | null): boolean {",
-  "  const first = findSub(s, c);",
-  "  if (first === null) return true;",
-  "  if (first === undefined) index(c, next);",
-  "  else {",
-  "    if (__STATS__) stats.indexes++;",
-  "    c.flags |= Flag.Marked;",
-  "    for (let e = next; e !== null; e = e.next) {",
-  "      if (__STATS__) stats.indexed++;",
-  "      e.ver = UNREAD;",
-  "    }",
-  "  }",
-  "  return false;",
-  "}",
-  "/** A marked pass's lookup. True: resolved; false: indexed, the slot decides. */",
-  "function viaSubs(c: Node, s: Node, last: Edge | null, next: Edge | null): boolean {",
-  "  if (__STATS__) stats.lookups++;",
-  "  const pair = findSub(s, c);",
-  "  if (pair === null) {",
-  "    link(c, s, last, next, false);",
-  "    return true;",
-  "  }",
-  "  if (pair === undefined) {",
-  "    index(c, next);",
-  "    return false;",
-  "  }",
-  "  if (pair.ver !== UNREAD) {",
-  "    if (__STATS__) stats.dups++;",
-  "    pair.ver = s.ver;",
-  "    return true;",
-  "  }",
-  "  if (__STATS__) stats.moves++;",
-  "  pair.ver = s.ver;",
-  "  move(c, pair, last, next!);",
-  "  return true;",
-  "}",
-].join("\n");
-
 export const reorderVariants = {
-  "subs-lookup": [
-    "mark the unread suffix, find the pair through the source's first subscribers; the slot index for sources with many",
-    [F, "  Queued = 1 << 7,\n}", "  Queued = 1 << 7,\n  /** Its run marked the unread suffix UNREAD (source-side lookups). */\n  Marked = 1 << 8,\n}"],
-    [T, "  if ((c.flags & Flag.Indexed) === 0) {\n    // A source without subscribers is absent.", "  if ((c.flags & (Flag.Indexed | Flag.Marked)) === 0) {\n    // A source without subscribers is absent."],
-    [
-      T,
-      "    if ((e === null && p === null) || absent(s, c) === true)\n      return link(c, s, last, next, false);\n    index(c, next);\n  }\n",
-      [
-        "    if ((e === null && p === null) || begin(c, s, next) === true)",
-        "      return link(c, s, last, next, false);",
-        "  }",
-        "  if ((c.flags & Flag.Indexed) === 0 && viaSubs(c, s, last, next) === true) return;",
-        "",
-      ].join("\n"),
-    ],
-    [T, "/** No edge to `c` among the source's few subscribers. */\nfunction absent(s: Node, c: Node): boolean {\n  let budget = SCAN;\n  for (let e = s.subs; e !== null; e = e.nextSub)\n    if (e.to === c || --budget === 0) return false;\n  return true;\n}", findSub],
-    [K, "  n.flags = f & ~(Flag.Busy | Flag.Indexed);", "  n.flags = f & ~(Flag.Busy | Flag.Indexed | Flag.Marked);"],
-    [K, "  n.flags &= ~(Flag.Busy | Flag.Indexed);", "  n.flags &= ~(Flag.Busy | Flag.Indexed | Flag.Marked);"],
+  "index-always": [
+    "previous release: a pair found among the subscribers indexes the pass",
+    [T, "    if (found !== null && found !== undefined) unread(c, next);", "    if (found !== null) found = undefined;"],
   ],
 };
 

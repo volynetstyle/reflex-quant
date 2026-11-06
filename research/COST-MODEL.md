@@ -207,15 +207,16 @@ the empty path cannot hide a loss on the full one. The release should stay
 if, over repeated CI runs, it is no slower than `flush-call` beyond the
 `current` cell's own spread on the full paths.
 
-## Reorder candidate: subs-lookup (pending CI)
+## Reorder: pairs through subscribers (adopted, LOG 28; A/B pending CI)
 
 `decompose` puts the largest part of a global reorder in the index: two
 walks over the source set in list order, which is random in memory (fill the
 slots, then clear them). Yet for a source with few subscribers the pair's
 edge is already in `s.subs`, and the read loads the source anyway.
 
-`subs-lookup` (`reorderVariants` in `bench/cost/build.mjs`) keeps the
-algorithm and changes the representation of the pass's lookup:
+The release (LOG 28, `src/tracking.ts`) keeps the algorithm and changes the
+representation of the pass's lookup; it was first measured as the research
+variant `subs-lookup`:
 
 - the first unresolved miss decides: if that source's first `SCAN`
   subscribers hold the pair, mark the unread suffix `UNREAD` (a walk over
@@ -246,7 +247,9 @@ Evidence so far:
   global reorders 0.81–0.94 of quant at every N, long-reorder.256 0.91;
   local paths within the `identity` control's own spread (up to 1.20 there).
 
-Adoption needs repeated CI runs of `reorder` with global reorders faster
-and no local path slower than `identity`'s spread; then it is classified as
-an optimization (a transient per-pass flag, `Marked`, no persistent state)
-and the count-pinning test is rewritten as the bound it stands for.
+Adopted (LOG 28) with `miss` at 409 bytes of bytecode, under V8's 460-byte
+limit for an inlined function. Probe `reorder` now times the release
+against `index-always` (`reorderVariants`: the previous release, where a
+pair found among the subscribers indexes the pass). It should stay if, over
+repeated CI runs, global reorders are faster and no local path is slower
+than the `identity` control's spread.

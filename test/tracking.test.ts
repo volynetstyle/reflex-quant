@@ -103,9 +103,9 @@ describe("tracking", () => {
     }
     expect(stats.links).toBe(0);
     expect(stats.unlinks).toBe(0);
-    // Each pass indexes once and walks the list once: O(d), not O(d^2).
+    // Each pass marks or indexes once and walks at most its list once: O(d), not O(d^2).
     expect(stats.indexes).toBe(39 * 3);
-    expect(stats.indexed).toBe(39 * 3 * (n + 1));
+    expect(stats.indexed).toBeLessThanOrEqual(39 * 3 * (n + 1));
     cs.forEach((c, j) => expect(edges(c).every((e) => identity[j]!.has(e))).toBe(true));
     for (const p of ps) expect(subs(p).length).toBe(3);
     checkGraph(cs);
