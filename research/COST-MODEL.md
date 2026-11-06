@@ -163,17 +163,24 @@ Ratio to quant (EPYC 7763):
 | insert-one | 256 | 1.00 | 1.00 | 1.00 | 1.65 | 1.01 | 1.68 | 0.96 |
 | insert-one | 1024 | 1.00 | 1.00 | 1.00 | 1.77 | 1.00 | 1.79 | 0.94 |
 
-- **The 0.88–0.91 at N = 4096 is the noise of the quant cell, not mechanism
-  cost.** That cell is bimodal (round medians: reverse 20.9..23.9, shuffle
-  64.4..81.9, insert-one 11.2..15.2 ns/N), and every variant's median sits at
-  its lower mode, including `no-displaced`, which removes code that never
-  runs here (stack high-water 0), and `scan-1`, which changes one constant
-  in otherwise identical bytes. At 256 and 1024 the variants stay within
-  0.92–1.02 on reverse and shuffle. The constant-factor mechanisms explain at most a few percent of
-  reverse; Reflex is at 0.56–0.62. The difference is in the representation
+- **The 0.88–0.91 at N = 4096 is not mechanism cost**: `no-displaced`
+  removes code that never runs here (stack high-water 0) and reaches the
+  same ratio. At 256 and 1024 the variants stay within 0.92–1.02 on reverse
+  and shuffle. The constant-factor mechanisms explain at most a few percent
+  of reverse; Reflex is at 0.56–0.62. The difference is in the representation
   (index sweep, lookup through the source, intrusive move), not in branches.
-  The next run carries `identity` (the same bytes as quant) to measure the
-  cell noise directly.
+- **Correction (run 42269260132, with the `identity` control):** this
+  section first called the 4096 gap the noise of the quant cell. The control
+  refutes that. At N = 4096 the cells are bimodal, and the mode follows the
+  code's bytes, not the mechanism: quant, `identity` and `scan-1` (all 5,717
+  bytes) sit mostly in the slow mode (reverse round medians about 25.0, with
+  one or two of nine rounds at 22.5; insert-one 14.1, rarely 11.7), while
+  variants of another size (`no-displaced` 5,637, `no-prefix-scan` 5,594)
+  sit in the fast mode in every round (21.9, 11.7). `identity` / quant is
+  1.02 / 0.98 / 1.00 at 4096. A code-layout effect of 10–17 % at large N,
+  independent of what the edit removes; any A/B whose candidate changes the
+  bundle's bytes carries it, and only the small-N rows (256, 1024), where
+  the effect is absent, isolate the candidate.
 - **The cheap front end is what keeps local edits at Reflex's level**:
   without it (`index-first-miss`, `lean`) insert-one is 1.65–1.79× slower,
   while quant is at 10.8 ns/N against Reflex's 10.1 at N = 1024. Tracking has
@@ -191,7 +198,7 @@ Ratio to quant (EPYC 7763):
 | leaf read / write in the kernel | field access, version, flag test | alien level |
 | public `set` | + the host's delivery check | +1.37 ns per write |
 
-## Surface A/B (pending CI)
+## Surface A/B (LOG 27: confirmed by two CI runs)
 
 Adopted: `set` and `update` test the queue at the call site (LOG 27). The
 probe `surface` measures that release (`current`) against the alternatives
@@ -207,7 +214,28 @@ the empty path cannot hide a loss on the full one. The release should stay
 if, over repeated CI runs, it is no slower than `flush-call` beyond the
 `current` cell's own spread on the full paths.
 
-## Reorder: pairs through subscribers (adopted, LOG 28; A/B pending CI)
+Runs 42258925131 and 42269260132 (both EPYC 7763), ratio to `current`:
+
+| scenario | flush-call | size-first | commit | get-alias |
+| --- | ---: | ---: | ---: | ---: |
+| leaf `set` | 1.22 / 1.22 | 1.00 / 1.00 | 1.00 / 1.00 | 1.00 / 1.00 |
+| leaf `get` | 1.00 / 1.00 | 1.00 / 1.00 | 1.00 / 1.00 | 0.84 / 0.84 |
+| read.signal | 1.00 / 1.00 | 1.00 / 1.00 | 1.00 / 1.00 | 0.74 / 0.74 |
+| write.no-subscribers | 1.28 / 1.28 | 1.14 / 1.14 | 1.00 / 1.00 | 1.00 / 1.00 |
+| write.same-value | 1.61 / 1.58 | 1.12 / 1.10 | 1.12 / 1.10 | 1.00 / 1.00 |
+| effect.rerun-1 | 1.02 / 1.02 | 1.02 / 1.05 | 1.04 / 1.02 | 0.99 / 1.00 |
+| batch.coalesce-64 | 1.01 / 1.04 | 1.00 / 1.04 | 1.00 / 1.05 | 1.00 / 1.01 |
+
+- **LOG 27 holds**: the empty write path is 22–61 % dearer with the old
+  `flush()` call; on the full paths every candidate is inside `current`'s
+  round spread (effect.rerun-1 26.9..28.0 ns, batch.coalesce-64 872..928 ns).
+  The guard order alone (`size-first`) gives part of it; moving the guard to
+  the call site gives the rest.
+- **`get-alias` is the next candidate**: `get` as kernel `read` itself,
+  under the public type, is 16 % cheaper on `get` and 26 % on read.signal in
+  both runs, with the full paths unchanged. Not adopted yet.
+
+## Reorder: pairs through subscribers (LOG 28, LOG 29)
 
 `decompose` puts the largest part of a global reorder in the index: two
 walks over the source set in list order, which is random in memory (fill the
@@ -247,9 +275,51 @@ Evidence so far:
   global reorders 0.81–0.94 of quant at every N, long-reorder.256 0.91;
   local paths within the `identity` control's own spread (up to 1.20 there).
 
-Adopted (LOG 28) with `miss` at 409 bytes of bytecode, under V8's 460-byte
-limit for an inlined function. Probe `reorder` now times the release
-against `index-always` (`reorderVariants`: the previous release, where a
-pair found among the subscribers indexes the pass). It should stay if, over
-repeated CI runs, global reorders are faster and no local path is slower
-than the `identity` control's spread.
+### CI evidence
+
+Two independent runs, ratio of the variant (or the earlier release) to the
+quant cell of the same run:
+
+| scenario | run 42269260132 (7763): `subs-lookup` / index release | run 42271998863 (9V45): `index-always` / release |
+| --- | ---: | ---: |
+| lb.shuffle@256 | 0.87 | 1.09 |
+| lb.shuffle@1024 | 0.87 | 1.21 |
+| lb.shuffle@4096 | 0.89 | 1.26 |
+| lb.reverse@256 | 0.86 | 1.15 |
+| lb.reverse@1024 | 0.89 | 1.18 |
+| lb.reverse@4096 | 0.84 | 1.25 |
+| regime.shuffle@8192 | 0.88 | 1.43 |
+| long-reorder.256 | 0.83 | 1.12 |
+| shared-chaotic.64x32 | **1.13** | **0.95** |
+| local paths (insert-one, rotate, reverse-8, value-sort, replace-half, stable, duplicate) | 0.98–1.01 | 0.99–1.02 |
+| branch.switch-100 (never reaches the new code) | 1.06 | 1.00 |
+| `identity` / quant, all rows | 0.96–1.05 | 0.95–1.01 |
+
+- **Global reorders**: 8–17 % cheaper at N = 256 and 1024 in both runs,
+  where the code-layout mode of the lower-bound section is absent, so the
+  gain is the representation's. At 4096 and 8192 the gain also carries that mode.
+- **Local paths are unchanged**, within the `identity` control; branch.switch's
+  1.06 in the first run is a layout effect of the kind above (it reaches
+  neither the marks nor the subscriber lookup, and is 1.00 in the second).
+- **One regression, shared-chaotic** (32 readers on every source): +13 % and
+  +5 %. Same structural work; a reader whose edge is at position p among a
+  source's subscribers walks p other readers' edges on every read, where the
+  slot costs two loads. LOG 29 marks a pass only when the pair is the
+  source's first subscriber (one comparison, `found === s.subs`), and takes a
+  deeper pair at once after indexing; pending CI against both earlier rules
+  (`index-always` = release 59f7085, `mark-any` = release 7b14509).
+- **Decompose, same CPU (7763)**, before (run 42252842592, index release)
+  and after (run 42271998863, marked release): the parts agree within a few
+  percent, the full pass is 23.0 → 19.3, 26.9 → 22.9 and 59.2 → 42.4 ns/N at
+  N = 256, 1024, 4096 (−16, −15, −28 %); the interaction term at 4096 goes from
+  +14.5 to −2.8 ns/N. `decompose` now also times the marked pass's parts (mark
+  walk, lookup through the first subscriber, and that lookup with moves).
+
+### Benchmark fix: lifecycle.computed-create
+
+Its computeds were never disposed, so the shared source's subscriber list
+grew every step and the step timed the collector: round medians 4.5..52 µs on
+every runtime, two modes 10x apart, and a 6.6x quant/Reflex ratio in run
+42271998863 that is only which mode each median hit. Each step now uses a
+fresh source, so its graph is garbage after it (local: 3.5..4.0 µs on all
+three runtimes).

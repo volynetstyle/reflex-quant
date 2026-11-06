@@ -169,6 +169,52 @@ const decompose = {
       return c.deps.from.value;
     };
   },
+  // The marked pass (LOG 28): no slots; a walk over edges marks them, and a
+  // read finds its pair as the source's first subscriber.
+  /** The mark walk alone: UNREAD on every edge, in list order (edges only). */
+  mark(q, n) {
+    const { c } = rawShuffle(q, n);
+    const { UNREAD } = q;
+    return (i) => {
+      for (let e = c.deps; e !== null; e = e.next) e.ver = UNREAD;
+      return i & 1;
+    };
+  },
+  /** N lookups through the subscribers in read order: the first one is the pair. */
+  subs(q, n) {
+    const { ps, orders, c } = rawShuffle(q, n);
+    return (i) => {
+      const order = orders[i & 3];
+      let t = 0;
+      for (let k = 0; k < order.length; k++) {
+        const s = ps[order[k]];
+        const e = s.subs;
+        if (e.to === c) {
+          e.ver = s.ver;
+          t++;
+        }
+      }
+      return t;
+    };
+  },
+  /** Subscriber lookup and move together: the marked branch of a miss, without the call. */
+  "subs-move"(q, n) {
+    const { ps, orders, c } = rawShuffle(q, n);
+    const { move } = q;
+    return (i) => {
+      const order = orders[i & 3];
+      let last = null;
+      for (let k = 0; k < order.length; k++) {
+        const s = ps[order[k]];
+        const e = s.subs;
+        e.ver = s.ver;
+        const next = last === null ? c.deps : last.next;
+        if (next !== e) move(c, e, last, next);
+        last = e;
+      }
+      return c.deps.from.value;
+    };
+  },
 };
 
 // -------------------------------------------------------------------- leaf

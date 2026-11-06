@@ -13,6 +13,7 @@ export const name = "quant-internals";
 
 /** The flags `read` tests before it pulls. */
 export const PULL_FLAGS: number = Flag.Stale | Flag.Dirty | Flag.Busy;
+export { UNREAD } from "../../src/flags.ts";
 export const VERSION_MASK: number = MASK;
 
 /**

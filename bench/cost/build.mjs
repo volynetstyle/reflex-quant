@@ -87,13 +87,18 @@ export const surfaceVariants = {
  * Representation candidates for global reorders, against the release (LOG 28:
  * a pass whose first unresolved miss finds the pair among the source's first
  * subscribers marks its unread suffix and finds pairs through subscribers).
- * index-always is the previous release: such a pass indexes. Exact
- * everywhere; the test suite runs against each copy.
+ * The release marks only when the pair is the source's first subscriber.
+ * index-always and mark-any are the two earlier rules. Exact everywhere; the
+ * test suite runs against each copy.
  */
 export const reorderVariants = {
   "index-always": [
-    "previous release: a pair found among the subscribers indexes the pass",
-    [T, "    if (found !== null && found !== undefined) unread(c, next);", "    if (found !== null) found = undefined;"],
+    "release 59f7085: a pair found among the subscribers indexes the pass",
+    [T, "  if (e !== s.subs) return index(c, next);", "  return index(c, next);"],
+  ],
+  "mark-any": [
+    "release 7b14509: a pair found anywhere within the budget marks the pass (deeper pairs walk other readers' edges per read)",
+    [T, "  if (e !== s.subs) return index(c, next);\n", ""],
   ],
 };
 

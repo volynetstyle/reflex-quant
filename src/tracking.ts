@@ -59,12 +59,14 @@ export function miss(
     }
 
     // Absent if this reader's whole list was scanned; otherwise the source's
-    // first subscribers decide. Found there: mark the unread suffix, and the
-    // rest of the pass finds its pairs through their sources too, with no
-    // slot to fill or clear.
+    // first subscribers decide. Found as the first one: a lookup through the
+    // subscribers costs no load beyond the read itself, so mark the unread
+    // suffix and let the rest of the pass find its pairs that way, with no
+    // slot to fill or clear. Found deeper: every lookup would walk other
+    // readers' edges, so index; either way the found edge is taken at once.
     found = e === null && p === null ? null : pair(s, c);
 
-    if (found !== null && found !== undefined) unread(c, next);
+    if (found !== null && found !== undefined) begin(c, s, found, next);
   } else found = pair(s, c);
 
   if (found === null) return link(c, s, last, next, false);
@@ -102,16 +104,22 @@ function pair(s: Node, c: Node): Edge | null | undefined {
   return null;
 }
 
-/** Mark the unread suffix, from `next` on: a walk over edges, not sources. */
-function unread(c: Node, next: Edge | null): void {
+/**
+ * The pass's lookup from here on, decided by the found edge's place: the
+ * source's first subscriber marks the unread suffix, from `next` on (a walk
+ * over edges, not sources); deeper, index.
+ */
+function begin(c: Node, s: Node, e: Edge, next: Edge | null): void {
+  if (e !== s.subs) return index(c, next);
+
   if (__STATS__) stats.indexes++;
 
   c.flags |= Flag.Marked;
 
-  for (let e = next; e !== null; e = e.next) {
+  for (let u = next; u !== null; u = u.next) {
     if (__STATS__) stats.indexed++;
 
-    e.ver = UNREAD;
+    u.ver = UNREAD;
   }
 }
 

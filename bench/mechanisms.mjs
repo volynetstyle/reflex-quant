@@ -309,10 +309,14 @@ export const scenarios = [
   {
     id: "lifecycle.computed-create",
     group: "lifecycle",
-    note: "create 100 computeds over one signal and read each once",
+    note: "create 100 computeds over a fresh signal and read each once",
     setup(api) {
-      const s = api.signal(1);
+      // A fresh source per step: the step's graph is garbage after it. Over a
+      // shared source, its subscriber list grew without bound (computeds are
+      // never disposed here) and the step timed the collector, bimodally
+      // (4.5..52 µs round medians on every runtime).
       return (i) => {
+        const s = api.signal(1);
         let t = 0;
         for (let k = 0; k < 100; k++) t += api.computed(() => s.get() + k).get();
         return t + i;

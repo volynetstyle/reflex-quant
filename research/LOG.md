@@ -455,6 +455,35 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   is killed by exactness tests (unread edges would be taken for repeats and
   cut); `index-always` (this change undone) survives, a constant factor only
   timing sees. 24 of 26 ablations are killed. Release 2086 → 2162 bytes gzip.
-- **Status:** adopted. The repeated measurement is probe `reorder` against
-  `index-always` (the previous release): global reorders must be faster, and
-  local paths no slower than the `identity` control's spread.
+- **Status:** adopted, confirmed on global reorders by two CI runs
+  (42269260132, research variant against the index release; 42271998863,
+  release against `index-always`): 8–17 % cheaper at N = 256 and 1024,
+  where no code-layout mode interferes (`research/COST-MODEL.md`), local
+  paths within the `identity` control. One regression: shared-chaotic.64x32,
+  +13 % and +5 % (LOG 29).
+
+### 29. Mark a pass only when the pair is the source's first subscriber (optimization)
+
+- **Witness:** shared-chaotic.64x32 (32 readers over the same 64 sources),
+  +13 % and +5 % after LOG 28 in two CI runs, with the same structural work.
+  A reader whose edge sits at position p among a source's subscribers walks
+  p other readers' edges on every read of a marked pass; a slot costs two
+  loads.
+- **Change:** `begin(c, s, e, next)` decides the pass's lookup from the
+  found edge's place: the source's first subscriber (`e === s.subs`, one
+  comparison) marks the unread suffix; a deeper pair indexes the pass. Either
+  way the found edge is taken at once (the index marks the suffix too), so a
+  pair found deeper costs no slot lookup on that read. One reader per source
+  is unaffected: its edge is always the first subscriber.
+- **Shape:** `miss` 421 bytes of bytecode (409 before, 428 with the decision
+  inline), `begin` 58; under V8's 460-byte limit. Release 2162 → 2180
+  bytes gzip.
+- **Evidence:** tests 63/63; both earlier rules pass the suite too and are
+  the probe's A/B (`reorderVariants`: `index-always` = release 59f7085,
+  `mark-any` = release 7b14509); checksums equal on all 114 cells of
+  `reorder`; same structural work as both. Mutants: 24 of 26 killed;
+  `index-always` (now: `begin` always indexes) survives as a constant factor,
+  `no-mark` is killed. Local indication (3 rounds, not evidence):
+  shared-chaotic 0.94 of `mark-any` and 0.93 of `index-always`, single-reader
+  reorders level with `mark-any`.
+- **Status:** adopted, pending CI.

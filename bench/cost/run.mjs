@@ -85,7 +85,7 @@ const probes = {
   decompose: {
     independent: true,
     cells: () =>
-      ["reads", "index", "lookup", "move", "lookup-move", "full"].flatMap((phase) =>
+      ["reads", "index", "lookup", "move", "lookup-move", "mark", "subs", "subs-move", "full"].flatMap((phase) =>
         DECOMPOSE_SIZES.map((n) => cell(phase, INTERNALS, `decompose.${phase}@${n}`)),
       ),
     report: decomposeReport,
@@ -307,13 +307,18 @@ function layoutReport() {
 }
 
 function decomposeReport() {
-  const phases = ["reads", "index", "lookup", "move", "lookup-move", "full"];
-  const lines = ["ns per N. sum = reads + index + lookup + move; interaction = full − sum; pair = lookup-move − (lookup + move).", ""];
-  lines.push(...head(["N", ...phases, "sum", "interaction", "interaction / full", "pair"]));
+  const phases = ["reads", "index", "lookup", "move", "lookup-move", "mark", "subs", "subs-move", "full"];
+  const lines = [
+    "ns per N. full is the release's pass (one reader: a marked pass, LOG 28). Indexed parts: reads + index + lookup + move;",
+    "marked parts: reads + mark + subs + move; interaction = full − marked parts; pair = (together) − (lookup + move).",
+    "",
+  ];
+  lines.push(...head(["N", ...phases, "indexed parts", "marked parts", "interaction", "slot pair", "subs pair"]));
   for (const n of DECOMPOSE_SIZES) {
     const t = Object.fromEntries(phases.map((p) => [p, at(p, `decompose.${p}@${n}`)?.ns / n]));
-    const sum = t.reads + t.index + t.lookup + t.move;
-    lines.push(row([n, ...phases.map((p) => num(t[p])), num(sum), num(t.full - sum), num((t.full - sum) / t.full), num(t["lookup-move"] - t.lookup - t.move)]));
+    const indexed = t.reads + t.index + t.lookup + t.move;
+    const marked = t.reads + t.mark + t.subs + t.move;
+    lines.push(row([n, ...phases.map((p) => num(t[p])), num(indexed), num(marked), num(t.full - marked), num(t["lookup-move"] - t.lookup - t.move), num(t["subs-move"] - t.subs - t.move)]));
   }
   return [...lines, ""];
 }

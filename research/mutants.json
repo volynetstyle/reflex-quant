@@ -56,7 +56,7 @@
   },
   {
     "id": "index-always",
-    "mechanism": "LOG 28: a pair found among the subscribers marks the pass instead of indexing it (optimization)",
+    "mechanism": "LOG 28: a pair found as the source's first subscriber marks the pass instead of indexing it (optimization)",
     "killed": false,
     "failed": []
   },
@@ -83,6 +83,8 @@
     "killed": true,
     "failed": [
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
+      "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
+      "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
       "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)"
     ]
   },
