@@ -517,3 +517,41 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
 - **Result:** tests 66/66; all 26 ablations are killed (19 semantic, 6
   structural, 1 convention); checksums equal on every suite and probe.
   Counters are compiled out of the release.
+
+### 31. P5 in-pass invalidation: a repeated read keeps the first observation
+
+- **Witness:** `c = () => { x = a; a := 2 (once); return x + a }` with `a = 1`:
+  quant and Reflex answer 3, 3, 3 on three demands while `a = 2` and an
+  execution now gives 4; alien-signals answers 3, 4, 4. The repeated read
+  stored the new version on the relation, erasing a change the first read
+  already fed into the result. With A→B→A between the reads the erased
+  change is a P1 change. Found while timing track.duplicate-64, whose 63
+  repeated reads per step each paid that store.
+- **Contract (SPEC):** P5 in-pass invalidation, a new invariant; D6 states
+  the divergence from the provenance spec, whose `track()` refreshes the
+  version on every reread and whose validation cache stamps the revision
+  after the execution. The second half matters on its own: the spec answers
+  1, 1, 1 for the single-read form `x = a; a := 2; return x`, which quant's
+  existing F1 test requires to converge. The contract spec now applies D6
+  (`test/support/contract-spec.ts`); on the spec machines the witness gives
+  3, 3, 3 (spec) and 3, 4, 4 (contract). The corpora cannot express a write
+  inside a computation, so D6 changes no corpus verdict: quant equals the
+  contract spec on 27,061 bounded, 18,660 recovery and 100,000 generated
+  programs, as before.
+- **Runtime:** the three paths that recognise a repeated read (the previous
+  read, the prefix scan, `take` for a pair found through subscribers or a
+  slot) no longer store; first observations (cursor hit, suffix scan, new
+  edge, an unread edge taken) do. One rule, whatever the distance between
+  the two reads.
+- **Evidence:** tests 72/72. `semantics.test.ts` P5: changing write then
+  reread (3, 4, 4), same-value write (no execution owed), a change before
+  the pass's first observation (none owed), A→B→A (owed), and one program
+  per repeat path; `structure.test.ts` pins that those programs reach the
+  prefix-scan, subscriber and slot paths (`test/support/p5.ts`), so the
+  semantic level does not depend on the representation. New mutant
+  `repeat-refresh` (the stores put back) is killed by the three P5 witnesses;
+  all 27 ablations are killed (20 semantic, 6 structural, 1 convention).
+  `miss` 417 → 401 bytes of bytecode, `take` 45 → 42; release 2147 → 2131
+  bytes gzip. Probe `reorder` carries `refresh-repeats` (the previous
+  behaviour) to time the change on CI; a local indication on
+  track.duplicate-64 is within noise.

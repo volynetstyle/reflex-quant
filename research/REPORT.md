@@ -65,8 +65,8 @@ task list; target within 25 % of the better of Reflex and alien-signals on
 common shapes, hostile shapes reported as measured.
 
 **Where the written contract, the spec and Reflex part.** Ten probes
-(`test/support/probes.ts`) pin the edges of the contract. Five regions
-separate the three:
+(`test/support/probes.ts`) pin the edges of the contract. Six regions
+separate the three (D6 lies outside the probes' program language):
 
 | Id | Region | Spec | Reflex | Quant | Classification |
 | --- | --- | --- | --- | --- | --- |
@@ -75,9 +75,15 @@ separate the three:
 | D3 | watcher validation after a failed run read a new computed (P3) | not validated (tentative) | validated | = spec | Reflex implementation detail; contradicts W2/V3 |
 | D4 | wake set after repeated failures (P4) | committed ∪ last attempt | union of all attempts | = spec | Reflex implementation detail; contradicts W2 |
 | D5 | failed watcher woken through an unchanged computed (P9) | runs (obligation kept) | idle: nothing runs | = spec | **Reflex defect against R2**, documented as intended in INVARIANTS §3 ("otherwise idle") |
+| D6 | a computation changes a source it already observed, then rereads it (SPEC P5) | refreshes the observed version on reread and validates as of the end of the execution: the change is never seen (3, 3, 3) | refreshes on reread: 3, 3, 3 | first observation kept, validated as of the start: the next demand executes (3, 4, 4) | **intentional divergence**: a reread erased a change the earlier read already depended on, and an A→B→A in between erased a P1 change. Not expressible in the program language (no write inside a computation) |
 
-The contract spec (`test/support/contract-spec.ts`) is the spec with D1 and
-D2 applied and nothing else. Quant equals it on every program run.
+The contract spec (`test/support/contract-spec.ts`) is the spec with D1, D2
+and D6 applied and nothing else. Quant equals it on every program run. D6 is
+invisible to the corpora (their programs never write inside a computation);
+it is executed by `test/semantics.test.ts` (P5) through the public API, and
+on the spec machines by the witness of LOG 31: the spec answers 3, 3, 3 for
+`x = a; a := 2; return x + a` and 1, 1, 1 for its single-read form (quant's
+F1 test, which converges), the contract spec 3, 4, 4 and 1, 2, 2.
 Emulating D3, D4 and D5 inside quant (`research/mutants.mjs
 --emulate-reflex`) reproduces Reflex on all 100,000 generated programs. So,
 on this corpus, Reflex = contract spec + D3 + D4 + D5, and the five regions
@@ -181,7 +187,7 @@ Every remaining mechanism has a counterexample: removing it fails a test.
 This is a Level 1 claim about this architecture, not a necessity proof; see
 [WITNESS-AUDIT.md](./WITNESS-AUDIT.md), which merges the ablations into ten
 obligations and classifies each witness.
-All 26 ablations are killed (`research/mutants.mjs`, `mutants.json`): 19 by
+All 27 ablations are killed (`research/mutants.mjs`, `mutants.json`): 20 by
 semantic tests, 6 only by structural bounds (the optimizations of Q4), 1
 only by tests that assert sibling order (the convention of Q4). The last two
 to fall, `no-fresh-source` (LOG 22) and `index-always` (LOG 28), had been
@@ -191,6 +197,7 @@ recorded the work they save, not because they save none (LOG 30).
 | Mechanism | Smallest counterexample (test or probe) |
 | --- | --- |
 | relation versions | P6 (direct ABA must re-run); "a write to a not-yet-read source during the run adds no rerun" (`direct-dirty-running`) |
+| first observation kept on a repeated read (P5) | `x = a; a := 2; return x + a` must give 3, then 4 (`repeat-refresh`) |
 | read-ordered deps + cursor | "stable graph: no allocation and no lookup per read" |
 | slot index + UNREAD marks | "random permutations of 64 shared sources: exact, no allocation, linear work" (`no-unread`) |
 | displaced-cell stack | "a nested indexed pass restores the outer pass's cells" (`no-displaced`: a duplicate relation) |

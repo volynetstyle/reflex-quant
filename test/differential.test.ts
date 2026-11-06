@@ -19,7 +19,7 @@ interface Tally {
   total: number;
   /** quant differs from the contract spec: a quant bug. */
   quantBug: number;
-  /** contract spec differs from the spec: explained by D1/D2. */
+  /** contract spec differs from the spec: explained by D1/D2 (D6 is outside the program language). */
   d1d2: number;
   /** Reflex differs from the contract spec: Reflex's own deviations. */
   reflexOwn: number;
@@ -41,7 +41,7 @@ function tally(programs: readonly Program[]): Tally {
     if (r.contractVsSpec >= 0) t.d1d2++;
     if (r.reflexVsContract >= 0) t.reflexOwn++;
   }
-  console.log(`== ${t.total} programs: quant≠contract ${t.quantBug}, contract≠spec (D1/D2) ${t.d1d2}, reflex≠contract ${t.reflexOwn}`);
+  console.log(`== ${t.total} programs: quant≠contract ${t.quantBug}, contract≠spec (D1/D2/D6) ${t.d1d2}, reflex≠contract ${t.reflexOwn}`);
   t.witnesses.forEach((w) => console.log(w));
   return t;
 }

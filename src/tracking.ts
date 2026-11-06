@@ -10,7 +10,11 @@ import { move } from "./graph";
 import { claim, index, link } from "./kernel";
 import { stats } from "./instrumentation";
 
-/** A read that is not the next edge in read order. Every answer is exact. */
+/**
+ * A read that is not the next edge in read order. Every answer is exact. A
+ * repeated read keeps the version of the pass's first observation (P5): a
+ * change between the two reads stays visible to the next validation.
+ */
 export function miss(
   c: Node,
   s: Node,
@@ -20,7 +24,6 @@ export function miss(
   if (last !== null && last.from === s) {
     if (__STATS__) stats.repeats++;
 
-    last.ver = s.ver;
     return;
   }
 
@@ -54,7 +57,6 @@ export function miss(
     if (p !== null && p.from === s) {
       if (__STATS__) stats.dups++;
 
-      p.ver = s.ver;
       return;
     }
 
@@ -124,7 +126,10 @@ function begin(c: Node, s: Node, e: Edge, next: Edge | null): void {
   }
 }
 
-/** A found edge: an unread one moves to the cursor, a repeated read keeps its place. */
+/**
+ * A found edge: an unread one is observed and moves to the cursor; a repeated
+ * read keeps its place and its first observation's version (P5).
+ */
 function take(
   c: Node,
   e: Edge,
@@ -132,13 +137,13 @@ function take(
   last: Edge | null,
   next: Edge | null,
 ): void {
-  const fresh = e.ver === UNREAD;
+  if (e.ver !== UNREAD) {
+    if (__STATS__) stats.dups++;
+
+    return;
+  }
+  if (__STATS__) stats.moves++;
 
   e.ver = s.ver;
-
-  if (fresh) {
-    if (__STATS__) stats.moves++;
-
-    move(c, e, last, next!);
-  } else if (__STATS__) stats.dups++;
+  move(c, e, last, next!);
 }

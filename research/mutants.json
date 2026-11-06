@@ -4,7 +4,8 @@
     "mechanism": "a running direct subscriber is left to versions (no DIRTY)",
     "killed": true,
     "failed": [
-      "semantics.test.ts > a write to a not-yet-read source during the run adds no rerun"
+      "semantics.test.ts > a write to a not-yet-read source during the run adds no rerun",
+      "semantics.test.ts > a change before the pass's first observation owes nothing"
     ]
   },
   {
@@ -62,7 +63,8 @@
     "killed": true,
     "failed": [
       "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
-      "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index"
+      "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
+      "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths"
     ]
   },
   {
@@ -70,8 +72,10 @@
     "mechanism": "LOG 28: a marked pass sets UNREAD on its unread suffix",
     "killed": true,
     "failed": [
+      "semantics.test.ts > one rule on every path that recognises a repeated read",
       "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
       "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
+      "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index"
     ]
@@ -89,7 +93,9 @@
     "mechanism": "UNREAD marking of the suffix while indexing",
     "killed": true,
     "failed": [
+      "semantics.test.ts > one rule on every path that recognises a repeated read",
       "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
+      "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
@@ -131,7 +137,10 @@
     "failed": [
       "semantics.test.ts > an effect writing a source it read converges",
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
-      "semantics.test.ts > a computed that writes a source it already read converges on the next read (F1)"
+      "semantics.test.ts > a computed that writes a source it already read converges on the next read (F1)",
+      "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
+      "semantics.test.ts > A→B→A after the first observation is a change (P1): the next demand executes again",
+      "semantics.test.ts > one rule on every path that recognises a repeated read"
     ]
   },
   {
@@ -197,6 +206,16 @@
     ]
   },
   {
+    "id": "repeat-refresh",
+    "mechanism": "P5: a repeated read keeps the first observation's version (immediate, prefix-scan and found repeats)",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
+      "semantics.test.ts > A→B→A after the first observation is a change (P1): the next demand executes again",
+      "semantics.test.ts > one rule on every path that recognises a repeated read"
+    ]
+  },
+  {
     "id": "no-repeat-check",
     "mechanism": "immediate repeat recognised before the scans",
     "killed": true,
@@ -230,6 +249,7 @@
     "failed": [
       "semantics.test.ts > failing effect does not stop the others; the error reaches the writer",
       "semantics.test.ts > disposing a sibling sharing the sources during a run leaves the others intact",
+      "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation"
     ]
   }

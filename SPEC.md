@@ -45,6 +45,7 @@ Change and propagation
 - **P2 cutoff.** An unchanged computed does not propagate.
 - **P3 glitch freedom.** No inconsistent intermediate observation; one execution per node per wave.
 - **P4 validate is not execute.** A watcher validates its whole committed source set before any lifecycle step.
+- **P5 in-pass invalidation.** Once a computation has observed a source in an execution, a later committed change to that source leaves it owing another execution; rereading the source in the same execution does not discharge the obligation.
 
 Failure
 - **F1 failed computed.** A failed computed commits nothing and executes on its next demand.
@@ -62,6 +63,7 @@ Watchers and lifecycle
 
 - **D1 universal validation.** Computed validation checks the whole frontier: if an earlier source changed and a later one now throws, validation throws.
 - **D2 failed computed re-entry.** A failed computed whose old frontier now throws validates that frontier first, rather than executing.
+- **D6 in-pass invalidation.** A relation keeps the version of its source's first successful observation in an execution, and an execution is validated as of its start (P5). The provenance spec refreshes the version on every reread and stamps its validation after the execution, so a change an execution makes to a source it already observed is never seen (research/REPORT.md).
 
 ### Structural bounds
 

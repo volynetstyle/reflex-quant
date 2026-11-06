@@ -7,6 +7,8 @@ import { node, read, stats, write } from "../src/kernel";
 import type { Node } from "../src/model";
 import { edgeCount, resetStats } from "./support/graph";
 import { run } from "../src/host";
+import { get as publicGet, set as publicSet } from "../src/index";
+import { foundRepeat, prefixRepeat } from "./support/p5";
 
 const signal = (v: unknown) => node(null, v, 0);
 const computed = (fn: (prev: unknown) => unknown) => node(fn, undefined, Flag.Dirty);
@@ -194,6 +196,23 @@ describe("structural bounds", () => {
     expect(stats.links).toBe(0);
     expect(stats.sweeps).toBe(20);
     expect(stats.indexes).toBe(20 * 2);
+  });
+
+  it("P5 witnesses reach the prefix-scan, subscriber and slot repeat paths", () => {
+    // The semantic test (semantics.test.ts, P5) relies on these programs
+    // exercising each path that recognises a repeated read.
+    const c = prefixRepeat();
+    resetStats();
+    publicGet(c);
+    expect([stats.dups, stats.sweeps, stats.indexes]).toEqual([1, 0, 0]);
+    for (const indexed of [false, true]) {
+      const w = foundRepeat(indexed);
+      publicGet(w.c);
+      publicSet(w.tick, 1);
+      resetStats();
+      publicGet(w.c);
+      expect([stats.dups, stats.sweeps, stats.indexes]).toEqual(indexed ? [1, 0, 1] : [1, 1, 0]);
+    }
   });
 
   it("O1: a completely scanned reader list proves absence where the subscribers cannot", () => {

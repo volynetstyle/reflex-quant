@@ -29,17 +29,19 @@ later changes of Reflex.
 
 ## Results
 
-- Equal to Reflex's executable spec, with two documented choices applied,
+- Equal to Reflex's executable spec, with three documented choices applied,
   on all 27,061 bounded and 18,660 recovery programs and on 100,000
   generated ones, with graph integrity checked after every operation.
 - Current Reflex is that contract plus three failure-path choices, on the
   same corpus. One of them drops an execution obligation that the contract
   (R2) says survives a failure.
-- All 26 mechanism ablations fail a test: 19 a semantic test, 6 only a
+- All 27 mechanism ablations fail a test: 20 a semantic test, 6 only a
   structural bound (the work an optimization saves, counted), 1 only a
   sibling-order test (a convention).
-- On CI: within 25 % of the better of Reflex and alien-signals on 14 of 18
-  scenarios, faster than both on 8. Reorders allocate nothing.
+- On CI (run 42278010312): within 25 % of the better of Reflex and
+  alien-signals on all 18 scenarios, at or ahead of it on 8; geometric mean
+  0.97 of the better one, 0.94 of Reflex, 0.43 of alien-signals. Reorders
+  allocate nothing. Trajectory over every CI run: research/HISTORY.md.
 
 ## Surface
 

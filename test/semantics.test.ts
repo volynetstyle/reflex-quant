@@ -1,9 +1,10 @@
 // Level 1: observable semantics through the public API.
 import { describe, expect, it } from "vitest";
-import { batch, computed, dispose, effect as watch, get, set, signal, untracked, type Computed } from "../src/index";
+import { batch, computed, dispose, effect as watch, get, peek, set, signal, untracked, type Computed } from "../src/index";
 import { idle } from "../src/kernel";
 import type { Node } from "../src/model";
 import { checkGraph } from "./support/graph";
+import { foundRepeat, prefixRepeat } from "./support/p5";
 
 /** An effect plus its disposer, the shape these tests were written in. */
 const effect = (fn: () => void | (() => void)): (() => void) => {
@@ -340,5 +341,91 @@ describe("tracking boundaries", () => {
     dispose(c);
     set(a, 5);
     expect(get(c)).toBe(2);
+  });
+});
+
+describe("P5 in-pass invalidation", () => {
+  // Once a computation has observed a source in an execution, a later change
+  // to that source leaves it owing another execution; rereading the source in
+  // the same execution does not discharge the obligation.
+
+  it("read, changing write, reread: the next demand executes again (3, 4, 4)", () => {
+    const a = signal(1);
+    let wrote = false;
+    let runs = 0;
+    const c = computed(() => {
+      runs++;
+      const x = get(a);
+      if (!wrote) {
+        wrote = true;
+        set(a, 2);
+      }
+      return x + get(a);
+    });
+    expect([get(c), get(c), get(c)]).toEqual([3, 4, 4]);
+    expect(runs).toBe(2);
+  });
+
+  it("a same-value write is no change (P1): nothing is owed", () => {
+    const a = signal(1);
+    let runs = 0;
+    const c = computed(() => {
+      runs++;
+      const x = get(a);
+      set(a, 1);
+      return x + get(a);
+    });
+    expect([get(c), get(c)]).toEqual([2, 2]);
+    expect(runs).toBe(1);
+  });
+
+  it("a change before the pass's first observation owes nothing", () => {
+    const a = signal(1);
+    const t = signal(0);
+    let runs = 0;
+    const c = computed(() => {
+      runs++;
+      // peek is not an observation: the write lands before a is observed.
+      if (get(t) === 1 && peek(a) === 1) set(a, 2);
+      return get(a) + get(a);
+    });
+    expect(get(c)).toBe(2);
+    set(t, 1);
+    expect([get(c), get(c)]).toEqual([4, 4]);
+    expect(runs).toBe(2);
+  });
+
+  it("A→B→A after the first observation is a change (P1): the next demand executes again", () => {
+    const a = signal(1);
+    let wrote = false;
+    let runs = 0;
+    const c = computed(() => {
+      runs++;
+      const x = get(a);
+      if (!wrote) {
+        wrote = true;
+        set(a, 2);
+        set(a, 1);
+      }
+      return x + get(a);
+    });
+    expect([get(c), get(c)]).toEqual([2, 2]);
+    expect(runs).toBe(2);
+  });
+
+  it("one rule on every path that recognises a repeated read", () => {
+    // The same program owes the same execution whether its repeat is found
+    // by the prefix scan, through the subscribers or through a slot
+    // (test/support/p5.ts; structure.test.ts pins which path each reaches).
+    const c = prefixRepeat();
+    expect([get(c), get(c), get(c)]).toEqual([13, 14, 14]);
+    for (const indexed of [false, true]) {
+      const w = foundRepeat(indexed);
+      expect(get(w.c)).toBe(66);
+      set(w.tick, 1);
+      expect([get(w.c), get(w.c), get(w.c)]).toEqual([166, 255, 255]);
+      expect(w.runs()).toBe(3);
+    }
+    expect(idle()).toBe(true);
   });
 });
