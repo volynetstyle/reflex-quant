@@ -1,24 +1,8 @@
 // Policy around the kernel: the watcher lifecycle (check, consume the
 // cleanup, run), a FIFO queue for scheduled watchers, and batching.
-import {
-  DIRTY,
-  STALE,
-  WATCH,
-  WOKEN,
-  check,
-  dispose,
-  exec,
-  node,
-  onWake,
-  untracked,
-  type Node,
-} from "./kernel";
-
-/** Run by this host's queue; other watchers are run by their owner. */
-const AUTO = 64;
-const QUEUED = 128;
-
-type Fn = () => unknown;
+import { Flag } from "./flags";
+import type { Cleanup, Fn, Node } from "./model";
+import { check, dispose, exec, node, onWake, untracked } from "./kernel";
 
 const queue: (Node | null)[] = [];
 let size = 0;
@@ -27,9 +11,9 @@ let draining = false;
 
 /** Queue a scheduled watcher once; the kernel calls this when it wakes one. */
 export function wake(w: Node): void {
-  if ((w.flags & (AUTO | QUEUED)) !== AUTO) return;
+  if ((w.flags & (Flag.Auto | Flag.Queued)) !== Flag.Auto) return;
 
-  w.flags |= QUEUED;
+  w.flags |= Flag.Queued;
   queue[size++] = w;
 }
 
@@ -37,7 +21,11 @@ onWake(wake);
 
 /** A watcher runs `fn` and keeps a returned function as its cleanup. */
 export function watcher(fn: Fn, auto: boolean): Node {
-  return node(fn, undefined, WATCH | STALE | DIRTY | (auto ? AUTO : 0));
+  return node(
+    fn,
+    undefined,
+    Flag.Watch | Flag.Stale | Flag.Dirty | (auto ? Flag.Auto : 0),
+  );
 }
 
 /**
@@ -51,26 +39,26 @@ export function watcher(fn: Fn, auto: boolean): Node {
 export function run(w: Node): void {
   const flags = w.flags;
 
-  if (w.fn === null || (flags & (STALE | WOKEN)) === 0) return;
+  if (w.fn === null || (flags & (Flag.Stale | Flag.Woken)) === 0) return;
 
-  w.flags = flags & ~(STALE | WOKEN);
+  w.flags = flags & ~(Flag.Stale | Flag.Woken);
 
-  if ((flags & STALE) !== 0) {
+  if ((flags & Flag.Stale) !== 0) {
     try {
       check(w);
     } catch (error) {
-      w.flags |= STALE;
+      w.flags |= Flag.Stale;
       throw error;
     }
   }
 
-  if ((w.flags & DIRTY) === 0 || w.fn === null) return;
+  if ((w.flags & Flag.Dirty) === 0 || w.fn === null) return;
 
   const cleanup = w.value;
 
   if (typeof cleanup === "function") {
     w.value = undefined;
-    untracked(cleanup as Fn);
+    untracked(cleanup as Cleanup);
 
     if (w.fn === null) return;
   }
@@ -85,7 +73,7 @@ export function stop(w: Node): void {
   w.value = undefined;
   dispose(w);
 
-  if (typeof cleanup === "function") untracked(cleanup as Fn);
+  if (typeof cleanup === "function") untracked(cleanup as Cleanup);
 }
 
 /** Run queued watchers until the queue drains; rethrow the first error. */
@@ -122,7 +110,7 @@ function drain(failed: boolean, first: unknown): void {
   for (let i = 0; i < size; i++) {
     const queuedWatcher = queue[i]!;
     queue[i] = null;
-    queuedWatcher.flags &= ~QUEUED;
+    queuedWatcher.flags &= ~Flag.Queued;
 
     try {
       run(queuedWatcher);

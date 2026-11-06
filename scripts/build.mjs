@@ -37,17 +37,28 @@ await esbuild.build({ ...common, format: "cjs", outfile: path.join(dist, "index.
 // Unminified twin, never published: the release check proves the minified
 // build behaves exactly like it.
 await esbuild.build({ ...common, minify: false, sourcemap: false, banner: {}, format: "esm", outfile: path.join(root, ".cache/release/plain.js") });
+// Same syntax optimizations as the release, retaining names for inspection.
+await esbuild.build({ ...common, minify: false, minifySyntax: true, sourcemap: false, banner: {}, format: "esm", outfile: path.join(root, ".cache/release/inspect.js") });
 
-// Declarations: emitted once, then written per format with explicit
-// extensions, so node16/bundler resolution finds the right file.
+// Inline the public handle types and the two re-exported signatures so
+// neither format needs to publish internal declarations.
 execFileSync(process.execPath, [tsc, "-p", path.join(root, "tsconfig.build.json")], { stdio: "inherit" });
 const types = path.join(dist, ".types");
-for (const file of readdirSync(types)) {
-  const text = readFileSync(path.join(types, file), "utf8");
-  const base = file.replace(/\.d\.ts$/, "");
-  const withExt = (ext) => text.replace(/(from\s+["'])(\.\/[^"']+)(["'])/g, `$1$2${ext}$3`);
-  writeFileSync(path.join(dist, `${base}.d.ts`), withExt(".js"));
-  writeFileSync(path.join(dist, `${base}.d.cts`), withExt(".cjs"));
+let declaration = readFileSync(path.join(types, "index.d.ts"), "utf8");
+for (const kind of ["import", "export"]) {
+  const line = new RegExp(`^${kind} type \\{[^}]+\\} from "\\./types";\\r?\\n`, "m");
+  if (!line.test(declaration)) throw new Error(`missing public type reference: ${kind} type { ... } from "./types"`);
+  declaration = declaration.replace(line, "");
 }
+declaration = readFileSync(path.join(types, "types.d.ts"), "utf8").replace(/^export \{\};\r?\n/m, "") + declaration;
+for (const [name, module] of [["batch", "host"], ["untracked", "kernel"]]) {
+  const source = readFileSync(path.join(types, `${module}.d.ts`), "utf8");
+  const signature = source.match(new RegExp(`^export declare function ${name}[^\\n]+$`, "m"))?.[0];
+  const reexport = `export { ${name} } from "./${module}";`;
+  if (!signature || !declaration.includes(reexport)) throw new Error(`missing public declaration for ${name}`);
+  declaration = declaration.replace(reexport, signature);
+}
+writeFileSync(path.join(dist, "index.d.ts"), declaration);
+writeFileSync(path.join(dist, "index.d.cts"), declaration);
 rmSync(types, { recursive: true, force: true });
 console.log(`built reflex-quant ${version}: ${readdirSync(dist).sort().join(", ")}`);

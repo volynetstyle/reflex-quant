@@ -1,13 +1,15 @@
+import { Flag } from "../src/flags";
 // Level 1, complexity class: structural work bounds that are not semantics.
 // Each assertion pins an optimization (O1, O2) or an asymptotic property;
 // removing the mechanism keeps every value correct and fails here.
 import { beforeEach, describe, expect, it } from "vitest";
-import { DIRTY, node, read, stats, write, type Node } from "../src/kernel";
+import { node, read, stats, write } from "../src/kernel";
+import type { Node } from "../src/model";
 import { edgeCount, resetStats } from "./support/graph";
 import { run } from "../src/host";
 
 const signal = (v: unknown) => node(null, v, 0);
-const computed = (fn: (prev: unknown) => unknown) => node(fn, undefined, DIRTY);
+const computed = (fn: (prev: unknown) => unknown) => node(fn, undefined, Flag.Dirty);
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 function reader(ps: Node[], orders: number[][], tick: Node) {
@@ -53,7 +55,7 @@ describe("structural bounds", () => {
     const w = node(() => {
       runs++;
       for (const p of ps) read(p);
-    }, undefined, 16 | 1 | DIRTY);
+    }, undefined, 16 | 1 | Flag.Dirty);
     run(w);
     resetStats();
     write(ps[300]!, -1);

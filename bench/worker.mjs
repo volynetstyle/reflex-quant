@@ -1,14 +1,15 @@
 // One measurement: one runtime, one scenario, one fresh process.
 //
-//   node --expose-gc bench/worker.mjs <bundle-dir> <scenario-id> [--verify]
+//   node --expose-gc bench/worker.mjs <bundle-dir> <scenario-id> [--verify] [--suite <name>]
 //
 // Prints one JSON line. --verify prints only the checksum of the first 64
 // steps, which must be equal for every runtime (same program, same answers).
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { scenarios } from "./scenarios.mjs";
+import { suiteOf } from "./suites.mjs";
 
 const [dir, id] = process.argv.slice(2);
+const { scenarios } = suiteOf(process.argv);
 const verify = process.argv.includes("--verify");
 const api = await import(pathToFileURL(path.join(path.resolve(dir), "index.mjs")).href);
 const scenario = scenarios.find((s) => s.id === id);

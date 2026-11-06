@@ -1,7 +1,9 @@
+import { Flag } from "../../src/flags";
 // Structural checks over the quant graph. Failures throw plain Errors with
 // indices and counts only: never hand a node or edge to an assertion library
 // (inspecting one walks the whole cyclic graph).
-import { BUSY, stats, type Edge, type Node } from "../../src/kernel";
+import { stats } from "../../src/kernel";
+import type { Edge, Node } from "../../src/model";
 
 export function check(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);
@@ -51,7 +53,7 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
   const inDeps = new Set<Edge>();
   const inSubs = new Set<Edge>();
   for (const n of list) {
-    check((n.flags & BUSY) === 0, `${label}: node ${id(n)} still BUSY`);
+    check((n.flags & Flag.Busy) === 0, `${label}: node ${id(n)} still Flag.Busy`);
     check(n.slot === null, `${label}: node ${id(n)} has a slot cell at rest`);
     const seen = new Set<Node>();
     let prev: Edge | null = null;

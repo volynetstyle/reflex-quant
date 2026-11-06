@@ -2,14 +2,15 @@
 // link counters, on the same scenarios. Counting, not timing: it runs on any
 // machine.
 //
-//   node bench/build.mjs && node bench/structure.mjs [--only <regex>]
+//   node bench/build.mjs && node bench/structure.mjs [--suite scenarios|mechanisms] [--only <regex>]
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { scenarios } from "./scenarios.mjs";
+import { suiteOf } from "./suites.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
+const { name: suite, scenarios } = suiteOf(args);
 const only = new RegExp(args.includes("--only") ? args[args.indexOf("--only") + 1] : ".");
 const load = (name) => import(pathToFileURL(path.join(root, ".cache/bench", name, "index.mjs")).href);
 const quant = await load("quant-stats");
@@ -42,5 +43,5 @@ const table = [
       `| ${id} | ${f(q.reads)} | ${f(q.hits)} | ${f(q.scans)} | ${f(q.lookups)} | ${f(q.indexed)} | ${f(q.moves)} | ${f(q.links)} | ${f(q.unlinks)} | ${f(q.runs)} | ${f(q.marks)} | ${f(q.checks)} | ${f(a.linksCreated)} | ${f(a.linksUnlinked)} |`,
   ),
 ].join("\n");
-writeFileSync(path.join(root, ".cache/bench/structure.json"), JSON.stringify(rows, null, 2) + "\n");
+writeFileSync(path.join(root, `.cache/bench/structure${suite === "scenarios" ? "" : `-${suite}`}.json`), JSON.stringify(rows, null, 2) + "\n");
 console.log(table);

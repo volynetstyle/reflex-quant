@@ -7,11 +7,17 @@ from the executable spec of [Reflex](https://github.com/volynetstyle/Reflex)
 (provenance in [research/REPORT.md](research/REPORT.md)); it does not follow
 later changes of Reflex.
 
-- **Production code:** three files, [`src/kernel.ts`](src/kernel.ts) (graph,
-  tracking, invalidation, validation), [`src/host.ts`](src/host.ts)
+- **Production code:** [`src/model.ts`](src/model.ts) and [`src/types.ts`](src/types.ts)
+  (internal and public types), [`src/flags.ts`](src/flags.ts) (flag layout),
+  [`src/graph.ts`](src/graph.ts) (local graph operations),
+  [`src/tracking.ts`](src/tracking.ts) (dependency resolution),
+  [`src/kernel.ts`](src/kernel.ts) (execution context, stack-dependent tracking,
+  invalidation and validation), [`src/host.ts`](src/host.ts)
   (watcher lifecycle, queue, batch), [`src/index.ts`](src/index.ts)
   (`signal`, `computed`, `effect`, `get`, `set`, `dispose`, `batch`,
-  `untracked`; a handle is the node itself). About 2 KB gzip.
+  `untracked`; a handle is the node itself). Research counters live in
+  [`src/instrumentation.ts`](src/instrumentation.ts) and are eliminated from
+  the release. The ESM and CJS bundles are each standalone; ESM is about 2 KB gzip.
 - **Report:** [research/REPORT.md](research/REPORT.md). **Design log**, one
   counterexample per mechanism: [research/LOG.md](research/LOG.md).
 - **Textbook version:** branch
@@ -36,7 +42,7 @@ later changes of Reflex.
 ## Layout
 
 ```text
-src/        kernel.ts, host.ts, index.ts
+src/        types, model, flags, graph, tracking, kernel, host, instrumentation, surface
 test/       differential (spec, contract spec, Reflex, quant), tracking,
             semantics, structural bounds; tools/ (QUANT_TOOLS=1)
 bench/      scenarios, adapters, build, timing (CI only), structure counters
@@ -51,6 +57,7 @@ For development, use Node.js 20.19 or later in the 20.x line, 22.13 or later in 
 npm run lint                                    # lint production TypeScript
 npm run format:check                            # check production formatting
 npm run format                                  # format production code and tool config
+npm run build && npm run check                  # standalone release and declarations
 npx vitest run --config vitest.config.ts        # all tests
 npx tsc -p tsconfig.json                        # typecheck src
 node research/mutants.mjs                       # ablation -> research/mutants.json
@@ -58,6 +65,7 @@ node bench/build.mjs                            # bundles: quant, Reflex bf71877
 node bench/run.mjs --verify-only                # same answers on all three runtimes
 node bench/structure.mjs                        # structural work per step
 node bench/run.mjs --rounds 9                   # timing: run it on CI, not locally
+node bench/run.mjs --suite mechanisms --only '^push\.'   # one mechanism: read write track push pull effect batch lifecycle
 ```
 
-CI (`.github/workflows/experiment.yml`) installs this repository and runs the tests, counters and timing independently. The Reflex benchmark baseline is fixed at commit `bf71877`; see `bin/reflex-runtime/README.md` for its provenance.
+CI is split in two workflows. `.github/workflows/ci.yml` runs lint, typecheck/release build and tests as parallel jobs. `.github/workflows/benchmark.yml` builds and checksum-verifies the bundles once, then runs in parallel one timing job per mechanism (`bench/mechanisms.mjs`), the graph scenarios (`bench/scenarios.mjs`) in shards, the structural counters and the edge-churn probe. Each timing job runs all three runtimes on one runner: compare ratios within a job, never times across jobs. The Reflex benchmark baseline is fixed at commit `bf71877`; see `bin/reflex-runtime/README.md` for its provenance.

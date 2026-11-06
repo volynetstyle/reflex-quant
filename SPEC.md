@@ -89,7 +89,17 @@ Quant separates four concerns.
 
 ### 1. Kernel mechanism
 
-`src/kernel.ts` owns facts intrinsic to maintaining the reactive dependency graph and satisfying the selected contract:
+The kernel mechanism spans `src/model.ts`, `src/flags.ts`, `src/graph.ts`,
+`src/tracking.ts`, and `src/kernel.ts`. The model defines types, flags declares
+the bit layout, graph contains context-independent operations, and tracking
+resolves dependencies. The kernel owns execution context, stack-dependent
+tracking, propagation, and validation; slot walks and edge creation remain
+there because they mutate the shared work stack.
+These source boundaries do not introduce runtime state or indirection. The
+release build bundles them into a standalone module per format, with research
+instrumentation eliminated; the release check verifies these properties.
+
+The kernel mechanism owns facts intrinsic to maintaining the reactive dependency graph and satisfying the selected contract:
 
 - dependency relations and graph integrity;
 - exact dynamic dependency tracking;

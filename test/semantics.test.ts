@@ -1,7 +1,8 @@
 // Level 1: observable semantics through the public API.
 import { describe, expect, it } from "vitest";
 import { batch, computed, dispose, effect as watch, get, set, signal, untracked, type Computed } from "../src/index";
-import { idle, type Node } from "../src/kernel";
+import { idle } from "../src/kernel";
+import type { Node } from "../src/model";
 import { checkGraph } from "./support/graph";
 
 /** An effect plus its disposer, the shape these tests were written in. */

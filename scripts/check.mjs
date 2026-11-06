@@ -5,14 +5,16 @@
 //
 //   node scripts/check.mjs        (after node scripts/build.mjs)
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { gzipSync } from "node:zlib";
 
 const root = path.resolve(import.meta.dirname, "..");
 const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
+const ts = createRequire(path.join(root, "package.json"))("typescript");
 const fail = (message) => {
   throw new Error(`release check: ${message}`);
 };
@@ -72,20 +74,87 @@ if (Object.keys(esm).sort().join() !== Object.keys(cjs).sort().join()) fail("esm
   console.log(`minified = unminified on ${scenarios.length} scenarios, ${steps} steps`);
 }
 
-for (const file of ["dist/index.js", "dist/index.cjs"]) {
+// Property names are not mangled by the build. Inspect the counter names in
+// the actual minified outputs as well as the named, syntax-optimized twin.
+const counterSource = ts.createSourceFile("instrumentation.ts", readFileSync(path.join(root, "src/instrumentation.ts"), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+const counterDeclaration = counterSource.statements.flatMap((statement) => ts.isVariableStatement(statement) ? [...statement.declarationList.declarations] : []).find((declaration) => ts.isIdentifier(declaration.name) && declaration.name.text === "stats");
+if (!counterDeclaration || !counterDeclaration.initializer || !ts.isObjectLiteralExpression(counterDeclaration.initializer)) fail("cannot inspect research counter names");
+const counterNames = new Set(counterDeclaration.initializer.properties.map((property) => property.name?.getText(counterSource)));
+
+// Parse the artifacts: no static or dynamic imports, CommonJS require, or
+// re-exports from another module.
+function checkStandalone(file, rejectCounters = false) {
   const code = readFileSync(path.join(root, file), "utf8");
-  if (/stats\.|__STATS__/.test(code)) fail(`${file} still carries research counters`);
-  if (/from\s*["']\.\.?\/src/.test(code)) fail(`${file} imports source files`);
+  const tree = ts.createSourceFile(file, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  if (tree.parseDiagnostics.length) fail(`${file} is not valid JavaScript`);
+  function visit(node) {
+    if (ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) ||
+        (ts.isExportDeclaration(node) && node.moduleSpecifier) ||
+        (ts.isCallExpression(node) && (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+          (ts.isIdentifier(node.expression) && node.expression.text === "require")))) {
+      fail(`${file} references another module`);
+    }
+    if (ts.isIdentifier(node) && (node.text === "__STATS__" || (rejectCounters && node.text === "stats"))) {
+      fail(`${file} still carries research instrumentation`);
+    }
+    if (rejectCounters && ts.isIdentifier(node) && node.text === "Flag") fail(`${file} still carries the flag enum`);
+    if ((ts.isPropertyAccessExpression(node) && counterNames.has(node.name.text)) ||
+        (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression) && counterNames.has(node.argumentExpression.text)) ||
+        (ts.isPropertyAssignment(node) && counterNames.has(node.name.getText(tree)))) {
+      fail(`${file} still carries a research counter`);
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
 }
+const expected = ["index.cjs", "index.cjs.map", "index.d.cts", "index.d.ts", "index.js", "index.js.map"];
+if (readdirSync(path.join(root, "dist")).sort().join() !== expected.join()) fail("unexpected files in dist");
+for (const file of ["dist/index.js", "dist/index.cjs", ".cache/release/inspect.js"]) checkStandalone(file, file.endsWith("inspect.js"));
+
+// Machine shape of the release: no identity function (a type assertion that
+// leaked into runtime as a call), and one allocation site per object shape,
+// so V8 sees one Node map and one Edge map.
+function checkShape(file) {
+  const tree = ts.createSourceFile(file, readFileSync(path.join(root, file), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const sites = { node: 0, edge: 0 };
+  const returned = (body) => {
+    if (ts.isIdentifier(body)) return body.text;
+    if (ts.isParenthesizedExpression(body)) return returned(body.expression);
+    if (ts.isBlock(body) && body.statements.length === 1 && ts.isReturnStatement(body.statements[0]) && body.statements[0].expression) return returned(body.statements[0].expression);
+    return undefined;
+  };
+  function visit(node) {
+    if ((ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node)) && node.body &&
+        node.parameters.length === 1 && ts.isIdentifier(node.parameters[0].name) && returned(node.body) === node.parameters[0].name.text) {
+      fail(`${file} carries an identity function: ${node.getText(tree).slice(0, 60)}`);
+    }
+    if (ts.isObjectLiteralExpression(node)) {
+      const keys = new Set(node.properties.map((p) => p.name?.getText(tree)));
+      if (["flags", "value", "ver", "fn", "deps", "subs", "slot", "gen"].every((k) => keys.has(k))) sites.node++;
+      if (["from", "to", "ver", "gen", "prev", "next", "prevSub", "nextSub"].every((k) => keys.has(k))) sites.edge++;
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+  if (sites.node !== 1 || sites.edge !== 1) fail(`${file}: ${sites.node} Node and ${sites.edge} Edge allocation sites, expected one each`);
+}
+for (const file of ["dist/index.js", ".cache/release/inspect.js"]) checkShape(file);
+console.log("release shape: no identity functions, one Node and one Edge allocation site");
+for (const file of ["index.d.ts", "index.d.cts"]) {
+  const tree = ts.createSourceFile(file, readFileSync(path.join(root, "dist", file), "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  if (tree.statements.some((node) => ts.isImportDeclaration(node) || ts.isImportEqualsDeclaration(node) || (ts.isExportDeclaration(node) && node.moduleSpecifier))) fail(`${file} references another module`);
+}
+console.log(`standalone bundles: ${gzipSync(readFileSync(path.join(root, "dist/index.js"))).length} bytes gzip`);
 
 // A consumer project in strict mode, against the shipped declarations.
 const tmp = mkdtempSync(path.join(tmpdir(), "reflex-quant-types-"));
 try {
-  const consumer = path.join(tmp, "use.ts");
-  writeFileSync(
-    consumer,
-    [
-      `import { signal, computed, effect, get, set, dispose, type Signal, type Computed } from ${JSON.stringify(path.join(root, "dist/index.js").replaceAll("\\", "/"))};`,
+  const consumers = [];
+  for (const [extension, entry] of [["mts", "index.js"], ["cts", "index.cjs"]]) {
+    const consumer = path.join(tmp, `use.${extension}`);
+    consumers.push(consumer);
+    writeFileSync(consumer, [
+      `import { signal, computed, effect, get, set, dispose, type Signal, type Computed, type Readable } from ${JSON.stringify(path.join(root, "dist", entry).replaceAll("\\", "/"))};`,
       "const a: Signal<number> = signal(1);",
       "const b: Computed<string> = computed(() => String(get(a)));",
       "const s: string = get(b);",
@@ -93,11 +162,16 @@ try {
       "dispose(effect(() => void get(b)));",
       "// @ts-expect-error a computed cannot be set",
       "set(b, 'x');",
+      "// Reading is covariant: a Signal<number> is a Readable<number | string>.",
+      "const r: Readable<number | string> = a;",
+      "// @ts-expect-error a signal is written, so it is invariant",
+      "const w: Signal<number | string> = a;",
+      "export { r, w };",
       "export { s };",
-    ].join("\n"),
-  );
+    ].join("\n"));
+  }
   const tsc = createRequire(path.join(root, "package.json")).resolve("typescript/bin/tsc");
-  execFileSync(process.execPath, [tsc, "--noEmit", "--strict", "--module", "nodenext", "--moduleResolution", "nodenext", "--target", "es2022", "--skipLibCheck", "false", consumer], { stdio: "inherit" });
+  execFileSync(process.execPath, [tsc, "--noEmit", "--strict", "--module", "nodenext", "--moduleResolution", "nodenext", "--target", "es2022", "--skipLibCheck", "false", ...consumers], { stdio: "inherit" });
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }

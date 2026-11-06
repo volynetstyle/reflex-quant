@@ -1,7 +1,7 @@
 // Timing comparison of quant, Reflex and alien-signals (CI only: timing runs
 // never count when taken on a developer machine).
 //
-//   node bench/build.mjs && node bench/run.mjs [--rounds 7] [--only <regex>] [--out <file>] [--verify-only]
+//   node bench/build.mjs && node bench/run.mjs [--suite scenarios|mechanisms] [--rounds 7] [--only <regex>] [--out <file>] [--verify-only]
 //
 // Protocol: every (runtime, scenario) pair runs in a fresh process per
 // round; within a round the pairs run in a random order, so drift and
@@ -13,10 +13,11 @@ import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { arch, cpus, platform, release } from "node:os";
 import path from "node:path";
-import { scenarios } from "./scenarios.mjs";
+import { suiteOf } from "./suites.mjs";
 
 const root = path.resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
+const { name: suite, scenarios } = suiteOf(args);
 const option = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const rounds = Number(option("--rounds", 7));
 const only = new RegExp(option("--only", "."));
@@ -37,7 +38,7 @@ const shuffle = (list) => {
 };
 const runWorker = (runtime, id, extra = []) =>
   JSON.parse(
-    execFileSync(process.execPath, ["--expose-gc", worker, bundle(runtime), id, ...extra], { encoding: "utf8", timeout: 120_000 })
+    execFileSync(process.execPath, ["--expose-gc", worker, bundle(runtime), id, "--suite", suite, ...extra], { encoding: "utf8", timeout: 120_000 })
       .trim()
       .split("\n")
       .pop(),
@@ -92,6 +93,7 @@ const env = {
   cpu: cpus()[0]?.model,
   cores: cpus().length,
   os: `${platform()} ${release()} ${arch()}`,
+  suite,
   rounds,
   manifest: JSON.parse(readFileSync(path.join(root, ".cache/bench/manifest.json"), "utf8")),
   invalid,

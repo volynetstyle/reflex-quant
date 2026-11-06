@@ -1,0 +1,201 @@
+name: Benchmark
+
+# Quant vs the vendored Reflex baseline vs alien-signals, split into parallel
+# jobs. Bundles are built and checksum-verified once, then shared. Every
+# timing job runs all three runtimes on its own runner, so ratios within one
+# job are valid; never compare times across jobs or runs.
+#
+#   mechanisms  one job per mechanism (bench/mechanisms.mjs): read, write,
+#               track, push, pull, effect, batch, lifecycle
+#   scenarios   graph workloads (bench/scenarios.mjs), sharded by group
+#   structure   counters for both suites (counting, not timing)
+#   edge-churn  isolated Edge allocation probe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "bench/**"
+      - "bin/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/benchmark.yml"
+  workflow_dispatch:
+    inputs:
+      rounds:
+        description: Timing rounds (fresh process per runtime and scenario per round)
+        required: false
+        default: "9"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  ROUNDS: ${{ inputs.rounds || '9' }}
+
+jobs:
+  bundles:
+    name: build and verify bench bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node bench/build.mjs
+      - name: Same answers on every runtime
+        run: |
+          node bench/run.mjs --suite mechanisms --verify-only
+          node bench/run.mjs --suite scenarios --verify-only
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bench-bundles
+          path: .cache/bench/
+          include-hidden-files: true
+          retention-days: 1
+
+  mechanisms:
+    name: mechanism ${{ matrix.mechanism }}
+    needs: bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        mechanism: [read, write, track, push, pull, effect, batch, lifecycle]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: bench-bundles
+          path: .cache/bench
+      - name: Timing
+        env:
+          MECHANISM: ${{ matrix.mechanism }}
+        run: |
+          mkdir -p artifacts
+          node bench/run.mjs --suite mechanisms --only "^$MECHANISM\\." --rounds "$ROUNDS" --out "artifacts/mechanism-$MECHANISM.json"
+          { echo "## Mechanism: $MECHANISM"; echo; cat "artifacts/mechanism-$MECHANISM.md"; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: mechanism-${{ matrix.mechanism }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+  scenarios:
+    name: scenarios ${{ matrix.shard.name }}
+    needs: bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard:
+          - { name: static-stable, only: "^(static|stable)\\." }
+          - { name: diamond-fan, only: "^(diamond|fan-in|fan-out)\\." }
+          - { name: dynamic, only: "^(branch|edit|reorder|value-sort)\\." }
+          - { name: churn, only: "^(replace-half|shared-chaotic|long-reorder)\\." }
+          - { name: batch-lifecycle, only: "^(batch|lifecycle)\\." }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: bench-bundles
+          path: .cache/bench
+      - name: Timing
+        env:
+          SHARD: ${{ matrix.shard.name }}
+          ONLY: ${{ matrix.shard.only }}
+        run: |
+          mkdir -p artifacts
+          node bench/run.mjs --suite scenarios --only "$ONLY" --rounds "$ROUNDS" --out "artifacts/scenarios-$SHARD.json"
+          { echo "## Scenarios: $SHARD"; echo; cat "artifacts/scenarios-$SHARD.md"; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: scenarios-${{ matrix.shard.name }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+  structure:
+    name: structural counters
+    needs: bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: bench-bundles
+          path: .cache/bench
+      - name: Counters for both suites
+        run: |
+          mkdir -p artifacts
+          for suite in mechanisms scenarios; do
+            node bench/structure.mjs --suite "$suite" | tee "artifacts/structure-$suite.md"
+            { echo "## Structural work per step: $suite"; echo; cat "artifacts/structure-$suite.md"; echo; } >> "$GITHUB_STEP_SUMMARY"
+          done
+          cp .cache/bench/structure*.json artifacts/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: structure
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+  edge-churn:
+    name: isolated edge churn
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Probe
+        run: |
+          mkdir -p artifacts
+          node bench/edge-churn.mjs --rounds 3 --out artifacts/edge-churn.json | tee artifacts/edge-churn.md
+          { echo "## Isolated edge churn (ns per edge)"; echo; cat artifacts/edge-churn.md; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: edge-churn
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30

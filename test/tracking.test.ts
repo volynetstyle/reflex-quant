@@ -1,11 +1,13 @@
+import { Flag } from "../src/flags";
 // Level 1: adversarial dependency tracking on the kernel. Every case checks
 // values, relation uniqueness, list integrity and the work counters.
 import { beforeEach, describe, expect, it } from "vitest";
-import { DIRTY, idle, node, read, stats, write, type Edge, type Node } from "../src/kernel";
+import { idle, node, read, stats, write } from "../src/kernel";
+import type { Edge, Node } from "../src/model";
 import { checkGraph, deps, edgeCount, indices, resetStats, subs } from "./support/graph";
 
 const signal = (v: unknown) => node(null, v, 0);
-const computed = (fn: (prev: unknown) => unknown) => node(fn, undefined, DIRTY);
+const computed = (fn: (prev: unknown) => unknown) => node(fn, undefined, Flag.Dirty);
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 function permutation(n: number, seed: number): number[] {
@@ -308,7 +310,7 @@ describe("tracking", () => {
     }
     const leaf = tip;
     let seen = -1;
-    const w = node(() => void (seen = read(leaf) as number), undefined, 16 | 1 | DIRTY);
+    const w = node(() => void (seen = read(leaf) as number), undefined, 16 | 1 | Flag.Dirty);
     write(s, 5);
     expect(read(leaf)).toBe(depth + 5);
     write(s, 6);

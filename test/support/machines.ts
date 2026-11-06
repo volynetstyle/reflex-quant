@@ -1,3 +1,4 @@
+import { Flag } from "../../src/flags";
 // The quant runtime behind the differential testkit's RuntimePort, and a
 // four-way runner: the executable spec, the contract spec (spec + D1/D2),
 // current Reflex and quant execute the same program operation by operation.
@@ -9,7 +10,8 @@ import {
 } from "../../bin/reflex-runtime/test/differential/harness";
 import type { Observation, Op, Program } from "../../bin/reflex-runtime/test/differential/api";
 import { RuntimeMachine } from "../../bin/reflex-runtime/test/differential/internal/machine/RuntimeMachine";
-import { DIRTY, node, read, write, type Node } from "../../src/kernel";
+import { node, read, write } from "../../src/kernel";
+import type { Node } from "../../src/model";
 import { run, stop, watcher } from "../../src/host";
 import { ContractSpecMachine } from "./contract-spec";
 
@@ -22,7 +24,7 @@ export class QuantMachine extends RuntimeMachine<Node, Node, Node> {
     const keep = (n: Node) => (quantNodes.push(n), n);
     super({
       createProducer: (value) => keep(node(null, value, 0)),
-      createComputed: (compute) => keep(node(compute as Node["fn"], undefined, DIRTY)),
+      createComputed: (compute) => keep(node(compute as Node["fn"], undefined, Flag.Dirty)),
       createWatcher: (compute) => keep(watcher(compute, false)),
       readProducer: (n) => read(n) as never,
       writeProducer: (n, value) => write(n, value),
