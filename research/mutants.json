@@ -34,8 +34,10 @@
   {
     "id": "no-fresh-source",
     "mechanism": "a source without subscribers is absent before any scan (optimization)",
-    "killed": false,
-    "failed": []
+    "killed": true,
+    "failed": [
+      "structure.test.ts > LOG 22: a source nobody reads is linked without a scan's proof or a lookup"
+    ]
   },
   {
     "id": "no-suffix-scan",
@@ -57,14 +59,19 @@
   {
     "id": "index-always",
     "mechanism": "LOG 28: a pair found as the source's first subscriber marks the pass instead of indexing it (optimization)",
-    "killed": false,
-    "failed": []
+    "killed": true,
+    "failed": [
+      "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
+      "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index"
+    ]
   },
   {
     "id": "no-mark",
     "mechanism": "LOG 28: a marked pass sets UNREAD on its unread suffix",
     "killed": true,
     "failed": [
+      "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
+      "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index"
     ]
@@ -82,6 +89,7 @@
     "mechanism": "UNREAD marking of the suffix while indexing",
     "killed": true,
     "failed": [
+      "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
@@ -184,7 +192,8 @@
     "mechanism": "BUSY checked on read (cycle detection)",
     "killed": true,
     "failed": [
-      "semantics.test.ts > cycles throw instead of overflowing"
+      "semantics.test.ts > cycles throw instead of overflowing",
+      "surface.test.ts > peeking a computed inside its own run is a cycle, as for get"
     ]
   },
   {

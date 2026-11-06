@@ -181,11 +181,12 @@ Every remaining mechanism has a counterexample: removing it fails a test.
 This is a Level 1 claim about this architecture, not a necessity proof; see
 [WITNESS-AUDIT.md](./WITNESS-AUDIT.md), which merges the ablations into ten
 obligations and classifies each witness.
-24 of 26 ablations are killed (`research/mutants.mjs`, `mutants.json`): 19
-by semantic tests, 4 only by structural bounds (the optimizations of Q4), 1
-only by tests that assert sibling order (the convention of Q4). The two
-survivors are pure constant factors that only CI timing sees:
-`no-fresh-source` (LOG 22) and `index-always` (LOG 28).
+All 26 ablations are killed (`research/mutants.mjs`, `mutants.json`): 19 by
+semantic tests, 6 only by structural bounds (the optimizations of Q4), 1
+only by tests that assert sibling order (the convention of Q4). The last two
+to fall, `no-fresh-source` (LOG 22) and `index-always` (LOG 28), had been
+called constant factors only timing sees; they survived because no counter
+recorded the work they save, not because they save none (LOG 30).
 
 | Mechanism | Smallest counterexample (test or probe) |
 | --- | --- |

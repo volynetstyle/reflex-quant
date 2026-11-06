@@ -359,12 +359,12 @@ function reorderReport() {
       ]),
     );
   }
-  lines.push("", "Structural work per step (quant | variants): lookups, moves, index or mark walks, edges walked.", "");
+  lines.push("", "Structural work per step (quant | variants): lookups, moves, index + mark walks, edges walked.", "");
   lines.push(...head(["scenario", ...["quant", ...vs].map((l) => `${l}: lookups / moves / walks / walked`)]));
   for (const id of ids) {
     const cellsOf = ["quant", ...vs].map((l) => {
       const p = structure[`${l}|${id}`]?.perStep;
-      return p ? `${num(p.lookups, 1)} / ${num(p.moves, 1)} / ${num(p.indexes, 1)} / ${num(p.indexed, 1)}` : "—";
+      return p ? `${num(p.lookups, 1)} / ${num(p.moves, 1)} / ${num(p.indexes, 1)} + ${num(p.sweeps ?? 0, 1)} / ${num(p.indexed, 1)}` : "—";
     });
     lines.push(row([id, ...cellsOf]));
   }

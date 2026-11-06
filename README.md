@@ -35,8 +35,9 @@ later changes of Reflex.
 - Current Reflex is that contract plus three failure-path choices, on the
   same corpus. One of them drops an execution obligation that the contract
   (R2) says survives a failure.
-- 24 of 26 mechanism ablations fail a test; the two survivors are constant
-  factors only timing sees.
+- All 26 mechanism ablations fail a test: 19 a semantic test, 6 only a
+  structural bound (the work an optimization saves, counted), 1 only a
+  sibling-order test (a convention).
 - On CI: within 25 % of the better of Reflex and alien-signals on 14 of 18
   scenarios, faster than both on 8. Reorders allocate nothing.
 

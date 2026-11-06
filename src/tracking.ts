@@ -7,7 +7,7 @@
 import { Flag, SCAN, UNREAD } from "./flags";
 import type { Edge, Node } from "./model";
 import { move } from "./graph";
-import { index, link } from "./kernel";
+import { claim, index, link } from "./kernel";
 import { stats } from "./instrumentation";
 
 /** A read that is not the next edge in read order. Every answer is exact. */
@@ -32,7 +32,7 @@ export function miss(
 
   if ((f & Flag.Marked) === 0) {
     // A source without subscribers is absent.
-    if (s.subs === null) return link(c, s, last, next, false);
+    if (s.subs === null) return link(c, s, last, next);
     // An edge found by a scan is the pair's only one; absence needs one side
     // scanned completely (this reader's list, or the source's subscribers).
     let e = next !== null ? next.next : null;
@@ -69,7 +69,7 @@ export function miss(
     if (found !== null && found !== undefined) begin(c, s, found, next);
   } else found = pair(s, c);
 
-  if (found === null) return link(c, s, last, next, false);
+  if (found === null) return link(c, s, last, next);
 
   if (found !== undefined) return take(c, found, s, last, next);
   // Past the budget: index the pass, and the slot decides from here on.
@@ -84,7 +84,8 @@ function slot(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   const cell = s.slot;
 
   if (cell !== null && cell.to === c) return take(c, cell, s, last, next);
-  link(c, s, last, next, true);
+  link(c, s, last, next);
+  claim(s, c.last as Edge);
 }
 
 /**
@@ -112,7 +113,7 @@ function pair(s: Node, c: Node): Edge | null | undefined {
 function begin(c: Node, s: Node, e: Edge, next: Edge | null): void {
   if (e !== s.subs) return index(c, next);
 
-  if (__STATS__) stats.indexes++;
+  if (__STATS__) stats.sweeps++;
 
   c.flags |= Flag.Marked;
 

@@ -231,9 +231,10 @@ Runs 42258925131 and 42269260132 (both EPYC 7763), ratio to `current`:
   round spread (effect.rerun-1 26.9..28.0 ns, batch.coalesce-64 872..928 ns).
   The guard order alone (`size-first`) gives part of it; moving the guard to
   the call site gives the rest.
-- **`get-alias` is the next candidate**: `get` as kernel `read` itself,
-  under the public type, is 16 % cheaper on `get` and 26 % on read.signal in
-  both runs, with the full paths unchanged. Not adopted yet.
+- **`get-alias`, adopted (LOG 30)**: `get` as kernel `read` itself, under
+  the public type, is 16 % cheaper on `get` and 26 % on read.signal in both
+  runs, with the full paths unchanged. The probe now keeps `flush-call` and
+  `get-function` (the earlier forms) as regression guards.
 
 ## Reorder: pairs through subscribers (LOG 28, LOG 29)
 

@@ -30,8 +30,7 @@ const I = "index.ts";
 const prefixScan =
   "    let p = last !== null ? last.prev : null;\n    budget = SCAN;\n    while (p !== null && p.from !== s && --budget !== 0) p = p.prev;\n    if (p !== null && p.from === s) {\n      if (__STATS__) stats.dups++;\n      p.ver = s.ver;\n      return;\n    }\n";
 const displaced = [
-  [K, "    const s = e.from;\n    if (s.slot !== null) {\n      stack[top++] = s;\n      stack[top++] = s.slot;\n    }\n    s.slot = e;", "    const s = e.from;\n    s.slot = e;"],
-  [K, "  if (indexed) {\n    if (s.slot !== null) {\n      stack[top++] = s;\n      stack[top++] = s.slot;\n    }\n    s.slot = e;", "  if (indexed) {\n    s.slot = e;"],
+  [K, "  if (s.slot !== null) {\n    stack[top++] = s;\n    stack[top++] = s.slot;\n  }\n  s.slot = e;", "  s.slot = e;"],
 ];
 const firstMiss = [
   [T, "  if ((f & Flag.Marked) === 0) {\n    // A source without subscribers is absent.", "  index(c, next);\n  return slot(c, s, last, next);\n  if ((f & Flag.Marked) === 0) {\n    // A source without subscribers is absent."],
@@ -57,29 +56,21 @@ const setFlush = [
 ];
 
 /**
- * Candidates for the public write and read paths, against the release
- * (current: set tests the queue at the call site, LOG 27). flush-call is the
- * previous release's set; size-first is that set with flush's guard
- * reordered (queue first), so flush-call -> size-first is the guard order
- * and size-first -> current the call. commit moves the same guard into one
- * host function; get-alias removes the surface function around kernel read.
- * None changes an answer: run.mjs requires equal checksums, and the test
- * suite runs against each source copy (QUANT_SRC=.cache/cost/src/surface-<v>).
+ * The public write and read paths against the release (current: set tests
+ * the queue at the call site, LOG 27; get and peek are kernel read and peek
+ * under the public type, LOG 30). flush-call and get-function are the earlier
+ * forms, kept as regression guards; size-first and commit, measured in two
+ * runs (research/COST-MODEL.md), are retired. None changes an answer: run.mjs
+ * requires equal checksums, and the test suite runs against each source copy
+ * (QUANT_SRC=.cache/cost/src/surface-<v>).
  */
 export const surfaceVariants = {
   current: ["set tests the queue at the call site: as released"],
   "flush-call": ["set calls flush() (previous release)", ...setFlush],
-  "size-first": ["set calls flush(), whose guard tests the queue first", ...setFlush, [H, "  if (draining || depth !== 0 || size === 0) return;", "  if (size === 0 || draining || depth !== 0) return;"]],
-  commit: [
-    "one host function: write, then the queue guard",
-    [H, 'import { check, dispose, exec, node, onWake, untracked } from "./kernel";', 'import { check, dispose, exec, node, onWake, untracked, write } from "./kernel";'],
-    [H, "export function flush(): void {", "export function commit(n: Node, value: unknown): void {\n  write(n, value);\n  if (size !== 0 && !draining && depth === 0) drainNow();\n}\nexport function flush(): void {"],
-    [I, hostImport, 'import { commit, depth, drainNow, draining, size, start, stop, watcher } from "./host";'],
-    [I, setGuard, "  commit(source as unknown as Node, value);"],
-  ],
-  "get-alias": [
-    "get is kernel read itself, under the public type",
-    [I, "export function get<T>(source: Readable<T>): T {\n  return read(source as unknown as Node) as T;\n}", "export const get = read as unknown as <T>(source: Readable<T>) => T;"],
+  "get-function": [
+    "get and peek as surface functions around kernel read and peek (previous release)",
+    [I, "export const get: <T>(source: Readable<T>) => T = read as never;", "export function get<T>(source: Readable<T>): T {\n  return read(source as unknown as Node) as T;\n}"],
+    [I, "export const peek: <T>(source: Readable<T>) => T = refresh as never;", "export function peek<T>(source: Readable<T>): T {\n  return refresh(source as unknown as Node) as T;\n}"],
   ],
 };
 
@@ -88,8 +79,9 @@ export const surfaceVariants = {
  * a pass whose first unresolved miss finds the pair among the source's first
  * subscribers marks its unread suffix and finds pairs through subscribers).
  * The release marks only when the pair is the source's first subscriber.
- * index-always and mark-any are the two earlier rules. Exact everywhere; the
- * test suite runs against each copy.
+ * index-always and mark-any are the two earlier rules. Exact: the semantic
+ * and differential suites pass on each copy; the structural tests that pin
+ * LOG 28 and 29 fail on them by design.
  */
 export const reorderVariants = {
   "index-always": [

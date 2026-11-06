@@ -36,11 +36,11 @@ const f = (x) => (x === 0 ? "0" : x < 10 ? x.toFixed(2) : x.toFixed(0));
 const table = [
   "Per measured step (mean of 256 steps after 64 warm-up steps).",
   "",
-  "| scenario | reads | cursor hits | skips | lookups | indexed walk | moves | new rel. | removed | executions | marks | validation loads | alien new links | alien removed |",
-  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+  "| scenario | reads | cursor hits | skips | lookups | index + mark walks | walked | moves | new rel. | removed | executions | marks | validation loads | alien new links | alien removed |",
+  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
   ...rows.map(
     ({ id, quant: q, alien: a }) =>
-      `| ${id} | ${f(q.reads)} | ${f(q.hits)} | ${f(q.scans)} | ${f(q.lookups)} | ${f(q.indexed)} | ${f(q.moves)} | ${f(q.links)} | ${f(q.unlinks)} | ${f(q.runs)} | ${f(q.marks)} | ${f(q.checks)} | ${f(a.linksCreated)} | ${f(a.linksUnlinked)} |`,
+      `| ${id} | ${f(q.reads)} | ${f(q.hits)} | ${f(q.scans)} | ${f(q.lookups)} | ${f(q.indexes)} + ${f(q.sweeps ?? 0)} | ${f(q.indexed)} | ${f(q.moves)} | ${f(q.links)} | ${f(q.unlinks)} | ${f(q.runs)} | ${f(q.marks)} | ${f(q.checks)} | ${f(a.linksCreated)} | ${f(a.linksUnlinked)} |`,
   ),
 ].join("\n");
 writeFileSync(path.join(root, `.cache/bench/structure${suite === "scenarios" ? "" : `-${suite}`}.json`), JSON.stringify(rows, null, 2) + "\n");

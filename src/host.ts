@@ -84,10 +84,9 @@ export function stop(w: Node): void {
 
 /** Run queued watchers until the queue drains; rethrow the first error. */
 export function flush(): void {
-  if (draining || depth !== 0 || size === 0) return;
+  if (size === 0 || draining || depth !== 0) return;
 
-  draining = true;
-  drain(false, undefined);
+  drainNow();
 }
 
 /**

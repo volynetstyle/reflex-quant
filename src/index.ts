@@ -46,15 +46,15 @@ export function effect(fn: () => void | (() => void)): Effect {
   return effectNode as unknown as Effect;
 }
 
-/** A signal's flags are 0, so one read path serves signals and computeds. */
-export function get<T>(source: Readable<T>): T {
-  return read(source as unknown as Node) as T;
-}
+/**
+ * Kernel `read` itself under the public type: a signal's flags are 0, so one
+ * read path serves signals and computeds, and no surface function stands in
+ * front of it.
+ */
+export const get: <T>(source: Readable<T>) => T = read as never;
 
 /** `get` without observation: up to date, but the running consumer does not depend on it. */
-export function peek<T>(source: Readable<T>): T {
-  return refresh(source as unknown as Node) as T;
-}
+export const peek: <T>(source: Readable<T>) => T = refresh as never;
 
 /** Writes, then runs what the write scheduled; a write that woke nothing stops at one load. */
 export function set<T>(source: Signal<T>, value: T): void {
@@ -69,14 +69,10 @@ export function set<T>(source: Signal<T>, value: T): void {
  * dependency of the running consumer. If `fn` throws, nothing is written.
  */
 export function update<T>(source: Signal<T>, fn: (value: T) => T): void {
-  const sourceNode = source as unknown as Node;
-
-  write(
-    sourceNode,
-    untracked(() => fn(sourceNode.value as T)),
+  set(
+    source,
+    untracked(() => fn((source as unknown as Node).value as T)),
   );
-
-  if (size !== 0 && !draining && depth === 0) drainNow();
 }
 
 export function dispose(target: Computed<unknown> | Effect): void {

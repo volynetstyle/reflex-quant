@@ -125,6 +125,77 @@ describe("structural bounds", () => {
     expect(stats.links).toBe(10 * 50);
   });
 
+  it("LOG 22: a source nobody reads is linked without a scan's proof or a lookup", () => {
+    // The reader's list is longer than the scan budget on both sides of the
+    // fresh read, so only `subs === null` proves absence at once.
+    const n = 24;
+    const ps = range(n).map(signal);
+    const fresh = signal(-1);
+    const tick = signal(0);
+    const plain = range(n);
+    const edited = [...range(n / 2), n, ...range(n / 2).map((k) => k + n / 2)];
+    const c = reader([...ps, fresh], [plain, edited], tick);
+    read(c);
+    resetStats();
+    write(tick, 1);
+    read(c);
+    expect(stats.links).toBe(1);
+    expect(stats.lookups).toBe(0);
+  });
+
+  it("LOG 28: a single reader's random reorder marks its pass, with no slot index", () => {
+    const n = 128;
+    const ps = range(n).map(signal);
+    const orders = range(8).map((k) => {
+      const o = range(n);
+      let s = 7 + k;
+      for (let i = n - 1; i > 0; i--) {
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+        const j = s % (i + 1);
+        [o[i], o[j]] = [o[j]!, o[i]!];
+      }
+      return o;
+    });
+    const tick = signal(0);
+    const c = reader(ps, orders, tick);
+    read(c);
+    resetStats();
+    for (let t = 1; t <= 40; t++) {
+      write(tick, t);
+      read(c);
+    }
+    expect(stats.links).toBe(0);
+    expect(stats.sweeps).toBe(40);
+    expect(stats.indexes).toBe(0);
+  });
+
+  it("LOG 29: over shared sources, the first reader marks its pass and deeper readers index", () => {
+    const n = 64;
+    const ps = range(n).map(signal);
+    const orders = range(8).map((k) => {
+      const o = range(n);
+      let s = 31 + k;
+      for (let i = n - 1; i > 0; i--) {
+        s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+        const j = s % (i + 1);
+        [o[i], o[j]] = [o[j]!, o[i]!];
+      }
+      return o;
+    });
+    const tick = signal(0);
+    // Three readers subscribed in order: the first is every source's first subscriber.
+    const cs = range(3).map(() => reader(ps, orders, tick));
+    cs.forEach(read);
+    resetStats();
+    for (let t = 1; t <= 20; t++) {
+      write(tick, t);
+      cs.forEach(read);
+    }
+    expect(stats.links).toBe(0);
+    expect(stats.sweeps).toBe(20);
+    expect(stats.indexes).toBe(20 * 2);
+  });
+
   it("O1: a completely scanned reader list proves absence where the subscribers cannot", () => {
     // Each source has more subscribers than the scan budget, so only the new
     // reader's own short list proves that its first reads are new relations.

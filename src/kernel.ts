@@ -140,8 +140,7 @@ function mark(first: Edge): void {
 
 /** Bring `n` up to date if it is a stale computed, then track it. */
 export function read(n: Node): unknown {
-  if ((n.flags & (Flag.Stale | Flag.Dirty | Flag.Busy)) !== 0) pull(n);
-
+  const value = peek(n);
   const c = active;
 
   if (c !== null) {
@@ -157,14 +156,14 @@ export function read(n: Node): unknown {
       next.ver = n.ver;
     } else miss(c, n, last, next);
   }
-  return n.value;
+  return value;
 }
 
-/** `read` without its tracking half: bring `s` up to date, record no relation. */
-export function peek(s: Node): unknown {
-  if ((s.flags & (Flag.Stale | Flag.Dirty | Flag.Busy)) !== 0) pull(s);
+/** `read` without its tracking half: bring `n` up to date, record no relation. */
+export function peek(n: Node): unknown {
+  if ((n.flags & (Flag.Stale | Flag.Dirty | Flag.Busy)) !== 0) pull(n);
 
-  return s.value;
+  return n.value;
 }
 
 /**
@@ -400,14 +399,17 @@ export function index(c: Node, next: Edge | null): void {
 
     if (unread) e.ver = UNREAD;
 
-    const s = e.from;
-
-    if (s.slot !== null) {
-      stack[top++] = s;
-      stack[top++] = s.slot;
-    }
-    s.slot = e;
+    claim(e.from, e);
   }
+}
+
+/** Point the source's slot at `e`, keeping a displaced cell (an enclosing run's) to give back. */
+export function claim(s: Node, e: Edge): void {
+  if (s.slot !== null) {
+    stack[top++] = s;
+    stack[top++] = s.slot;
+  }
+  s.slot = e;
 }
 
 /** Clear the run's slots, give back the cells it displaced. */
@@ -429,7 +431,6 @@ export function link(
   s: Node,
   last: Edge | null,
   next: Edge | null,
-  indexed: boolean,
 ): void {
   if (__STATS__) stats.links++;
 
@@ -454,12 +455,4 @@ export function link(
   else s.subs = e;
   s.lastSub = e;
   c.last = e;
-
-  if (indexed) {
-    if (s.slot !== null) {
-      stack[top++] = s;
-      stack[top++] = s.slot;
-    }
-    s.slot = e;
-  }
 }

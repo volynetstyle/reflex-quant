@@ -487,3 +487,33 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   shared-chaotic 0.94 of `mark-any` and 0.93 of `index-always`, single-reader
   reorders level with `mark-any`.
 - **Status:** adopted, pending CI.
+
+### 30. Code shape after LOG 27–29; the last survivors were a counting gap
+
+- **Shape:** each fact is written once and used where it is needed.
+  `read` is `peek` plus the tracking half (the pull check was written twice);
+  one `claim(s, e)` puts an edge in a source's slot and keeps a displaced
+  cell, for `index` and for a new edge of an indexed pass, so `link` loses
+  its `indexed` flag; `update` is `set(source, untracked(...))`; `flush` ends
+  in `drainNow` and tests the queue first, as `set` does; `get` and `peek`
+  are kernel `read` and `peek` under the public type (two CI runs:
+  −16 % on `get`, −26 % on read.signal, full paths unchanged). Bytecode:
+  `read` 103 → 87, `miss` 421 → 417, `peek` 27, `claim` 57; no inlining
+  refusal on duplicate, stable, signal read and write, local edit,
+  long-reorder, shared-chaotic or effect workloads. Release 2180 → 2147 bytes
+  gzip.
+- **Review of "two survivors are constant factors only timing sees":** both
+  save structural work that no counter recorded. `no-fresh-source` saves the
+  failed scan comparisons and the subscriber lookup of a fresh source (LOG 22
+  said "no comparison counter"); `index-always` saves the slot walks, but
+  the mark walks were counted as `indexes` too. A `sweeps` counter separates
+  them, and three structural tests pin the work: a fresh source in a long
+  list is linked with no lookup (LOG 22), a single reader's reorder marks
+  and never indexes (LOG 28), and over shared sources only the first reader
+  marks (LOG 29). The count assertions of the 64-shared-sources exactness
+  test move to that structural test, so the earlier rules (`index-always`,
+  `mark-any`) still pass every semantic and differential test and fail only
+  the structural ones.
+- **Result:** tests 66/66; all 26 ablations are killed (19 semantic, 6
+  structural, 1 convention); checksums equal on every suite and probe.
+  Counters are compiled out of the release.
