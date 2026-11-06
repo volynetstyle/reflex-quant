@@ -8,7 +8,10 @@ name: Benchmark
 #   mechanisms  one job per mechanism (bench/mechanisms.mjs): read, write,
 #               track, push, pull, effect, batch, lifecycle
 #   scenarios   graph workloads (bench/scenarios.mjs), sharded by group
-#   structure   counters for both suites (counting, not timing)
+#   scaling     the same families at N = 16..4096 (bench/scaling.mjs), one
+#               job per family so all sizes of a family share a runner;
+#               scaling-report merges them into growth exponents
+#   structure   counters for all suites (counting, not timing)
 #   edge-churn  isolated Edge allocation probe
 
 on:
@@ -61,6 +64,7 @@ jobs:
         run: |
           node bench/run.mjs --suite mechanisms --verify-only
           node bench/run.mjs --suite scenarios --verify-only
+          node bench/run.mjs --suite scaling --verify-only
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bench-bundles
@@ -144,6 +148,84 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
+  scaling:
+    name: scaling ${{ matrix.family }}
+    needs: bundles
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        family:
+          - chain
+          - chain-cutoff
+          - fan-out-effects
+          - fan-in
+          - diamond
+          - validate-wide
+          - branch-switch
+          - insert-one
+          - reverse
+          - shuffle
+          - mount-dispose
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: bench-bundles
+          path: .cache/bench
+      - name: Timing at every N
+        env:
+          FAMILY: ${{ matrix.family }}
+        run: |
+          mkdir -p artifacts
+          node bench/run.mjs --suite scaling --only "^$FAMILY@" --rounds "$ROUNDS" --out "artifacts/scaling-$FAMILY.json"
+          node bench/scaling-report.mjs "artifacts/scaling-$FAMILY.json" --out "artifacts/scaling-$FAMILY.report.md"
+          { echo "## Scaling: $FAMILY"; echo; cat "artifacts/scaling-$FAMILY.report.md"; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: scaling-${{ matrix.family }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30
+
+  scaling-report:
+    name: scaling report
+    needs: scaling
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: scaling-*
+          path: shards
+          merge-multiple: true
+      - name: Growth exponents for all families
+        run: |
+          mkdir -p artifacts
+          # Slopes are per family, each fitted within one runner; absolute
+          # times in this merged table come from different runners.
+          node bench/scaling-report.mjs shards/scaling-*.json --out artifacts/scaling.md
+          { echo "## Scaling: all families"; echo; cat artifacts/scaling.md; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scaling-report
+          path: artifacts/
+          retention-days: 30
+
   structure:
     name: structural counters
     needs: bundles
@@ -163,7 +245,7 @@ jobs:
       - name: Counters for both suites
         run: |
           mkdir -p artifacts
-          for suite in mechanisms scenarios; do
+          for suite in mechanisms scenarios scaling; do
             node bench/structure.mjs --suite "$suite" | tee "artifacts/structure-$suite.md"
             { echo "## Structural work per step: $suite"; echo; cat "artifacts/structure-$suite.md"; echo; } >> "$GITHUB_STEP_SUMMARY"
           done

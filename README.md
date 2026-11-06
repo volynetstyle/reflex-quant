@@ -66,6 +66,8 @@ node bench/run.mjs --verify-only                # same answers on all three runt
 node bench/structure.mjs                        # structural work per step
 node bench/run.mjs --rounds 9                   # timing: run it on CI, not locally
 node bench/run.mjs --suite mechanisms --only '^push\.'   # one mechanism: read write track push pull effect batch lifecycle
+node bench/run.mjs --suite scaling --only '^chain@' --out .cache/bench/s.json && node bench/scaling-report.mjs .cache/bench/s.json
+                                                # growth with load: N = 16..4096, log-log slope per runtime
 ```
 
 CI is split in two workflows. `.github/workflows/ci.yml` runs lint, typecheck/release build and tests as parallel jobs. `.github/workflows/benchmark.yml` builds and checksum-verifies the bundles once, then runs in parallel one timing job per mechanism (`bench/mechanisms.mjs`), the graph scenarios (`bench/scenarios.mjs`) in shards, the structural counters and the edge-churn probe. Each timing job runs all three runtimes on one runner: compare ratios within a job, never times across jobs. The Reflex benchmark baseline is fixed at commit `bf71877`; see `bin/reflex-runtime/README.md` for its provenance.

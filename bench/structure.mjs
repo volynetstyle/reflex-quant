@@ -2,7 +2,7 @@
 // link counters, on the same scenarios. Counting, not timing: it runs on any
 // machine.
 //
-//   node bench/build.mjs && node bench/structure.mjs [--suite scenarios|mechanisms] [--only <regex>]
+//   node bench/build.mjs && node bench/structure.mjs [--suite scenarios|mechanisms|scaling] [--only <regex>]
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";

@@ -1,7 +1,7 @@
 // Timing comparison of quant, Reflex and alien-signals (CI only: timing runs
 // never count when taken on a developer machine).
 //
-//   node bench/build.mjs && node bench/run.mjs [--suite scenarios|mechanisms] [--rounds 7] [--only <regex>] [--out <file>] [--verify-only]
+//   node bench/build.mjs && node bench/run.mjs [--suite scenarios|mechanisms|scaling] [--rounds 7] [--only <regex>] [--out <file>] [--verify-only]
 //
 // Protocol: every (runtime, scenario) pair runs in a fresh process per
 // round; within a round the pairs run in a random order, so drift and

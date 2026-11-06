@@ -3,10 +3,12 @@
 //   scenarios   graph shapes: mixed workloads (scenarios.mjs)
 //   mechanisms  one mechanism per scenario: read, write, track, push, pull,
 //               effect, batch, lifecycle (mechanisms.mjs)
+//   scaling     the same families at N = 16..4096 (scaling.mjs)
 import { scenarios as graph } from "./scenarios.mjs";
 import { scenarios as mechanisms } from "./mechanisms.mjs";
+import { scenarios as scaling } from "./scaling.mjs";
 
-export const suites = { scenarios: graph, mechanisms };
+export const suites = { scenarios: graph, mechanisms, scaling };
 
 export function suiteOf(argv) {
   const i = argv.indexOf("--suite");
