@@ -110,7 +110,7 @@ async function bundle(name, entry, plugins = [], stats = false) {
     platform: "neutral",
     minify: true,
     target: "es2022",
-    define: { __STATS__: String(stats) },
+    define: { __STATS__: String(stats), __DEV__: "false" },
     plugins,
     outfile: path.join(dir, "index.mjs"),
     logLevel: "warning",

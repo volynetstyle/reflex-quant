@@ -555,3 +555,320 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   bytes gzip. Probe `reorder` carries `refresh-repeats` (the previous
   behaviour) to time the change on CI; a local indication on
   track.duplicate-64 is within noise.
+
+### 32. W5 construction atomicity: an `effect()` that throws leaves nothing live
+
+- **Witness:** `effect(() => { get(s); throw e })`. The call throws, so no
+  handle is returned, but the watcher stays live: `fail` keeps the read of
+  `s` as a wake edge (F3), so `set(s, 1)` runs it again, and nothing can
+  dispose it. Found by `test/torture-semantics.test.ts`, which carried the
+  lifecycle shape of alien-signals issue #118 over to quant. The two
+  runtimes are built differently, yet both fail the same lifecycle class.
+- **Contract (SPEC):** F3 was stated for every watcher. It now covers an
+  established watcher, one whose handle `effect()` returned. The new
+  invariant W5: a call that throws returns no handle and leaves no live
+  watcher. The rule follows the call, not the watcher's own run. If the
+  watcher's run succeeds and a sibling run in the drain that the call
+  opened throws, the call still throws and still returns nothing, so the
+  same zombie would remain.
+- **Repair (surface):** `effect()` wraps `start` and, on a throw, runs the
+  host's existing `stop` before rethrowing. No state is added. A failed run
+  commits no cleanup (`exec` commits nothing on a throw), so the watcher's
+  own failure runs nothing. In the sibling case `stop` consumes the cleanup
+  of the successful run, and that run's writes stay committed.
+- **Layer:** the kernel's `fail` is right for an established watcher; only
+  the surface knows that the handle was never published.
+- **Alternatives rejected:** detach in the kernel a watcher that has never
+  succeeded (`gen === 0`). A first run deferred by a batch or an open drain
+  fails after its handle is returned, and F3 must keep that watcher; `gen`
+  cannot tell whether the handle was published. Returning the handle and
+  swallowing the error breaks error delivery. Stopping only on the
+  watcher's own failure leaves the zombie in the sibling case.
+- **Evidence:** `semantics.test.ts` W5: the watcher's own failure leaves
+  no relation and no rerun; a sibling's failure rolls the call back (the
+  cleanup is consumed and the write stays); a deferred first run is
+  established and its failure is F3. Mutant `construction-commits` is killed
+  by three tests; `run-direct` is now also killed by the W5 tests. Cost: a
+  try/catch around `start`, off every hot path; about +9 B gzip.
+
+### 33. C1: a precondition, diagnosed by the development build (CHECKING)
+
+- **Witnesses**, one root cause. The cycle is `a = cyclic ? b + 1 : 0`,
+  `b = a + 1`, read once, then `cyclic := true`:
+  - (a) `get(b)` gave 3. `verify(b)` ran `a`, and `a` read `b`, whose STALE
+    bit the walk had cleared on entry. `b` looked clean, so its committed
+    1 was used. This is a delay element that no one specified.
+  - (b) The same cycle, but with `b` DIRTY (it also reads a signal that
+    changed), throws `Cycle`. The answer depended on how the node was
+    invalidated.
+  - (c) `get(a)` gave 2, and then `get(b)` gave 1 at rest, forever. `a`
+    ran and read `b`; `b`'s validation reached `a`. `a` was BUSY, but `exec`
+    clears STALE|DIRTY when a run starts, and `verify` tested BUSY only
+    under those bits. So it compared `a`'s committed version, found it
+    equal, and cleared `b`. `a`'s commit pushes nothing, so the
+    invalidation was lost.
+  - (d) No cycle in the graph: `a` writes `x` at depth 0, so `set` drains.
+    An effect reads `x`, then `b = a + 1` (validated, because it was read
+    before). The effect saw `b`'s old 1 and stayed clean while `b` became
+    11. The same effect reading `a` directly threw `Cycle`.
+  - (e) `check`, the watcher's validation, has the same blind spot. It
+    compared the committed version of a source under validation. With (a)
+    diagnosed, the read in the run throws, but only after the cleanup was
+    consumed (P4).
+- **Root:** a node on a validation walk has STALE cleared and no other bit
+  set, so `read`, `verify` and `check` see it as a clean node at rest; and
+  a BUSY node that no push marked again looks clean to `verify` and
+  `check`.
+- **Structural check:** `checkGraph` now asserts freshness: a live node
+  that is neither STALE nor DIRTY has clean sources, at their current
+  versions. It holds after every operation of every differential program
+  and in every existing test; (c) and (d) are its first violations.
+- **Contract (SPEC):** C1 is a precondition, not an invariant. A program
+  whose demand reaches an evaluation in progress is erroneous. The
+  development build diagnoses it with a cycle error; the production build
+  gives it no defined result beyond graph integrity and the structural
+  bounds, and pays nothing for a diagnosis. It is a precondition because
+  no type can rule such a program out (the demand is made through a
+  closure and depends on the order of evaluation), and because the
+  diagnosis would be C1's only production cost. The committed value was
+  rejected as the development build's answer: (b) makes it depend on
+  invalidation history, and (c) and (d) show it is not even stable. (d)
+  has no data cycle, so the precondition also covers a write during an
+  evaluation whose synchronous drain demands the node in progress. The
+  provenance spec assumes acyclic evaluation, so C1 is no D-decision.
+- **First repair, and why it was not minimal:** a new bit, `1 << 9`. The
+  read mask became 519, which needs a wide operand, so `peek` grew from 27
+  to 30 bytes of bytecode, past V8's threshold for always inlining a small
+  function (`--max-inlined-bytecode-size-small=27`, TurboFan and Maglev).
+  stable.wide-8 ran at 1.13× HEAD in every round of a local A/B (an
+  indication, not evidence). A W3 guard in `exec` added 8 more bytes there.
+- **Minimal repair:**
+  - No new bit: CHECKING takes WOKEN's bit (32). WOKEN belongs to watchers
+    and CHECKING to computeds, and no node is both: a walk visits sources,
+    and a watcher is never a source. Every mask stays a byte.
+  - CHECKING is set by the store that already clears STALE (the root and
+    each descent). It is cleared by `exec`'s store that sets BUSY (the mask
+    becomes ~35 instead of ~3, the same size), and by one store of its own
+    only when the walk finds a node clean. If the read path inspects only
+    `n.flags`, two writes per validated node are the floor: the state "in
+    progress" must appear there and disappear again.
+  - Under `__DEV__`: every write of CHECKING, and the BUSY extension of the
+    source tests in `verify` and `check`. The CHECKING tests in the masks of
+    `peek` and `pull` stay in both builds. Production never sets the bit on
+    a computed, so they are inert there and cost nothing (the immediate is
+    a byte either way).
+- **Production equals HEAD on the hot path.** In the production build, the
+  bytecode lengths of `peek` 27, `read` 87, `pull` 60, `exec` 244, `write`
+  244, `mark` 162 and `check` 177 equal HEAD's. `verify` grows from 333 to
+  371, all of it W3 (LOG 34). The development build has the same lengths,
+  with `verify` at 394.
+- **Build:** `scripts/build.mjs` also emits `dist/index.development.{js,cjs}`
+  (`__DEV__` true, constants folded, names kept), which `package.json`
+  selects through the `development` condition. The release check
+  smoke-tests both builds and checks the split: on (a) the development
+  build throws `Cycle detected` and the production build answers. It also
+  checks that no artifact carries an unreplaced `__DEV__`. `npm test` runs
+  the development build. `npm run test:production` (vitest
+  `--mode production`, also run in CI) runs the suite against the
+  production build and skips the seven tests of the diagnosis. vitest
+  replaces quant's `__DEV__` file by file, because the Reflex runtime reads
+  a global `__DEV__` of its own.
+- **Alternatives rejected:**
+  - C1 as an invariant in production. With the minimal layout its only
+    production cost is one store per node a walk finds clean (a local
+    indication on a chain of 100 clean nodes: 1.04× HEAD). The precondition
+    makes the production build pay nothing.
+  - Lazy marking: mark the walk only before it runs a node. It needs no
+    store in a walk that runs nothing, but two per node in a walk with a
+    run below them (a cutoff at the bottom of a chain), and more code.
+  - BUSY meaning "run or validation on the stack". `write`'s BUSY branch
+    (no DIRTY; versions decide) would apply to nodes under validation, and
+    `dispose` would defer detaching to the end of a run that a validation
+    never reaches, so the relations would leak.
+  - Keeping STALE during the walk. A read would re-enter `verify` on the
+    same node, and pushes during the walk must re-mark it (LOG 8).
+  - Marking the path DIRTY. A read would run the node inside its own
+    validation: two executions in one wave (P3).
+  - Searching the work stack on reads. A node under validation and a clean
+    node have identical flags, and the read path inspects only `n.flags`, so
+    every read would have to search: S1.
+- **Evidence:** `semantics.test.ts` "C1 evaluation in progress (development
+  build)": (a), (b), (c), (d) with both reads, (e) through the cleanup
+  count, and every ring of length 1 to 4, for every gate and demanded node,
+  demanded directly or from a consumer above (60 programs). Seven
+  diagnostic ablations run against the development build: `no-checking-read`,
+  `no-checking-descent`, `checking-kept-when-clean`, `checking-kept-on-run`,
+  `checking-kept-on-failure`, `verify-busy-blind` and `check-busy-blind`.
+  All are killed. Only the "from above" programs kill
+  `no-checking-descent`, because in a simple ring the walk always closes on
+  its own root. `no-cycle-check` (BUSY on read, in both builds) is now
+  killed by five tests instead of one.
+- **Classification:** development diagnostic (SPEC). It is not counted in
+  the mechanism basis.
+- **Status:** adopted, pending CI.
+
+### 34. W3: a computed disposed during its own validation is not run
+
+- **Witness:** `a = () => { v = get(s); if (v === 1) dispose(b); return v }`,
+  `b = a + 1`, then `s := 1` and `get(b)`. This threw
+  `TypeError: n.fn is not a function`. `verify(b)` ran `a`; `a` disposed
+  `b`, which was not BUSY, so it was detached at once; `a` changed, so
+  `verify` ran `b` with `fn === null`. It was found while looking for (a)
+  of LOG 33 and has the same root: an evaluation in progress was
+  invisible. Unlike C1, it is a crash in a legal program, and nothing
+  before production can rule it out, so the repair ships.
+- **Contract (SPEC):** W3 now reads "safe inside the node's own pass and
+  its own validation".
+- **Repair (kernel):** `verify` does not run a node whose `fn` is null, at
+  its two decisions to run one (a source changed, or the climb reaches a
+  parent whose child changed). Its catch does not leave such a node DIRTY,
+  which would otherwise make a later read or validation run it. `exec` is
+  untouched, so a run that no validation decided pays nothing.
+- **Alternatives rejected:** a guard in `exec` costs every run a compare
+  and adds 5 bytes of bytecode there. Deferring disposal while the node is
+  under validation, as for BUSY, would need a detach in the climb.
+- **Residual:** the walk goes on over the disposed node's removed edges
+  (the cut keeps their `next` chain) until the first changed source, so a
+  source validated after the disposal can still throw into the demand in
+  progress. Later reads return the frozen value.
+- **Evidence:** `semantics.test.ts` "W3 disposal during validation": the
+  disposed node's own source changed, the climb reaches it through `m`, and
+  a later source throws in the same walk. Mutants `disposed-run`,
+  `disposed-run-climb` and `disposed-left-dirty` are each killed by their
+  program.
+- **Cost:** production `verify` grows from 333 to 371 bytes of bytecode;
+  no hot function changes. With W5 (about +9 B), the production release
+  grows from 2131 to 2163 B gzip; the development build is 2962 B.
+
+### 35. The work stack gives back what a deep walk grew (structural, retained memory)
+
+- **Witness:** read a chain of 2,000 computeds, then validate it once. The
+  shared work stack keeps 1,999 slots for good: walks null the slots they
+  pop but never shrank the array. Retained memory followed the deepest walk
+  ever, not the live structure. The stack is not graph, so S4 does not name
+  it; this is the same kind of repair as clearing the pointers of a
+  detached edge.
+- **Repair:** at the end of an outermost validation (base 0, so top 0), a
+  stack longer than TRIM (512) is cut to KEEP (256) by setting its length.
+  V8 right-trims the backing store in place. Checked with
+  `--allow-natives-syntax`: the FixedArray at the same address went from
+  capacity 22,583 to 256 and stayed PACKED_ELEMENTS, also when it grew
+  again. The gap TRIM = 2 × KEEP keeps walks only a little deeper than KEEP
+  from cutting and regrowing on every pass. A steady workload deeper than
+  TRIM regrows on every pass, which copies O(depth), the same order as the
+  walk.
+- **Placement, the cheapest found:** only `verify`'s outermost exit. The
+  guard tests the length first (one load and one compare, false in the
+  common case), then the base. The same guard in `mark` cost 29 bytes of
+  bytecode there (162 → 191), on the write path, and it is not needed. A
+  deep mark runs through computeds that are STALE afterwards, so their next
+  demand is an outermost validation, whose end cuts the stack whichever walk
+  grew it (tested).
+- **Alternatives rejected:**
+  - a test at every push: a cost per element;
+  - a new array: `stack` would change from const to let, and the warm
+    buffer would be lost;
+  - `splice`: it allocates;
+  - the host's drain end: it misses reads that drain nothing, and the work
+    stack is kernel state.
+- **Cost:** in the production build, `verify` grows from 371 to 404 bytes
+  of bytecode; `peek`, `read`, `pull`, `exec`, `write`, `mark` and `check`
+  keep HEAD's lengths. The release grows from 2163 to 2193 B gzip.
+  `stackHighWater` (research) keeps the peak `trim` cut, under `__STATS__`
+  only.
+- **Evidence:** `structure.test.ts` "work stack at rest": a deep validation
+  cuts the stack back to KEEP; a stack a deep mark grew is cut by the next
+  outermost validation; a validation no deeper than TRIM leaves the stack as
+  it is. Mutant `no-trim` is killed by these tests only (structural).
+
+### 36. SETTLE: a wrapped generation never makes a committed edge tentative
+
+- **Witnesses** (`test/generations.test.ts`). A committed edge keeps its
+  birth generation, because reuse never restamps it, and an edge counts as
+  tentative while `e.gen === (node.gen + 1) & MASK`. After 2^30 - 1 commits
+  of its node, an edge from the first run reads as tentative again. The
+  tests forge only the counter (`gen = MASK`, as after 2^30 - 1 runs); one
+  real successful run then wraps it to 0.
+  - A watcher driven by a computed stops running, with no failure at all.
+    The first loop of `check` skips the pull of a "tentative" source, sees
+    the old version and owes nothing, so the watcher never commits again
+    and its generation stays in the colliding state. It is a permanent
+    stall after exactly 2^30 runs of the watcher: 207 days at 60 runs a
+    second, 12 days at 1,000.
+  - A failed watcher (F3) or computed (F1) loses a committed edge that its
+    failed run did not read: `fail` drops it as a tentative edge left by an
+    earlier failure. A write to that source no longer wakes the watcher.
+  - An owed watcher skips the pull of a committed source (the second loop
+    of `check`), so its cleanup runs before the validation failure (P4).
+- **Contract:** none changes. F1, F3 and P4 were broken by a property of
+  the construction (masked SMI generations and an equality test), so the
+  repair is an implementation lemma.
+- **Repair:** when a commit makes `gen & SETTLE` zero (SETTLE = 2^29 - 1),
+  the node restamps all its edges with its generation (`settle`). At a
+  commit every edge is committed, so this is exact. No committed edge is
+  then more than 2^29 behind its node, while a collision needs 2^30 - 1.
+  Once a cycle is not enough: an edge stamped at the restamp collides 2^30 -
+  1 commits later, one commit before the next restamp, whatever the phase.
+  The cost is one AND and one compare per successful run, plus O(d) once in
+  2^29 runs.
+- **Alternatives rejected:**
+  - Restamp on every reuse: a store on every stable read (S1's path).
+  - A per-edge tentative bit: it must be cleared at every commit, O(new
+    edges) per run.
+  - Unmasked generations: they become doubles past the SMI range, which
+    generalises the field representation.
+  - Without bounding the age of an edge, a finite counter cannot tell
+    "born in the next run" from "2^30 - 1 runs old". Some bound has to be
+    paid, either per read or per commit; per commit is cheaper.
+- **Cost:** `exec` grows from 244 to 272 bytes of bytecode (production
+  build); `peek`, `read`, `pull`, `write`, `mark` and `check` are
+  unchanged. The release grows from 2193 to 2221 B gzip.
+- **Evidence:** five tests in `generations.test.ts`: the stall (no
+  failure), F3, F1, P4, and both restamp phases. Mutant `no-settle` is
+  killed by all five. `settle-once-a-cycle` (restamp only at the wrap) is
+  killed by the phase test.
+
+### 37. Torture round 2 and two cost curves (no mechanism)
+
+- **Lifecycle** (`test/torture-lifecycle.test.ts`, all green, no repair):
+  - A throwing cleanup leaves the execution owed (F4), and the next delivery
+    discharges it once.
+  - A cleanup that writes a source of its own watcher and then throws: the
+    write commits and delivers the watcher again in the same drain (W2), so
+    each delivery is one cleanup and one run, and the error reaches the
+    writer. At disposal the last cleanup runs after teardown, its write
+    wakes nothing, and its error reaches the disposer.
+  - A watcher disposed while queued stays inert.
+  - A failing watcher does not stop later watchers from growing the queue.
+  - A throwing `peek` inside a computation restores the context and
+    records nothing.
+  - Failures across a full reorder (committed A, failed B, failed C, failed
+    reverse(A), A again) keep the committed frontier and only the last
+    attempt's reads. The recovery reuses the very same relation objects,
+    with no link.
+- **Contract characterization:** a computed that fails during a watcher's
+  validation surfaces to the writer, and the effect's own try/catch never
+  sees it (P4). This is the point where a runtime that executes the effect
+  first, and lets it catch the error, has a different contract.
+- **Failed-computed fanout** (local, scratch script: one computed throwing
+  on every run, N effects). Quant runs the getter exactly N times per
+  update, at about 5 µs per watcher (each retry constructs a new exception).
+  That is linear, and F1 with D2 forces it: every watcher's validation is a
+  demand, and a failed computed executes on each demand, as the executable
+  contract spec does. alien-signals 3.2.1 and Reflex run the getter at most
+  once per step here, because their effects stop being delivered after the
+  failure (Reflex by design, D5). A contract that caches a failure until a
+  source changes would make this O(1) getter runs per wave; that changes F1
+  and is not adopted here.
+- **Identity curves** (`bench/scaling.mjs`; local, 3 rounds; CI times
+  them):
+  - `shuffle` (reorder all): quant runs at 0.11–0.48 of alien.
+  - `replace-all` (every relation new, on private sources): quant runs at
+    0.74–0.93 of alien and 0.80–0.90 of Reflex. The new relations are
+    proven absent for free, because a source without subscribers needs no
+    search (LOG 22).
+  - `replace-all-shared` (the same sources are also read by another
+    computed): quant runs at 1.16–1.43 of alien and about 1.37 of Reflex.
+    The structural counters show the same links and unlinks as alien, plus
+    exactly one subscriber lookup per new relation. That lookup is the
+    price of exact identity when the identity really is new.

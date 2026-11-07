@@ -49,6 +49,13 @@ export function cut(c: Node, last: Edge | null): void {
   for (; e !== null; e = e.next) unsub(e);
 }
 
+/** Restamp every edge of `c`, all of them committed, with its generation (SETTLE). */
+export function settle(c: Node): void {
+  const gen = c.gen;
+
+  for (let e = c.deps; e !== null; e = e.next) e.gen = gen;
+}
+
 /** Take an edge out of its source's subscriber list. */
 export function unsub(e: Edge): void {
   if (__STATS__) stats.unlinks++;

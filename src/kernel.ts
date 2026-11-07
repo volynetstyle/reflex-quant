@@ -22,10 +22,10 @@
 // comparisons, so no ToBoolean runs on mixed values; no recursion, no array
 // methods, and no allocation besides nodes and new edges.
 
-import { Flag, MASK, UNREAD } from "./flags";
+import { Flag, KEEP, MASK, SETTLE, TRIM, UNREAD } from "./flags";
 import type { Edge, Flags, Node, WorkStack } from "./model";
 import { miss } from "./tracking";
-import { cut, unsub } from "./graph";
+import { cut, settle, unsub } from "./graph";
 import { stats } from "./instrumentation";
 
 export { node } from "./graph";
@@ -36,11 +36,14 @@ let active: Node | null = null;
 /**
  * One LIFO work stack shared by all walks: sibling edges to resume (mark),
  * edges to climb back through (pull), and (source, cell) pairs an indexed run
- * displaced. Every walk pops back to its own base before returning.
+ * displaced. Every walk pops back to its own base before returning, and the
+ * outermost one gives back what a deep walk grew (`trim`).
  */
 const stack: WorkStack = [];
 /** First free index of `stack`. */
 let top = 0;
+/** Longest the work stack has been when `trim` cut it (research). */
+let peak = 0;
 let wake: (w: Node) => void = () => {};
 
 /**
@@ -59,10 +62,34 @@ export function idle(): boolean {
 
 /**
  * Deepest work-stack top reached so far (research). Walks null the slots
- * they pop but never shrink the array, so its length is the high-water mark.
+ * they pop and only `trim` shrinks the array, so the high-water mark is its
+ * length or the longest length `trim` cut.
  */
 export function stackHighWater(): number {
+  return stack.length > peak ? stack.length : peak;
+}
+
+/** Slots the work stack holds now (tests). */
+export function stackLength(): number {
   return stack.length;
+}
+
+/**
+ * At rest, cut a stack that a deep walk grew past TRIM back to KEEP slots,
+ * so one deep walk does not hold its depth in memory for good. Setting the
+ * length right-trims V8's backing store in place: no allocation, and the
+ * array stays packed.
+ *
+ * Only the end of an outermost validation calls it (top 0), whichever walk
+ * grew the stack. A deep mark walk runs through computeds that are STALE
+ * afterwards, so their next demand is such a validation; `write` and `mark`
+ * stay as they were. The guard costs one length load and one compare per
+ * validation, nothing per node.
+ */
+function trim(): void {
+  if (__STATS__ && stack.length > peak) peak = stack.length;
+
+  stack.length = KEEP;
 }
 
 // ------------------------------------------------------------------- write
@@ -161,7 +188,8 @@ export function read(n: Node): unknown {
 
 /** `read` without its tracking half: bring `n` up to date, record no relation. */
 export function peek(n: Node): unknown {
-  if ((n.flags & (Flag.Stale | Flag.Dirty | Flag.Busy)) !== 0) pull(n);
+  if ((n.flags & (Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking)) !== 0)
+    pull(n);
 
   return n.value;
 }
@@ -170,56 +198,88 @@ export function peek(n: Node): unknown {
  * Pull a computed up to date. Existential, in read order: sources are
  * checked first to last and the first changed one makes the node run. A
  * STALE source is descended into (the stack keeps the edge to climb back
- * through); a DIRTY one runs. A throw leaves every node still checking DIRTY.
+ * through); a DIRTY one runs. A throw leaves every node on the walk DIRTY.
+ * A node whose run is on the stack is a cycle. A development build also
+ * diagnoses a node whose validation is on the stack (CHECKING): C1 is a
+ * precondition, so its committed value never answers such a demand there.
  */
 function pull(root: Node): void {
   const f = root.flags;
 
-  if ((f & Flag.Busy) !== 0) throw new Error("Cycle detected");
+  if ((f & (Flag.Busy | Flag.Checking)) !== 0)
+    throw new Error("Cycle detected");
 
   if ((f & Flag.Dirty) !== 0) return exec(root);
 
   verify(root, f);
 }
 
-/** The walk of `pull` for a STALE, not DIRTY, not BUSY node; kept apart so `pull` stays small. */
+/**
+ * The walk of `pull` for a STALE node that is not DIRTY, BUSY or CHECKING;
+ * kept apart so `pull` stays small. A node disposed during the walk is not
+ * run (W3), nor left DIRTY.
+ *
+ * Development builds diagnose C1: a node on the walk is CHECKING until it is
+ * clean or runs, and a source on the stack (BUSY or CHECKING) is a cycle
+ * even when no push marked it again, since its version is not yet a fact.
+ * CHECKING is set by the store that clears STALE and cleared by `exec` as it
+ * sets BUSY; only a node found clean pays a store of its own. Production
+ * builds compile all of it away.
+ */
 function verify(root: Node, f: Flags): void {
-  root.flags = f & ~Flag.Stale;
+  root.flags = __DEV__ ? (f & ~Flag.Stale) | Flag.Checking : f & ~Flag.Stale;
   const base = top;
   let n = root;
   let e = root.deps;
 
   try {
     for (;;) {
-      while (e !== null) {
-        const s: Node = e.from;
-        const sf = s.flags;
+      settled: {
+        while (e !== null) {
+          const s: Node = e.from;
+          const sf = s.flags;
 
-        if (__STATS__) stats.checks++;
+          if (__STATS__) stats.checks++;
 
-        if ((sf & (Flag.Stale | Flag.Dirty)) !== 0) {
-          if ((sf & Flag.Busy) !== 0) throw new Error("Cycle detected");
+          if (
+            (sf &
+              (__DEV__
+                ? Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking
+                : Flag.Stale | Flag.Dirty)) !==
+            0
+          ) {
+            if ((sf & (Flag.Busy | Flag.Checking)) !== 0)
+              throw new Error("Cycle detected");
 
-          if ((sf & Flag.Dirty) === 0) {
-            s.flags = sf & ~Flag.Stale;
-            stack[top++] = e;
-            n = s;
-            e = s.deps;
-            continue;
+            if ((sf & Flag.Dirty) === 0) {
+              s.flags = __DEV__
+                ? (sf & ~Flag.Stale) | Flag.Checking
+                : sf & ~Flag.Stale;
+              stack[top++] = e;
+              n = s;
+              e = s.deps;
+              continue;
+            }
+            exec(s);
           }
-          exec(s);
-        }
 
-        if (s.ver !== e.ver) {
-          exec(n);
-          break;
+          if (s.ver !== e.ver) {
+            if (n.fn !== null) exec(n);
+            break settled;
+          }
+          e = e.next;
         }
-        e = e.next;
+        // Every source unchanged: clean, and no longer on the walk.
+        if (__DEV__) n.flags &= ~Flag.Checking;
       }
 
       // Climb; a parent whose child changed runs as well.
       for (;;) {
-        if (top === base) return;
+        if (top === base) {
+          if (stack.length > TRIM && base === 0) trim();
+
+          return;
+        }
 
         const up = stack[--top] as Edge;
         stack[top] = null;
@@ -229,14 +289,23 @@ function verify(root: Node, f: Flags): void {
           e = up.next;
           break;
         }
-        exec(n);
+
+        if (n.fn !== null) exec(n);
       }
     }
   } catch (error) {
-    n.flags |= Flag.Dirty;
+    if (n.fn !== null)
+      n.flags = __DEV__
+        ? (n.flags | Flag.Dirty) & ~Flag.Checking
+        : n.flags | Flag.Dirty;
 
     while (top > base) {
-      (stack[--top] as Edge).to.flags |= Flag.Dirty;
+      const p = (stack[--top] as Edge).to;
+
+      if (p.fn !== null)
+        p.flags = __DEV__
+          ? (p.flags | Flag.Dirty) & ~Flag.Checking
+          : p.flags | Flag.Dirty;
       stack[top] = null;
     }
     throw error;
@@ -253,14 +322,23 @@ export function check(w: Node): void {
   const tentative = (w.gen + 1) & MASK;
   let e = w.deps;
 
-  // Until a run is owed, versions decide; then only the pulls remain.
+  // Until a run is owed, versions decide; then only the pulls remain. A
+  // development build pulls a source on the stack too, so the C1 diagnosis
+  // fails here, before the cleanup (P4).
   if ((w.flags & Flag.Dirty) === 0) {
     for (; e !== null; e = e.next) {
       const s = e.from;
 
       if (__STATS__) stats.checks++;
 
-      if ((s.flags & (Flag.Stale | Flag.Dirty)) !== 0 && e.gen !== tentative)
+      if (
+        (s.flags &
+          (__DEV__
+            ? Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking
+            : Flag.Stale | Flag.Dirty)) !==
+          0 &&
+        e.gen !== tentative
+      )
         pull(s);
 
       if (s.ver !== e.ver) {
@@ -276,7 +354,14 @@ export function check(w: Node): void {
 
     const s = e.from;
 
-    if ((s.flags & (Flag.Stale | Flag.Dirty)) !== 0 && e.gen !== tentative)
+    if (
+      (s.flags &
+        (__DEV__
+          ? Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking
+          : Flag.Stale | Flag.Dirty)) !==
+        0 &&
+      e.gen !== tentative
+    )
       pull(s);
   }
 }
@@ -300,8 +385,15 @@ export function exec(n: Node): void {
   const base = top;
 
   if (__STATS__) stats.runs++;
-  // Cleared before the run: a push during it marks the node again.
-  n.flags = (n.flags & ~(Flag.Stale | Flag.Dirty)) | Flag.Busy;
+  // Cleared before the run: a push during it marks the node again. In a
+  // development build a computed's validation ends here, BUSY taking over
+  // from CHECKING; on a watcher the bit is WOKEN, which this run discharges.
+  n.flags =
+    (n.flags &
+      ~(__DEV__
+        ? Flag.Stale | Flag.Dirty | Flag.Checking
+        : Flag.Stale | Flag.Dirty)) |
+    Flag.Busy;
   n.last = null;
   active = n;
   let value: unknown;
@@ -328,6 +420,9 @@ export function exec(n: Node): void {
   if ((last === null ? n.deps : last.next) !== null) cut(n, last);
 
   n.gen = (n.gen + 1) & MASK;
+
+  // Every edge is committed now; see SETTLE.
+  if ((n.gen & SETTLE) === 0) settle(n);
 
   if (Object.is(value, n.value) === false) {
     n.value = value;

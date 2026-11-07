@@ -1,24 +1,36 @@
 # The smallest known runtime implied by the Quant contract
 
 Experiment: derive a reactive runtime from a frozen contract (invariants
-T1–W4, bounds S1–S7, decisions D1–D2 in [SPEC.md](../SPEC.md)) that was
-extracted from Reflex's semantic contract and executable spec, not from its
-implementation; Reflex is provenance, not authority; keep every mechanism a test
-forces and nothing else; compare it with the spec, current Reflex (`dev`
-`bf71877`) and alien-signals 3.2.1. Code: `src/kernel.ts`, `src/host.ts`,
-`src/index.ts`. Design history: [LOG.md](./LOG.md) (20 entries, each with
-its counterexample). Ablation record: `mutants.json`.
+T1–W5, bounds S1–S7, decisions D1, D2 and D6, precondition C1 in
+[SPEC.md](../SPEC.md)) that
+was extracted from Reflex's semantic contract and executable spec, not from
+its implementation; Reflex is provenance, not authority; keep every mechanism
+a test forces and nothing else; compare it with the spec, current Reflex
+(`dev` `bf71877`) and alien-signals 3.2.1. Code: the eight production files
+in `src/` (Q5). Design history: [LOG.md](./LOG.md) (37 entries, each with its
+witness). Ablation record: `mutants.json`. Figures are as of commit
+`241a3b7` (tests 72/72, ESM release 2,131 B gzip) unless a passage names an
+older run; the CI trajectory is in [HISTORY.md](./HISTORY.md). LOG 32–37
+(W5, the C1 precondition, W3, the work stack at rest, generation wrap, torture
+round 2) postdate that commit: tests 116/116 against the development build
+and 109/109 (7 diagnosis tests skipped) against the production build, ESM
+release 2,221 B gzip.
 
 **Result.** The invariants admit a substantially different architecture of
-about the same per-object size: versions instead of change bits, an
-on-demand source-side index instead of tape and stamps, and per-relation
-generations for exact failure semantics. It matches the executable spec,
-amended by two of Reflex's documented choices, on every program of the
-bounded and recovery languages and on 100,000 generated programs. On the
-same corpus Reflex is that contract plus three failure-path choices, which
-the experiment isolates exactly. On CI it is within 25 % of the better of
-Reflex and alien-signals on 14 of 18 scenarios and faster than both on 8
-(section 6).
+about the same per-object size: versions instead of change bits, bounded
+exact searches backed by an on-demand mark or source-side index instead of
+tape and stamps, and per-relation generations for exact failure semantics.
+It matches the executable spec, amended by three documented decisions (D1
+and D2 from Reflex's own documents, D6 from this experiment), on all 27,061
+bounded and 18,660 recovery programs and on 100,000 generated programs. D6
+(P5, in-pass invalidation) needs a write inside a computation, which no
+corpus can express; dedicated P5 tests pin it. On the same corpus Reflex is
+that contract plus three failure-path choices, which the experiment isolates
+exactly. All 34 mechanism ablations fail a test, and so do the 7 of the
+C1 development diagnostic (Q3). On CI (run
+42287159440) it is within 25 % of the better of Reflex and alien-signals on
+all 18 scenarios and faster than both on 8; geometric mean 0.97 of the
+better one, 0.95 of Reflex and 0.42 of alien-signals (Q6).
 
 ## 1. Contract inventory (phase 0)
 
@@ -60,7 +72,7 @@ relation when one exists; no Θ(d²) tracking; graph size proportional to live
 relations; repeated failures do not accumulate relations; nesting does not
 rebuild global state (structure.test, tracking.test).
 
-**C. Performance:** the bench scenarios of section 6, chosen to match the
+**C. Performance:** the bench scenarios of Q6, chosen to match the
 task list; target within 25 % of the better of Reflex and alien-signals on
 common shapes, hostile shapes reported as measured.
 
@@ -104,13 +116,16 @@ after its failure, the spec does.
 `lastSub`, `slot`, `gen`. **Edge** (8 fields): `from`, `to`, `ver`, `gen`,
 `prev`/`next` (in `to.deps`), `prevSub`/`nextSub` (in `from.subs`).
 **Kernel bits:** STALE (may be out of date; for a watcher: validate), DIRTY
-(must run), BUSY (run on the stack), INDEX (run uses slot cells), WATCH
+(must run), BUSY (run on the stack), INDEXED (run uses slot cells), MARKED
+(run marked its unread edges; pairs are found through subscribers), WATCH
 (watcher), WOKEN (watcher woken by signals only: run without validating).
+The development build adds CHECKING (a computed's validation on the stack),
+on WOKEN's bit: no node is both a watcher and a computed.
 **Host bits:** AUTO, QUEUED. **Mutable globals:** kernel `active`,
 `wake`, one work stack with `top`; host `queue` with `size`, `depth`,
-`draining`. **API:** `signal`, `computed`, `effect`, `get`, `set`,
-`dispose`, `batch`, `untracked`; a handle is the node itself, so a signal
-costs one allocation.
+`draining`. **API:** `signal`, `computed`, `effect`, `get`, `peek`, `set`,
+`update`, `dispose`, `batch`, `untracked`; a handle is the node itself, so a
+signal costs one allocation.
 
 V8 discipline (the rules of the Reflex runtime): one node shape and one
 edge shape, each built at a single literal site; every numeric field a
@@ -128,19 +143,30 @@ feedback, grow-store and benchmark-sink deopts, none repeating.
 - **Read:** one path for signals and computeds (a signal's flags are 0). A
   stale computed is pulled: an iterative descent in read order, the first
   source whose version differs makes the node run; a STALE source is
-  descended into, a DIRTY one runs. Inside a pass the read is tracked.
+  descended into, a DIRTY one runs. A node disposed during the walk is not
+  run (W3). Inside a pass the read is tracked. The development build
+  diagnoses the C1 precondition: a demand that reaches a node whose run or
+  validation is on the stack throws. The production build pays nothing for
+  it; its hot functions have the bytecode of the build without it (LOG 33).
 - **Tracking:** `deps` is kept in read order; the hot path compares the next
-  edge's source and advances `last`. A miss tries bounded exact scans
-  (unread suffix, accepted prefix, the source's subscribers); otherwise the
-  pass indexes its relations in their sources' `slot` cells once (O(d)),
-  after which every read is an O(1) exact answer: duplicate, move, or new.
-  A successful pass cuts the unread suffix.
+  edge's source and advances `last`. A miss tries the cheapest exact proofs
+  first: the previous read, a source nobody reads (new without a scan), then
+  bounded scans of the unread suffix and the accepted prefix, then the
+  source's first 8 subscribers. A pair found as the source's first
+  subscriber marks the pass's unread suffix (one O(d) walk over edges); a
+  deeper pair or an exhausted budget indexes the pass's relations in their
+  sources' `slot` cells (O(d)). After either walk every read is an exact
+  answer: duplicate, move, or new. A repeated read keeps the version of the
+  first observation (P5). A successful pass cuts the unread suffix.
 - **Failure:** nothing commits; the node is DIRTY; relations born since the
   last success (`edge.gen === node.gen + 1`) are tentative: they wake but are
-  not validated, and unread ones from earlier failures are dropped.
+  not validated, and unread ones from earlier failures are dropped. A commit
+  restamps every relation twice per 2^30 runs (SETTLE), so a wrapped
+  generation never makes an old relation look tentative (LOG 36).
 - **Host:** a watcher runs as validate all committed sources → if owed,
   consume and run the cleanup untracked → execute. Effects run only inside
-  a FIFO drain loop; batch defers the drain.
+  a FIFO drain loop; batch defers the drain. An `effect()` call that throws
+  stops its watcher before rethrowing (W5).
 
 ## Q1. What survived
 
@@ -148,15 +174,15 @@ feedback, grow-store and benchmark-sink deopts, none repeating.
 | --- | --- | --- |
 | bidirectional intrusive relations | the same: one relation object in two doubly linked lists | push needs subscribers, validation needs sources in order, removal must be O(1) from both ends |
 | two dirty states (`Unknown`/`Changed`) | STALE / DIRTY | push knows "may have changed"; only failures, first runs and direct writes know "must execute". Validation turns the first into the second |
-| `Computing` | RUNNING | cycle detection and disposal deferred to the end of the node's own pass |
-| read-order cursor (`tailIn`) | `cursor` | stable traces must cost one comparison per read; read order also makes existential validation waste-free |
+| `Computing` | BUSY | cycle detection and disposal deferred to the end of the node's own pass |
+| read-order cursor (`tailIn`) | `last` | stable traces must cost one comparison per read; read order also makes existential validation waste-free |
 | relation reuse and moves | the same | a reorder must not allocate |
 | preserve the unread suffix until success | prune on success only | W3: committed relations a failed attempt did not reach must still wake |
 | `Scheduled` + host queue | QUEUED + FIFO queue in the host | the kernel only delivers; deduplication and timing are host policy (LB3) |
-| universal watcher validation | `validateAll` | V3 |
+| universal watcher validation | `check` | V3 |
 | `edge.born` (a research branch, never merged) | `edge.gen` | forced here by W2/V3 exactness, not by absence proofs: a per-relation fact is the floor (MODEL LB2) |
 | `Unknown` versus `Changed` on watchers | STALE versus WOKEN | a watcher woken by signals only has clean computed sources, so its universal validation is vacuous; measured on fan-in (LOG 21) |
-| explicit walker stacks | `siblings`, `descent` | depth must not be bounded by the call stack (a 20,000-deep chain overflows the recursive kernel) |
+| explicit walker stacks | one work stack (`stack`, `top`) | depth must not be bounded by the call stack (a 20,000-deep chain overflows the recursive kernel) |
 | producer hint (INV-H) | the `slot` cell | the same object-local cell answers pair membership, here only during an indexed pass and always exactly |
 
 ## Q2. What disappeared
@@ -175,8 +201,8 @@ feedback, grow-store and benchmark-sink deopts, none repeating.
   that `Visited` stores. The cleanup is the watcher's value and is consumed
   before it runs.
 - **Finger, lockstep, rounds, strike register, hint repair: gone.** Bounded
-  scans (≤ 8 relations each side) plus the index cover the same cases with
-  linear worst cases.
+  scans (≤ 8 relations each side), a bounded subscriber lookup, and the mark
+  or index walk cover the same cases with linear worst cases.
 - **Contexts, execution domains, runtime phase registers, hooks: gone.**
   They are integration surface, not semantics.
 - **`lastIn`:** not needed; the suffix cut walks from the cursor.
@@ -187,9 +213,14 @@ Every remaining mechanism has a counterexample: removing it fails a test.
 This is a Level 1 claim about this architecture, not a necessity proof; see
 [WITNESS-AUDIT.md](./WITNESS-AUDIT.md), which merges the ablations into ten
 obligations and classifies each witness.
-All 27 ablations are killed (`research/mutants.mjs`, `mutants.json`): 20 by
-semantic tests, 6 only by structural bounds (the optimizations of Q4), 1
-only by tests that assert sibling order (the convention of Q4). The last two
+All 34 mechanism ablations are killed (`research/mutants.mjs`,
+`mutants.json`): 25 by semantic tests, 8 only by structural or
+representation tests (the optimizations of Q4, the work stack at rest, and
+the second restamp of each generation cycle), 1 only by tests that assert sibling order (the
+convention of Q4). None of them is killed only by a test of the development
+build. The 7 ablations of the C1 diagnosis (LOG 33) are killed against the
+development build; a development diagnostic is no mechanism, so they are
+not counted. The last two
 to fall, `no-fresh-source` (LOG 22) and `index-always` (LOG 28), had been
 called constant factors only timing sees; they survived because no counter
 recorded the work they save, not because they save none (LOG 30).
@@ -208,116 +239,141 @@ recorded the work they save, not because they save none (LOG 30).
 | failed watcher stays STALE; host-side deduplication | historical fault `validation-history-dependence`, recovery language (`no-retry`); re-delivery test (`wake-guard`) |
 | clear STALE before the pass | "an effect writing a source it read converges", F1 test (`clear-after`) |
 | deferred disposal | "dispose inside the callback, then more reads: no ghost relation" (`eager-dispose`) |
-| RUNNING on read | "cycles throw" (`no-cycle-check`) |
+| BUSY on read | "cycles throw" (`no-cycle-check`) |
 | universal watcher validation | P10 (`existential-watcher`) |
 | STALE, not WOKEN, for a running watcher | "a write to a not-yet-read source during the run adds no rerun" (`woken-when-running`) |
 | repeat check before the scans | bounded language (`no-repeat-check`: a duplicate relation) |
 | drain-loop-only effects | "effects created inside a batch or another effect run after it" (`run-direct`, `start-outside-drain`) |
 | iterative push and pull | "push and pull are not bounded by the call stack" (the recursive v2 kernel overflows) |
+| rollback of an `effect()` call that throws (W5) | "a failed first run leaves no live watcher and no relation", "a sibling's failure … rolls the new watcher back" (`construction-commits`) |
+| relations restamped twice a generation cycle (SETTLE) | a watcher driven by a computed keeps running after its generation wraps; F1, F3 and P4 under wrap (`no-settle`); both restamp phases (`settle-once-a-cycle`) |
+| work stack cut back at rest | "the end of a deep outermost validation cuts the stack back to KEEP" (`no-trim`) |
+| no run of a node disposed during its validation (W3) | "a computed disposed while it is validated…" (`disposed-run`, `disposed-run-climb`); "a later source failing in the same walk…" (`disposed-left-dirty`) |
 
 ## Q4. Optimization versus semantics
 
 | Class | Mechanisms |
 | --- | --- |
-| correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD on an indexed or marked pass, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; RUNNING (cycles, deferred disposal); WATCH delivery |
+| correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD on an indexed or marked pass, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; BUSY (cycles, deferred disposal); WATCH delivery |
 | failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3) |
-| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack) |
+| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the work stack cut back to KEEP at rest, so retained memory does not follow the deepest walk ever (LOG 35) |
 | constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; a marked pass finds pairs through subscribers instead of the slot index (LOG 28); `readSignal`; delivery on the STALE transition; no version compares once owed |
 | convention | `subsTail` (FIFO sibling order; only order-asserting tests fail without it) |
+| development diagnostic | CHECKING and the BUSY test of sources in `verify` and `check` (the C1 precondition; compiled out of the production build, LOG 33) |
 | removed as unnecessary | the run() guard against a watcher on the stack (no API path reaches it) |
 
 ## Q5. Complexity comparison
 
 Reflex: `packages/reflex-runtime/src/kernel` + `src/protocol`, without
-dev, profiling, projection and domains. Quant: the three production files.
+dev, profiling, projection and domains. Quant: the eight production files of
+`src/` at `241a3b7` (`instrumentation.ts` is compiled out of the release and
+not counted). Code lines are lines that are neither blank nor comment-only.
 
 | | Reflex | Quant |
 | --- | --- | --- |
-| implementation lines (code lines) | 5,610 (3,671) in 42 files | 666 (507) in 3 files: kernel 486 (378), host 121 (88), index 59 (41) |
-| of which tracking and graph shape | 1,881 (1,114) | 103 code lines (miss path, index, scans, links) |
-| minified bundle, gzip | 8,980 B (whole internal surface) | 2,019 B (kernel + host + API) |
+| implementation lines (code lines) | 5,610 (3,671) in 42 files | 1,012 (620) in 8 files: kernel 458 (289), host 152 (93), tracking 149 (83), index 83 (48), graph 69 (48), model 49 (29), flags 28 (14), types 24 (16) |
+| of which tracking and graph shape | 1,881 (1,114) | 218 (131): `tracking.ts` (miss path, scans, subscriber lookup, mark) and `graph.ts` (node, move, cut, unsub); the index walk and `link` stay in the kernel |
+| minified bundle, gzip | 8,980 B (whole internal surface) | 2,131 B ESM (kernel + host + API) |
 | node fields | 8 | 10 |
 | relation fields | 7 | 8 |
-| node state bits | 10 production (+2 dev) | 6 kernel + 3 host |
-| global runtime state | context bank: consumer, stamp, propagation and batch depth, phase, frame, hooks; module registers; walker stacks | `active`, `deliver`, 3 transient stacks; host queue, depth, flushing |
+| node state bits | 10 production (+2 dev) | 7 kernel + 2 host (+1 dev, on WOKEN's bit) |
+| global runtime state | context bank: consumer, stamp, propagation and batch depth, phase, frame, hooks; module registers; walker stacks | kernel `active`, `wake`, one work stack with `top`; host queue, `size`, `depth`, `draining` |
 | queues | host-owned (none in the kernel) | one FIFO in the host |
 | allocations per new relation | 1 | 1 |
 | allocations per stable read | 0 | 0 |
 | stable read work | cursor hit | cursor hit: 1 comparison, 2 stores |
-| dynamic reorder work | finger, lockstep, tape | ≤ 24 comparisons per miss, else one O(d) index walk per pass |
+| dynamic reorder work | finger, lockstep, tape | ≤ 8 comparisons for each of the suffix scan, prefix scan and subscriber lookup per miss; else one O(d) mark or index walk per pass |
 
-The soft budget (kernel ≤ 300 lines) is exceeded by 26 % in code lines.
-What forced it: exact uniqueness without hashing (miss path, index, scans:
-103 code lines), the iterative pull with its failure unwinding (55), and the
-exact failure bookkeeping (abort, generations: 22).
+The soft budget (kernel ≤ 300 lines) holds for `kernel.ts` alone (289 code
+lines) only because tracking and graph operations moved into their own
+files; kernel, tracking and graph together are 420 code lines, 40 % over it.
+What forced the excess, as first measured on the single-file kernel (v4):
+exact uniqueness without hashing (miss path, index, scans), the iterative
+pull with its failure unwinding, and the exact failure bookkeeping (abort,
+generations).
 
 ## Q6. Performance
 
-CI only (GitHub Actions `ubuntu-24.04`, Node 24.22.1, one job for all three
-runtimes). Every (runtime, scenario) pair runs in a fresh process each
-round; 9 rounds, pairs in random order; a round's value is the median of 21
-batches of about 10 ms after at least 300 ms of warm-up. Before timing,
-every scenario's first 64 steps must give the same checksum on all three
-runtimes (0 mismatches). The two runs got different CPUs (EPYC 7763,
-EPYC 9V74), so compare ratios within a run, not times across runs. Reflex
-is the production bundle of `bf71877` built by its own
-`build-baseline-oracle.mjs --production`, behind the same minimal host
+CI only: GitHub Actions run 42287159440 at `241a3b7`, Node 22.23.4. The 18
+graph scenarios run in five shards, one job each; every job times all three
+runtimes on one runner, so compare ratios within a job, never times across
+jobs (the shards got AMD EPYC 9V45, AMD EPYC 9V74 and Intel Xeon Platinum
+8370C). Every (runtime, scenario) pair runs in a fresh process each round;
+9 rounds, pairs in random order; a round's value is the median of 21
+batches of about 10 ms after at least 300 ms and 2,000 steps of warm-up.
+Before timing, every scenario's first 64 steps must give the same checksum
+on all three runtimes (0 mismatches). Reflex is the frozen production
+bundle of `bf71877` (`bin/reflex-runtime`), behind the same minimal host
 (FIFO queue, claim-based deduplication) quant uses; alien-signals 3.2.1.
+The trajectory over every CI run is in [HISTORY.md](./HISTORY.md); the
+kernel v2 and v3 tables of earlier revisions of this section are in git
+history.
 
-Kernel v3 (iterative push and pull, shorter call paths), run 41826712831;
-the last column is the recursive v2, run 41824417430:
+| scenario | shard CPU | quant | Reflex | alien | quant / best | quant / Reflex | quant / alien |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| static.read-clean | Xeon 8370C | 2.05 µs | 1.76 µs | 1.68 µs | 1.22 | 1.16 | 1.22 |
+| static.chain-100 | Xeon 8370C | 2.55 µs | 2.71 µs | 2.90 µs | 0.94 | 0.94 | 0.88 |
+| stable.wide-8 | Xeon 8370C | 77 ns | 69 ns | 131 ns | 1.11 | 1.11 | 0.58 |
+| stable.wide-256 | Xeon 8370C | 1.61 µs | 1.56 µs | 3.54 µs | 1.03 | 1.03 | 0.46 |
+| diamond.8x8 | EPYC 9V74 | 2.52 µs | 2.78 µs | 3.53 µs | 0.91 | 0.91 | 0.71 |
+| fan-in.1024 | EPYC 9V74 | 6.63 µs | 6.11 µs | 15.97 µs | 1.08 | 1.08 | 0.42 |
+| fan-out.effects-1000 | EPYC 9V74 | 21.78 µs | 28.00 µs | 28.14 µs | 0.78 | 0.78 | 0.77 |
+| fan-out.computeds-1000 | EPYC 9V74 | 36.73 µs | 32.36 µs | 44.99 µs | 1.13 | 1.13 | 0.82 |
+| branch.switch-100 | EPYC 9V45 | 3.75 µs | 5.10 µs | 9.49 µs | 0.74 | 0.74 | 0.39 |
+| edit.insert-one-256 | EPYC 9V45 | 1.45 µs | 1.39 µs | 5.97 µs | 1.04 | 1.04 | 0.24 |
+| reorder.reverse-8 | EPYC 9V45 | 77 ns | 66 ns | 541 ns | 1.15 | 1.15 | 0.14 |
+| reorder.rotate-256 | EPYC 9V45 | 1.79 µs | 1.53 µs | 14.04 µs | 1.16 | 1.16 | 0.13 |
+| value-sort.256x32 | EPYC 9V45 | 35.55 µs | 31.11 µs | 243.99 µs | 1.14 | 1.14 | 0.15 |
+| replace-half.256 | EPYC 9V74 | 4.02 µs | 4.73 µs | 5.73 µs | 0.85 | 0.85 | 0.70 |
+| shared-chaotic.64x32 | EPYC 9V74 | 38.27 µs | 49.33 µs | 189.58 µs | 0.78 | 0.78 | 0.20 |
+| long-reorder.256 (hostile) | EPYC 9V74 | 4.69 µs | 3.79 µs | 25.21 µs | 1.24 | 1.24 | 0.19 |
+| batch.writes-32 | EPYC 9V45 | 303 ns | 515 ns | 550 ns | 0.59 | 0.59 | 0.55 |
+| lifecycle.mount-100 | EPYC 9V45 | 9.52 µs | 15.86 µs | 10.17 µs | 0.94 | 0.60 | 0.94 |
 
-| scenario | quant | Reflex | alien | quant / best | v2: quant / best |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| static.read-clean | 1.00 µs | 1.02 µs | 1.09 µs | 0.98 | 0.93 |
-| static.chain-100 | 2.52 µs | 2.25 µs | 2.74 µs | 1.12 | 1.17 |
-| stable.wide-8 | 45 ns | 58 ns | 112 ns | 0.77 | 1.12 |
-| stable.wide-256 | 1.21 µs | 1.15 µs | 3.02 µs | 1.05 | 1.26 |
-| diamond.8x8 | 1.84 µs | 2.10 µs | 2.68 µs | 0.87 | 0.99 |
-| fan-in.1024 | 8.11 µs | 5.18 µs | 12.45 µs | **1.57** | 1.50 |
-| fan-out.effects-1000 | 27.36 µs | 28.42 µs | 26.11 µs | 1.05 | 1.28 |
-| fan-out.computeds-1000 | 22.24 µs | 27.36 µs | 37.93 µs | 0.81 | 1.29 |
-| branch.switch-100 | 6.87 µs | 7.25 µs | 11.34 µs | 0.95 | 1.13 |
-| edit.insert-one-256 | 2.09 µs | 2.13 µs | 6.43 µs | 0.98 | 1.01 |
-| reorder.reverse-8 | 121 ns | 112 ns | 1.19 µs | 1.08 | 1.58 |
-| reorder.rotate-256 | 2.81 µs | 2.74 µs | 26.42 µs | 1.02 | 1.05 |
-| value-sort.256x32 | 54.81 µs | 50.59 µs | 217.97 µs | 1.08 | 1.08 |
-| replace-half.256 | 6.85 µs | 4.89 µs | 5.57 µs | **1.40** | 1.04 |
-| shared-chaotic.64x32 | 37.89 µs | 50.54 µs | 306.45 µs | 0.75 | 0.80 |
-| long-reorder.256 (hostile) | 5.24 µs | 3.76 µs | 33.46 µs | **1.39** | 1.37 |
-| batch.writes-32 | 442 ns | 731 ns | 784 ns | 0.60 | 0.71 |
-| lifecycle.mount-100 | 18.25 µs | 21.44 µs | 13.46 µs | **1.36** (0.85 vs Reflex) | 1.99 |
+- Within 25 % of the better competitor: 18 of 18. Faster than both: 8.
+  Geometric mean: 0.97 of the better one, 0.95 of Reflex, 0.42 of
+  alien-signals. These are ratios on this suite, chosen by this project to
+  cover the task list, not a general ranking.
+- **Ahead of both, most clearly:** branch switching (0.74), shared dynamic graphs
+  (shared-chaotic 0.78), batched writes (0.59), effect fan-out (0.78),
+  churn of half the sources (0.85), diamond (0.91).
+- **Reorders** are where the two comparisons part. Against alien-signals,
+  which unlinks and relinks on every out-of-place read, quant is 5–8×
+  faster (0.13–0.19; the structural table below counts the relinks).
+  Against Reflex, whose tape and finger are specialized for permutations,
+  quant is 14–24 % slower on every reorder scenario. long-reorder.256, a
+  uniform random permutation of 256 sources every pass, is the hostile
+  case and this run's worst ratio (1.24): quant pays one O(d) walk and an
+  O(1) move per read.
+- **Slowest on the trivial paths:** static.read-clean (1.22 of alien) and
+  stable.wide-8 (1.11 of Reflex). In the mechanism suite of the same run,
+  untracked signal reads and writes nobody observes are 1.66–1.68× alien
+  (and 0.50–0.78 of Reflex), and 64 repeated reads of one source in a pass
+  (track.duplicate-64) are 1.51× both: each repeat leaves the cursor path.
+- **Earlier misses with a measured cause, now closed:** fan-in.1024 (1.57
+  in v3 → 1.08) validated all 1,024 producer relations before every run;
+  WOKEN (LOG 21) takes that to 0 validation loads. replace-half.256 (1.40 →
+  0.85) paid failed scan comparisons for every fresh source; the
+  no-subscriber check (LOG 22) removes them. lifecycle.mount-100 (1.36 of
+  alien → 0.94) routed a new effect through the host queue; since LOG 24 it
+  opens the drain itself.
 
-- Within 25 % of the better competitor: 14 of 18 (v2: 11). Faster than
-  both: 8.
-- **fan-in.1024 and replace-half.256** are the two misses that have a
-  measured cause; the committed kernel (v4) changes both, without CI timing
-  yet. fan-in validated all 1,024 producer relations before every run;
-  WOKEN (LOG 21) takes that to 0 validation loads per write (structural
-  count). replace-half regressed from v2 because each fresh source paid 16
-  failed scan comparisons; the no-subscriber check (LOG 22) removes them.
-- **long-reorder.256** is the hostile case: a uniform random permutation of
-  256 sources every pass. Quant pays one O(d) index walk and an O(1) move
-  per read; Reflex's tape and finger are 1.39× faster here. alien-signals
-  is 6.4× slower than quant, with one allocation per out-of-place read.
-- **lifecycle.mount-100** creates and disposes 100 effects; alien runs an
-  effect inline at creation, while quant and Reflex routed it through the
-  host queue. Quant is faster than Reflex here. Since LOG 24 a new effect
-  outside a drain or batch opens the drain itself and runs without the
-  queue (locally 11.3 µs vs alien 12.1 µs; CI timing pending).
+Structural work per step (`bench/structure.mjs`, CI run 42287159440; mean
+of 256 steps after 64 warm-up steps; alien-signals' link counters from the
+same sources, instrumented as in the lab). Scan hits are relations found by
+the bounded scans; lookups are subscriber or slot lookups; walks are index
+plus mark walks per step:
 
-Structural work per step (`bench/structure.mjs`, kernel v4; alien-signals'
-link counters from the same sources, instrumented as in the lab):
-
-| scenario | quant cursor hits / reads | scan moves | index walk | new / removed relations | alien new / removed links |
-| --- | --- | ---: | ---: | --- | --- |
-| stable.wide-256 | 256 / 256 | 0 | 0 | 0 / 0 | 0 / 0 |
-| reorder.rotate-256 | 2 / 257 | 255 | 0 | 0 / 0 | 255 / 255 |
-| value-sort.256x32 | 8,161 / 8,224 | 63 | 0 | 0 / 0 | 4,140 / 4,140 |
-| edit.insert-one-256 | 193 / 258 | 64 | 0 | 0.5 / 0.5 | 65 / 65 |
-| shared-chaotic.64x32 | 150 / 2,080 | 2 (+1,928 indexed) | 2,080 | 0 / 0 | 2,002 / 2,002 |
-| long-reorder.256 | 6.6 / 257 | 250 indexed | 257 | 0 / 0 | 255 / 255 |
-| replace-half.256 | 129 / 257 | 0 | 0 | 128 / 128 | 128 / 128 |
+| scenario | quant cursor hits / reads | scan hits | lookups | walks | moves | new / removed relations | alien new / removed links |
+| --- | --- | ---: | ---: | ---: | ---: | --- | --- |
+| stable.wide-256 | 256 / 256 | 0 | 0 | 0 | 0 | 0 / 0 | 0 / 0 |
+| fan-in.1024 | 1,024 / 1,024 | 0 | 0 | 0 | 0 | 0 / 0 | 0 / 0 |
+| reorder.rotate-256 | 2 / 257 | 255 | 0 | 0 | 0 | 0 / 0 | 255 / 255 |
+| value-sort.256x32 | 8,161 / 8,224 | 63 | 0 | 0 | 0 | 0 / 0 | 4,140 / 4,140 |
+| edit.insert-one-256 | 193 / 258 | 64 | 0 | 0 | 0 | 0.5 / 0.5 | 65 / 65 |
+| shared-chaotic.64x32 | 150 / 2,080 | 2 | 1,952 | 31 + 1 | 1,928 | 0 / 0 | 2,002 / 2,002 |
+| long-reorder.256 | 6.6 / 257 | 0.06 | 250 | 0 + 1 | 250 | 0 / 0 | 255 / 255 |
+| replace-half.256 | 129 / 257 | 0 | 0 | 0 | 0 | 128 / 128 | 128 / 128 |
 
 Quant allocates a relation only when one is genuinely new; every reorder is
 a move. Stable reads do one comparison and two stores, no lookup.
@@ -334,8 +390,9 @@ hides.**
   classified exactly for free, and F1 (a computed that writes its own
   source) converges instead of staying stale.
 - *Simpler:* no tape, no finger, no lockstep, no stamp register, no clock.
-  Exact pair membership is one on-demand index in object-local cells,
-  linear per pass, with bounded exact scans in front. That is 553 code
+  Exact pair membership is bounded exact scans and a bounded subscriber
+  lookup, backed by one on-demand mark or index walk in object-local cells,
+  linear per pass. That is 620 code
   lines against Reflex's 3,671 in kernel and protocol, though Reflex also
   carries contexts, hooks and domains. Per object it is not smaller: 10
   node and 8 relation fields against 8 and 7. The saving is in mechanisms,

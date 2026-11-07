@@ -37,7 +37,11 @@ export function edgeCount(nodes: readonly Node[]): number {
  * - both lists are consistent doubly linked lists;
  * - every edge is in exactly one deps list and one subs list, of its own ends;
  * - one relation per (source, consumer) pair;
- * - no pass is running, no slot cell is left behind.
+ * - no pass is running, no slot cell is left behind;
+ * - freshness: a live node that is neither STALE nor DIRTY has only clean
+ *   sources, and every relation carries its source's current version, so a
+ *   read at rest cannot return a value its sources have moved past (P3).
+ *   It holds for a program that keeps the preconditions (C1, SPEC).
  */
 export function checkGraph(nodes: readonly Node[], label = "graph"): void {
   const all = new Set<Node>();
@@ -75,6 +79,13 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
       prev = e;
     }
     check(n.lastSub === prev, `${label}: lastSub of ${id(n)} is not its last edge`);
+    if (n.fn !== null && (n.flags & (Flag.Stale | Flag.Dirty)) === 0) {
+      for (let e = n.deps; e !== null; e = e.next) {
+        const f = e.from.flags;
+        check((f & (Flag.Stale | Flag.Dirty)) === 0, `${label}: clean node ${id(n)} has an invalidated source ${id(e.from)}`);
+        check(e.ver === e.from.ver, `${label}: clean node ${id(n)} holds a stale version of source ${id(e.from)}`);
+      }
+    }
   }
   check(inDeps.size === inSubs.size, `${label}: ${inDeps.size} deps edges vs ${inSubs.size} subs edges`);
   for (const e of inDeps) check(inSubs.has(e), `${label}: edge ${id(e.from)} -> ${id(e.to)} missing from subs`);

@@ -18,7 +18,9 @@ later changes of Reflex.
   `batch`, `untracked`; a handle is the node itself; see [Surface](#surface)).
   Research counters live in
   [`src/instrumentation.ts`](src/instrumentation.ts) and are eliminated from
-  the release. The ESM and CJS bundles are each standalone; ESM is about 2 KB gzip.
+  the release, as are development diagnostics (`__DEV__`), which a separate
+  development build keeps ([Development build](#development-build)). The ESM
+  and CJS bundles are each standalone; ESM is about 2.2 KB gzip.
 - **Report:** [research/REPORT.md](research/REPORT.md). **Design log**, one
   counterexample per mechanism: [research/LOG.md](research/LOG.md).
 - **Textbook version:** branch
@@ -26,6 +28,31 @@ later changes of Reflex.
   same semantics without the engineering (recursive push and pull, one
   exact index, no counters), written as a guided tour. It passes the same
   differential corpus; this branch is its lowering for speed and stack depth.
+
+## Example
+
+A computation depends on exactly what its last run read, so dependencies
+change from run to run:
+
+```ts
+import { computed, effect, get, set, signal } from "reflex-quant";
+
+const full = signal(false);
+const first = signal("Ada");
+const last = signal("Lovelace");
+const name = computed(() => (get(full) ? `${get(first)} ${get(last)}` : get(first)));
+
+effect(() => console.log(get(name))); // "Ada"        name reads full, first
+set(last, "Byron");                   // nothing runs: last was not read
+set(full, true);                      // "Ada Byron"  name now reads last too
+set(full, false);                     // "Ada"        last is dropped again
+set(last, "King");                    // nothing runs
+```
+
+When a computation reads the same sources in a different order, its
+existing relations are moved, not rebuilt: with 256 sources rotated every
+pass (`reorder.rotate-256`), quant creates and removes no relations per
+pass, where alien-signals relinks 255 (`node bench/structure.mjs`).
 
 ## Results
 
@@ -35,13 +62,17 @@ later changes of Reflex.
 - Current Reflex is that contract plus three failure-path choices, on the
   same corpus. One of them drops an execution obligation that the contract
   (R2) says survives a failure.
-- All 27 mechanism ablations fail a test: 20 a semantic test, 6 only a
-  structural bound (the work an optimization saves, counted), 1 only a
-  sibling-order test (a convention).
-- On CI (run 42278010312): within 25 % of the better of Reflex and
+- All 34 mechanism ablations fail a test: 25 a semantic test, 8 only a
+  structural bound or a representation test (the work an optimization saves, counted), 1 only a
+  sibling-order test (a convention). The 7 ablations of the development
+  diagnostic (C1) fail a test of the development build.
+- On CI (run 42287159440): within 25 % of the better of Reflex and
   alien-signals on all 18 scenarios, at or ahead of it on 8; geometric mean
-  0.97 of the better one, 0.94 of Reflex, 0.43 of alien-signals. Reorders
-  allocate nothing. Trajectory over every CI run: research/HISTORY.md.
+  0.97 of the better one, 0.95 of Reflex, 0.42 of alien-signals. Reorders
+  allocate nothing. Reflex remains faster on every reorder scenario
+  (quant 1.14–1.24 of it). The suite is this project's own; per-scenario
+  numbers are in research/REPORT.md (Q6), the trajectory over every CI run
+  in research/HISTORY.md.
 
 ## Surface
 
@@ -69,6 +100,19 @@ dispose(total);                                     // detach; the value stays r
 - `update(s, fn)`: a write, not an observation. `fn` runs untracked, so
   neither `s` nor what `fn` reads becomes a dependency of the running
   consumer; if `fn` throws, nothing is written.
+- `effect(fn)`: if the call throws, it returns no handle and leaves nothing
+  live; a cleanup its run returned has already run.
+
+### Development build
+
+Bundlers that resolve the `development` export condition, and Node with
+`--conditions=development`, load `dist/index.development.js` (or `.cjs`). It
+diagnoses a precondition that the production build does not check (SPEC C1):
+a read or a validation that reaches a computed whose evaluation is in
+progress throws `Cycle detected`, instead of answering with the computed's
+previous value. Such a demand comes from a cycle, or from a write inside a
+computed whose synchronous effects read back into it. The production build
+pays nothing for the diagnosis; the release check verifies the split.
 
 ## Layout
 
@@ -89,7 +133,8 @@ npm run lint                                    # lint production TypeScript
 npm run format:check                            # check production formatting
 npm run format                                  # format production code and tool config
 npm run build && npm run check                  # standalone release and declarations
-npx vitest run --config vitest.config.ts        # all tests
+npx vitest run --config vitest.config.ts        # all tests, development build
+npm run test:production                         # the same suite, production build
 npx tsc -p tsconfig.json                        # typecheck src
 node research/mutants.mjs                       # ablation -> research/mutants.json
 node bench/build.mjs                            # bundles: quant, Reflex bf71877, alien-signals

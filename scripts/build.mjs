@@ -1,5 +1,8 @@
 // Release build: dist/index.js (ESM), dist/index.cjs (CJS), both with
-// source maps, declarations for each format, research counters compiled out.
+// source maps, declarations for each format, research counters and
+// development diagnostics compiled out; and the development build,
+// dist/index.development.{js,cjs}, which diagnoses the C1 precondition
+// (SPEC) and is chosen by bundlers through the "development" condition.
 //
 //   node scripts/build.mjs
 import { execFileSync } from "node:child_process";
@@ -23,7 +26,7 @@ const common = {
   bundle: true,
   platform: "neutral",
   target: "es2022",
-  define: { __STATS__: "false" },
+  define: { __STATS__: "false", __DEV__: "false" },
   // Full minification (exported names are never mangled); the source maps
   // restore names in traces and profiles.
   minify: true,
@@ -34,6 +37,11 @@ const common = {
 };
 await esbuild.build({ ...common, format: "esm", outfile: path.join(dist, "index.js") });
 await esbuild.build({ ...common, format: "cjs", outfile: path.join(dist, "index.cjs") });
+// Development build: the same source with its diagnostics, names and layout
+// kept for debugging; constants still folded, so each build sees one mask.
+const development = { ...common, define: { __STATS__: "false", __DEV__: "true" }, minify: false, minifySyntax: true };
+await esbuild.build({ ...development, format: "esm", outfile: path.join(dist, "index.development.js") });
+await esbuild.build({ ...development, format: "cjs", outfile: path.join(dist, "index.development.cjs") });
 // Unminified twin, never published: the release check proves the minified
 // build behaves exactly like it.
 await esbuild.build({ ...common, minify: false, sourcemap: false, banner: {}, format: "esm", outfile: path.join(root, ".cache/release/plain.js") });

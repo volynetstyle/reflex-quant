@@ -42,7 +42,14 @@ export function computed<T>(
 /** Runs now (or when the enclosing batch or drain ends), then on every change it read. */
 export function effect(fn: () => void | (() => void)): Effect {
   const effectNode = watcher(fn, true);
-  start(effectNode);
+
+  try {
+    start(effectNode);
+  } catch (error) {
+    stop(effectNode);
+    throw error;
+  }
+
   return effectNode as unknown as Effect;
 }
 

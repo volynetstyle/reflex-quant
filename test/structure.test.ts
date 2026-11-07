@@ -1,9 +1,9 @@
-import { Flag } from "../src/flags";
+import { Flag, KEEP, TRIM } from "../src/flags";
 // Level 1, complexity class: structural work bounds that are not semantics.
 // Each assertion pins an optimization (O1, O2) or an asymptotic property;
 // removing the mechanism keeps every value correct and fails here.
 import { beforeEach, describe, expect, it } from "vitest";
-import { node, read, stats, write } from "../src/kernel";
+import { idle, node, read, stackHighWater, stackLength, stats, write } from "../src/kernel";
 import type { Node } from "../src/model";
 import { edgeCount, resetStats } from "./support/graph";
 import { run } from "../src/host";
@@ -251,5 +251,52 @@ describe("structural bounds", () => {
     expect(stats.links).toBe(0);
     expect(stats.indexes).toBe(40);
     expect(stats.indexed).toBe(40 * (n + 1));
+  });
+});
+
+describe("work stack at rest", () => {
+  /** s -> c0 -> c1 -> ... -> cN, each read as it is built (no recursion); with leaves, ci also feeds a computed born after c(i+1). */
+  function chain(n: number, leaves: boolean) {
+    const s = signal(0);
+    const nodes = [computed(() => read(s))];
+    read(nodes[0]!);
+    for (let i = 0; i < n; i++) {
+      const p = nodes[i]!;
+      const c = computed(() => (read(p) as number) + 1);
+      read(c);
+      nodes.push(c);
+      if (leaves) read(computed(() => read(p)));
+    }
+    return { s, end: nodes[n]! };
+  }
+
+  it("the end of a deep outermost validation cuts the stack back to KEEP", () => {
+    const { s, end } = chain(2000, false);
+    write(s, 1);
+    expect(read(end)).toBe(2001);
+    expect(stackLength()).toBe(KEEP);
+    expect(stackHighWater()).toBeGreaterThan(TRIM);
+    expect(idle()).toBe(true);
+  });
+
+  it("a stack a deep mark grew is cut by the next outermost validation", () => {
+    // Every ci has a pending sibling (its leaf) while mark descends to c(i+1).
+    const { s, end } = chain(2000, true);
+    write(s, 1);
+    expect(stackLength()).toBeGreaterThan(TRIM);
+    expect(read(end)).toBe(2001);
+    expect(stackLength()).toBe(KEEP);
+  });
+
+  it("a validation no deeper than TRIM leaves the stack as it is", () => {
+    const { s, end } = chain(400, false);
+    write(s, 1);
+    expect(read(end)).toBe(401);
+    const length = stackLength();
+    expect(length).toBeGreaterThan(KEEP);
+    expect(length).toBeLessThanOrEqual(TRIM);
+    write(s, 2);
+    read(end);
+    expect(stackLength()).toBe(length);
   });
 });

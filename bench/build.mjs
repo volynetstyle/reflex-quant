@@ -35,7 +35,7 @@ async function bundle(name, entry, { stats = false, alias = {}, readable = false
     minifyWhitespace: !readable,
     minifyIdentifiers: !readable,
     target: "es2022",
-    define: { __STATS__: String(stats) },
+    define: { __STATS__: String(stats), __DEV__: "false" },
     alias,
     outfile: path.join(dir, "index.mjs"),
     logLevel: "warning",

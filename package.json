@@ -1,6 +1,6 @@
 {
   "name": "reflex-quant",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "The smallest reactive runtime the invariants of Reflex imply: signals, computeds, effects; exact dependency tracking, no recursion, ~2 KB gzip.",
   "keywords": [
     "signals",
@@ -29,10 +29,12 @@
     ".": {
       "import": {
         "types": "./dist/index.d.ts",
+        "development": "./dist/index.development.js",
         "default": "./dist/index.js"
       },
       "require": {
         "types": "./dist/index.d.cts",
+        "development": "./dist/index.development.cjs",
         "default": "./dist/index.cjs"
       }
     },
@@ -56,6 +58,7 @@
     "format": "prettier --write src eslint.config.mjs .prettierrc.json",
     "format:check": "prettier --check src eslint.config.mjs .prettierrc.json",
     "test": "vitest run --config vitest.config.ts",
+    "test:production": "vitest run --config vitest.config.ts --mode production",
     "typecheck": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run typecheck && npm run build && npm run check"
   },

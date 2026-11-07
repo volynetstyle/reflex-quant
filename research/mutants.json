@@ -116,7 +116,8 @@
     "mechanism": "removal of earlier failed runs' unread edges",
     "killed": true,
     "failed": [
-      "differential.test.ts > phase 0 probes pin their classification"
+      "differential.test.ts > phase 0 probes pin their classification",
+      "torture-structure.test.ts > a failed computed retains only the current attempt frontier"
     ]
   },
   {
@@ -140,7 +141,8 @@
       "semantics.test.ts > a computed that writes a source it already read converges on the next read (F1)",
       "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
       "semantics.test.ts > A→B→A after the first observation is a change (P1): the next demand executes again",
-      "semantics.test.ts > one rule on every path that recognises a repeated read"
+      "semantics.test.ts > one rule on every path that recognises a repeated read",
+      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
     ]
   },
   {
@@ -156,7 +158,9 @@
     "mechanism": "the kernel wakes a watcher only when it is neither STALE nor WOKEN (re-delivery after a failed validation)",
     "killed": true,
     "failed": [
-      "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes"
+      "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
+      "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
+      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
     ]
   },
   {
@@ -166,7 +170,8 @@
     "failed": [
       "differential.test.ts > historical faults and contract boundaries",
       "differential.test.ts > recovery exhaustive language",
-      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal"
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)"
     ]
   },
   {
@@ -185,7 +190,9 @@
     "killed": true,
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification",
-      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal"
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
+      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
     ]
   },
   {
@@ -193,7 +200,8 @@
     "mechanism": "disposal deferred to the end of the node's own run",
     "killed": true,
     "failed": [
-      "semantics.test.ts > dispose inside the callback, then more reads: no ghost relation"
+      "semantics.test.ts > dispose inside the callback, then more reads: no ghost relation",
+      "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot"
     ]
   },
   {
@@ -202,7 +210,130 @@
     "killed": true,
     "failed": [
       "semantics.test.ts > cycles throw instead of overflowing",
+      "semantics.test.ts > the answer does not depend on how the cycle's nodes were invalidated",
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above",
+      "semantics.test.ts > a reentrant demand without a data cycle fails as a direct read does",
       "surface.test.ts > peeking a computed inside its own run is a cycle, as for get"
+    ]
+  },
+  {
+    "id": "no-checking-read",
+    "mechanism": "C1 (development diagnostic): CHECKING on read, so a node under validation is a cycle, not its previous value",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a read of a node under validation is a cycle, not its previous value",
+      "semantics.test.ts > the answer does not depend on how the cycle's nodes were invalidated",
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above",
+      "semantics.test.ts > a reentrant demand without a data cycle fails as a direct read does",
+      "torture-semantics.test.ts > a cycle introduced through a validating ancestor fails loudly"
+    ]
+  },
+  {
+    "id": "no-checking-descent",
+    "mechanism": "C1 (development diagnostic): CHECKING on every node a validation descends into, not only on its root",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above"
+    ]
+  },
+  {
+    "id": "checking-kept-when-clean",
+    "mechanism": "C1 (development diagnostic): a node its validation finds clean leaves the walk (its one extra store)",
+    "killed": true,
+    "failed": [
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal"
+    ]
+  },
+  {
+    "id": "checking-kept-on-run",
+    "mechanism": "C1 (development diagnostic): a node on the walk that runs leaves it as the run starts (folded into exec's store)",
+    "killed": true,
+    "failed": [
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "semantics.test.ts > diamond: one execution per node, no glitch",
+      "semantics.test.ts > layered diamond 8x8: each node executes once per write",
+      "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
+      "semantics.test.ts > one rule on every path that recognises a repeated read",
+      "structure.test.ts > the end of a deep outermost validation cuts the stack back to KEEP",
+      "structure.test.ts > a stack a deep mark grew is cut by the next outermost validation",
+      "structure.test.ts > a validation no deeper than TRIM leaves the stack as it is",
+      "tracking.test.ts > push and pull are not bounded by the call stack (20,000-deep chain)"
+    ]
+  },
+  {
+    "id": "checking-kept-on-failure",
+    "mechanism": "C1 (development diagnostic): a failed validation clears CHECKING along its walk",
+    "killed": true,
+    "failed": [
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
+      "semantics.test.ts > a read of a node under validation is a cycle, not its previous value",
+      "semantics.test.ts > validation reaching an executing node is a cycle and leaves no clean node behind",
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above",
+      "semantics.test.ts > a reentrant demand without a data cycle fails as a direct read does",
+      "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
+      "torture-semantics.test.ts > a cycle introduced through a validating ancestor fails loudly"
+    ]
+  },
+  {
+    "id": "verify-busy-blind",
+    "mechanism": "C1 (development diagnostic): validation fails on a source on the stack even when no push marked it again",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > validation reaching an executing node is a cycle and leaves no clean node behind",
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above"
+    ]
+  },
+  {
+    "id": "check-busy-blind",
+    "mechanism": "C1 (development diagnostic): watcher validation pulls a source on the stack, so it fails before the cleanup (P4)",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)"
+    ]
+  },
+  {
+    "id": "disposed-run",
+    "mechanism": "W3: a node disposed during its validation is not run when its own source changed",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a computed disposed while it is validated is not run again; its value freezes"
+    ]
+  },
+  {
+    "id": "disposed-run-climb",
+    "mechanism": "W3: a node disposed during its validation is not run when the climb reaches it",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a computed disposed while it is validated is not run again; its value freezes"
+    ]
+  },
+  {
+    "id": "disposed-left-dirty",
+    "mechanism": "W3: a failed walk does not leave a node disposed during it owing a run",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a later source failing in the same walk does not leave the disposed computed owing a run"
+    ]
+  },
+  {
+    "id": "no-trim",
+    "mechanism": "the end of an outermost validation cuts a stack a deep walk grew back to KEEP (retained memory)",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > the end of a deep outermost validation cuts the stack back to KEEP",
+      "structure.test.ts > a stack a deep mark grew is cut by the next outermost validation",
+      "structure.test.ts > a validation no deeper than TRIM leaves the stack as it is"
+    ]
+  },
+  {
+    "id": "construction-commits",
+    "mechanism": "W5: an effect() call that throws detaches its watcher",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a failed first run leaves no live watcher and no relation",
+      "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back",
+      "torture-semantics.test.ts > failed initial effect construction leaves no unreachable live watcher"
     ]
   },
   {
@@ -231,7 +362,9 @@
     "mechanism": "effects run inside the host's drain loop",
     "killed": true,
     "failed": [
-      "semantics.test.ts > effects created inside a batch or another effect run after it"
+      "semantics.test.ts > effects created inside a batch or another effect run after it",
+      "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back",
+      "semantics.test.ts > a first run deferred by a batch is established: its failure is F3"
     ]
   },
   {
@@ -239,7 +372,8 @@
     "mechanism": "an effect's unqueued first run opens the drain",
     "killed": true,
     "failed": [
-      "semantics.test.ts > effects created inside a batch or another effect run after it"
+      "semantics.test.ts > effects created inside a batch or another effect run after it",
+      "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back"
     ]
   },
   {
@@ -250,7 +384,11 @@
       "semantics.test.ts > failing effect does not stop the others; the error reaches the writer",
       "semantics.test.ts > disposing a sibling sharing the sources during a run leaves the others intact",
       "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
-      "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation"
+      "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
+      "structure.test.ts > a stack a deep mark grew is cut by the next outermost validation",
+      "torture-structure.test.ts > random reorder + failure reuses every existing relation",
+      "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot",
+      "torture-structure.test.ts > nested indexed failure restores the enclosing reader's slot state"
     ]
   }
 ]

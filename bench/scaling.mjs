@@ -152,6 +152,30 @@ export const families = {
       return (i) => (tick.set(i), c.get());
     },
   },
+  "replace-all": {
+    note: "N sources, then N other sources, alternately (every relation replaced; the pair of shuffle)",
+    build(api, n) {
+      const sets = [range(n).map((k) => api.signal(k)), range(n).map((k) => api.signal(n + k))];
+      const order = range(n);
+      const tick = api.signal(0);
+      const c = api.computed(() => sumOf(sets[tick.get() & 1], order));
+      c.get();
+      return (i) => (tick.set(i), c.get());
+    },
+  },
+  "replace-all-shared": {
+    note: "replace-all, but another computed also reads every source (no new relation is proven absent for free)",
+    build(api, n) {
+      const sets = [range(n).map((k) => api.signal(k)), range(n).map((k) => api.signal(n + k))];
+      const order = range(n);
+      const other = api.computed(() => (sumOf(sets[0], order) + sumOf(sets[1], order)) & SMI);
+      other.get();
+      const tick = api.signal(0);
+      const c = api.computed(() => sumOf(sets[tick.get() & 1], order));
+      c.get();
+      return (i) => (tick.set(i), c.get());
+    },
+  },
   "mount-dispose": {
     note: "mount and dispose N effects over one signal (lifecycle)",
     build(api, n) {
