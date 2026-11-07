@@ -2,25 +2,17 @@
 
 An experiment: derive the smallest known reactive runtime implied by a
 frozen contract (semantic invariants and structural bounds, see
-[SPEC.md](SPEC.md)), and measure what is left. The contract was extracted
+[CONTRACT.md](CONTRACT.md)), and measure what is left. The contract was extracted
 from the executable spec of [Reflex](https://github.com/volynetstyle/Reflex)
 (provenance in [research/REPORT.md](research/REPORT.md)); it does not follow
 later changes of Reflex.
 
-- **Production code:** [`src/model.ts`](src/model.ts) and [`src/types.ts`](src/types.ts)
-  (internal and public types), [`src/flags.ts`](src/flags.ts) (flag layout),
-  [`src/graph.ts`](src/graph.ts) (local graph operations),
-  [`src/tracking.ts`](src/tracking.ts) (dependency resolution),
-  [`src/kernel.ts`](src/kernel.ts) (execution context, stack-dependent tracking,
-  invalidation and validation), [`src/host.ts`](src/host.ts)
-  (watcher lifecycle, queue, batch), [`src/index.ts`](src/index.ts)
-  (`signal`, `computed`, `effect`, `get`, `peek`, `set`, `update`, `dispose`,
-  `batch`, `untracked`; a handle is the node itself; see [Surface](#surface)).
-  Research counters live in
-  [`src/instrumentation.ts`](src/instrumentation.ts) and are eliminated from
-  the release, as are development diagnostics (`__DEV__`), which a separate
-  development build keeps ([Development build](#development-build)). The ESM
-  and CJS bundles are each standalone; ESM is about 2.2 KB gzip.
+The runtime has three operational layers: the **kernel** owns the dependency
+machine (graph, tracking, propagation and validation); the **host** handles
+watcher lifecycle and delivery; and the **surface** exposes the typed API.
+Research instrumentation and development diagnostics are eliminated from the
+production build. The standalone ESM bundle is about 2.2 KB gzip.
+
 - **Report:** [research/REPORT.md](research/REPORT.md). **Design log**, one
   counterexample per mechanism: [research/LOG.md](research/LOG.md).
 - **Textbook version:** branch
@@ -107,7 +99,7 @@ dispose(total);                                     // detach; the value stays r
 
 Bundlers that resolve the `development` export condition, and Node with
 `--conditions=development`, load `dist/index.development.js` (or `.cjs`). It
-diagnoses a precondition that the production build does not check (SPEC C1):
+diagnoses a precondition that the production build does not check (contract C1):
 a read or a validation that reaches a computed whose evaluation is in
 progress throws `Cycle detected`, instead of answering with the computed's
 previous value. Such a demand comes from a cycle, or from a write inside a
@@ -117,16 +109,17 @@ pays nothing for the diagnosis; the release check verifies the split.
 ## Layout
 
 ```text
-src/        types, model, flags, graph, tracking, kernel, host, instrumentation, surface
+src/        graph representation, kernel machine, host, public surface, instrumentation
 test/       differential (spec, contract spec, Reflex, quant), tracking,
             semantics, structural bounds; tools/ (QUANT_TOOLS=1)
 bench/      scenarios, adapters, build, timing (CI only), structure counters
-research/   REPORT.md, LOG.md, mutants.mjs (ablation), versions/ (v0-v3)
+research/   evidence, design log, ablations, and historical benchmark snapshots
+reference/  frozen Reflex implementation and provenance fixtures
 ```
 
 ## Running
 
-For development, use Node.js 20.19 or later in the 20.x line, 22.13 or later in the 22.x line, or 24+ and npm (the published library supports Node.js 18+). Install this repository's dependencies with `npm ci`; the Reflex sources, spec harness and fixed production baseline used by the tests and benchmarks are included in `bin/reflex-runtime` and do not require a Reflex checkout. From this directory:
+For development, use Node.js 20.19 or later in the 20.x line, 22.13 or later in the 22.x line, or 24+ and npm (the published library supports Node.js 18+). Install this repository's dependencies with `npm ci`; the Reflex sources, spec harness and fixed production baseline used by the tests and benchmarks are included in `reference/reflex` and do not require a Reflex checkout. From this directory:
 
 ```sh
 npm run lint                                    # lint production TypeScript
@@ -148,4 +141,4 @@ node bench/cost/build.mjs && node bench/cost/run.mjs regime --rounds 0
                                                 # cost-model probes (research/COST-MODEL.md); timing on CI
 ```
 
-CI is split in two workflows. `.github/workflows/ci.yml` runs lint, typecheck/release build and tests as parallel jobs. `.github/workflows/benchmark.yml` builds and checksum-verifies the bundles once, then runs in parallel one timing job per mechanism (`bench/mechanisms.mjs`), the graph scenarios (`bench/scenarios.mjs`) in shards, the structural counters and the edge-churn probe. Each timing job runs all three runtimes on one runner: compare ratios within a job, never times across jobs. The Reflex benchmark baseline is fixed at commit `bf71877`; see `bin/reflex-runtime/README.md` for its provenance.
+CI is split in two workflows. `.github/workflows/ci.yml` runs lint, typecheck/release build and tests as parallel jobs. `.github/workflows/benchmark.yml` builds and checksum-verifies the bundles once, then runs in parallel one timing job per mechanism (`bench/mechanisms.mjs`), the graph scenarios (`bench/scenarios.mjs`) in shards, the structural counters and the edge-churn probe. Each timing job runs all three runtimes on one runner: compare ratios within a job, never times across jobs. The Reflex benchmark baseline is fixed at commit `bf71877`; see `reference/reflex/README.md` for its provenance.

@@ -2,7 +2,7 @@
 
 Experiment: derive a reactive runtime from a frozen contract (invariants
 T1–W5, bounds S1–S7, decisions D1, D2 and D6, precondition C1 in
-[SPEC.md](../SPEC.md)) that
+[CONTRACT.md](../CONTRACT.md)) that
 was extracted from Reflex's semantic contract and executable spec, not from
 its implementation; Reflex is provenance, not authority; keep every mechanism
 a test forces and nothing else; compare it with the spec, current Reflex
@@ -37,7 +37,7 @@ better one, 0.95 of Reflex and 0.42 of alien-signals (Q6).
 **Provenance and ID map.** The contract was extracted from the Reflex
 material listed below. The comparison snapshot is Reflex `dev` `bf71877`;
 no separate extraction snapshot was recorded when the contract was selected.
-Source IDs in the tables (V, C, R, W, L) are Reflex's; SPEC.md IDs are
+Source IDs in the tables (V, C, R, W, L) are Reflex's; CONTRACT.md IDs are
 Quant's: tracking T1–T3 (exact tracking, uniqueness, nesting); change P1–P4
 (version fact, cutoff, glitch freedom, V3); failure F1–F4 (C1–C3, C4/R3,
 W2, R2); watchers W1–W4 (W1, L1–L5, disposal, batching).
@@ -272,7 +272,7 @@ not counted). Code lines are lines that are neither blank nor comment-only.
 | | Reflex | Quant |
 | --- | --- | --- |
 | implementation lines (code lines) | 5,610 (3,671) in 42 files | 1,012 (620) in 8 files: kernel 458 (289), host 152 (93), tracking 149 (83), index 83 (48), graph 69 (48), model 49 (29), flags 28 (14), types 24 (16) |
-| of which tracking and graph shape | 1,881 (1,114) | 218 (131): `tracking.ts` (miss path, scans, subscriber lookup, mark) and `graph.ts` (node, move, cut, unsub); the index walk and `link` stay in the kernel |
+| of which tracking and graph shape | 1,881 (1,114) | 218 (131): tracking (miss path, scans, subscriber lookup, mark) and graph primitives (node, move, cut, unsub); the tracking machine now lives in `kernel.ts` |
 | minified bundle, gzip | 8,980 B (whole internal surface) | 2,131 B ESM (kernel + host + API) |
 | node fields | 8 | 10 |
 | relation fields | 7 | 8 |
@@ -303,7 +303,7 @@ jobs (the shards got AMD EPYC 9V45, AMD EPYC 9V74 and Intel Xeon Platinum
 batches of about 10 ms after at least 300 ms and 2,000 steps of warm-up.
 Before timing, every scenario's first 64 steps must give the same checksum
 on all three runtimes (0 mismatches). Reflex is the frozen production
-bundle of `bf71877` (`bin/reflex-runtime`), behind the same minimal host
+bundle of `bf71877` (`reference/reflex`), behind the same minimal host
 (FIFO queue, claim-based deduplication) quant uses; alien-signals 3.2.1.
 The trajectory over every CI run is in [HISTORY.md](./HISTORY.md); the
 kernel v2 and v3 tables of earlier revisions of this section are in git

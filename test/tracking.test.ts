@@ -1,9 +1,9 @@
-import { Flag } from "../src/flags";
+import { Flag } from "../src/graph";
 // Level 1: adversarial dependency tracking on the kernel. Every case checks
 // values, relation uniqueness, list integrity and the work counters.
 import { beforeEach, describe, expect, it } from "vitest";
 import { idle, node, read, stats, write } from "../src/kernel";
-import type { Edge, Node } from "../src/model";
+import type { Edge, Node } from "../src/graph";
 import { checkGraph, deps, edgeCount, indices, resetStats, subs } from "./support/graph";
 
 const signal = (v: unknown) => node(null, v, 0);

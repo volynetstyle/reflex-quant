@@ -1,9 +1,9 @@
-import { Flag } from "../../src/flags";
+import { Flag } from "../../src/graph";
 // Structural checks over the quant graph. Failures throw plain Errors with
 // indices and counts only: never hand a node or edge to an assertion library
 // (inspecting one walks the whole cyclic graph).
 import { stats } from "../../src/kernel";
-import type { Edge, Node } from "../../src/model";
+import type { Edge, Node } from "../../src/graph";
 
 export function check(condition: boolean, message: string): void {
   if (!condition) throw new Error(message);

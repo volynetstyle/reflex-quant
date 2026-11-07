@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { batch, computed, dispose, effect as watch, get, peek, set, signal, untracked, type Computed, type Effect } from "../src/index";
 import { idle } from "../src/kernel";
-import type { Node } from "../src/model";
+import type { Node } from "../src/graph";
 import { checkGraph } from "./support/graph";
 import { dev } from "./support/mode";
 import { foundRepeat, prefixRepeat } from "./support/p5";

@@ -42,7 +42,7 @@ const quantDev = (dev: boolean): Plugin => ({
 export default defineConfig(({ mode }) => ({
   root,
   plugins: [quantDev(mode !== "production"), ...(mutantSrc ? [redirect] : [])],
-  resolve: { alias: { "@runtime": resolve(root, "bin/reflex-runtime/src") } },
+  resolve: { alias: { "@runtime": resolve(root, "reference/reflex/src") } },
   define: { __DEV__: false, __PROFILE__: false, __TRACKING_ONE_HOP__: true, __TRACKING_TWO_HOP__: true, __TRACKING_LAST_EDGE__: true, __TEST__: true, __PROD__: false, __STATS__: "true" },
   esbuild: { platform: "node", format: "esm", target: "es2022" } as never,
   test: {

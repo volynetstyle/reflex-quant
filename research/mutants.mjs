@@ -13,7 +13,7 @@ import path from "node:path";
 const root = path.resolve(import.meta.dirname, "..");
 const cache = path.join(root, ".cache/mutants");
 const K = "kernel.ts";
-const T = "tracking.ts";
+const T = "kernel.ts";
 const H = "host.ts";
 const I = "index.ts";
 

@@ -872,3 +872,28 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
     The structural counters show the same links and unlinks as alien, plus
     exactly one subscriber lookup per new relation. That lookup is the
     price of exact identity when the identity really is new.
+
+## Representation and edge removal note
+
+Reactive kernel: nodes, edges, tracking, push, pull, failure.
+
+A node is a signal (fn === null), a computed, or a watcher (WATCH). An edge
+is one relation in two doubly linked lists: `to.deps` in the order `to`
+last read its sources (prev/next) and `from.subs` in birth order
+(prevSub/nextSub). Change is a version fact: a node bumps `ver` when its
+value changes; an edge keeps the `ver` its reader saw.
+
+Removal invariant: an edge taken out of a list must not keep a pointer into
+either list, because garbage that points at live or younger edges is kept
+alive by the scavenger once it is old (an old dead edge pins newer ones, and
+through `to` their watchers and closures, until a major GC). Removal is
+therefore two steps: unlink the neighbours, then clear the edge's own
+links. `unsub` clears prevSub/nextSub; `cut` clears the head's `prev`, and
+`fail` clears `prev`/`next`. In `cut` the interior of a removed run keeps
+its `next` chain, which only reaches other garbage of the same cut and
+is read by `unsub` while the run is walked. Any new removal path must
+do the same.
+
+Written for V8: one node shape and one edge shape, each built at a single
+site; numeric fields are SMI counters (masked); conditions are explicit
+comparisons, so no ToBoolean runs on mixed values; the graph walks avoid recursion and allocation per stable read.

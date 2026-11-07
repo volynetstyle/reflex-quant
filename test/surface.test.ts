@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { batch, computed, effect, get, peek, set, signal, untracked, update, type Computed } from "../src/index";
 import { idle } from "../src/kernel";
-import type { Node } from "../src/model";
+import type { Node } from "../src/graph";
 import { checkGraph } from "./support/graph";
 
 const asNode = (handle: unknown): Node => handle as Node;

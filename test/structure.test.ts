@@ -1,10 +1,10 @@
-import { Flag, KEEP, TRIM } from "../src/flags";
+import { Flag, KEEP, TRIM } from "../src/graph";
 // Level 1, complexity class: structural work bounds that are not semantics.
 // Each assertion pins an optimization (O1, O2) or an asymptotic property;
 // removing the mechanism keeps every value correct and fails here.
 import { beforeEach, describe, expect, it } from "vitest";
 import { idle, node, read, stackHighWater, stackLength, stats, write } from "../src/kernel";
-import type { Node } from "../src/model";
+import type { Node } from "../src/graph";
 import { edgeCount, resetStats } from "./support/graph";
 import { run } from "../src/host";
 import { get as publicGet, set as publicSet } from "../src/index";

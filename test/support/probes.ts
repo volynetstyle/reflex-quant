@@ -1,8 +1,8 @@
 // Phase 0 probes: small programs at the edges of the written contract, where
 // the executable spec and current Reflex could part. REPORT.md classifies
 // each one.
-import { expr as e, op } from "../../bin/reflex-runtime/test/differential/api";
-import type { Program } from "../../bin/reflex-runtime/test/differential/api";
+import { expr as e, op } from "../../reference/reflex/test/differential/api";
+import type { Program } from "../../reference/reflex/test/differential/api";
 
 export const probes: Program[] = [
   {

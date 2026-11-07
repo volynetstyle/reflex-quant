@@ -4,7 +4,7 @@
 import { describe, expect, it } from "vitest";
 import { batch, computed, dispose, effect, get, peek, set, signal, type Computed } from "../src/index";
 import { idle, stats } from "../src/kernel";
-import type { Edge, Node } from "../src/model";
+import type { Edge, Node } from "../src/graph";
 import { checkGraph, deps, resetStats } from "./support/graph";
 
 const n = (x: object) => x as unknown as Node;

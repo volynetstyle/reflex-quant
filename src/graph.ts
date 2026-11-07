@@ -1,6 +1,106 @@
-// Intrusive graph operations independent of the execution context.
-import type { Edge, Flags, Node } from "./model";
 import { stats } from "./instrumentation";
+
+// Compile-time vocabulary of the runtime graph. Nothing here exists at runtime.
+
+// The aliases name different facts but do not brand numbers: counters wrap at
+// MASK and edge versions can carry UNREAD.
+export type Flags = number;
+export type Version = number;
+export type Generation = number;
+
+/** A computed's or watcher's body; a signal has none. */
+export type Fn = (prev: unknown) => unknown;
+/** A watcher's cleanup, run untracked. */
+export type Cleanup = () => unknown;
+
+export interface Node {
+  flags: Flags;
+  value: unknown;
+  /** Bumps on every Object.is-visible change of value. */
+  ver: Version;
+  /** null for a signal and for a disposed node. */
+  fn: Fn | null;
+  /** Sources, in read order. */
+  deps: Edge | null;
+  /** The running pass's last accepted source edge. */
+  last: Edge | null;
+  /** Subscribers, in birth order. */
+  subs: Edge | null;
+  lastSub: Edge | null;
+  /** While a reader indexes: this node's edge into that reader. */
+  slot: Edge | null;
+  /** Successful runs; edges born since the last one are tentative. */
+  gen: Generation;
+}
+
+export interface Edge {
+  readonly from: Node;
+  readonly to: Node;
+  /** from.ver when `to` read it; UNREAD while indexed and not yet read. */
+  ver: Version | typeof UNREAD;
+  /** to.gen + 1 at birth: tentative while it still equals to.gen + 1. */
+  gen: Generation;
+  prev: Edge | null;
+  next: Edge | null;
+  prevSub: Edge | null;
+  nextSub: Edge | null;
+}
+
+/** Shared LIFO of the kernel's walks: edges, and (source, cell) pairs. */
+export type WorkStack = (Node | Edge | null)[];
+
+// Flag layout and constants used by the kernel and host.
+export const enum Flag {
+  /** A source below may have changed; a watcher must validate. */
+  Stale = 1 << 0,
+  /** Must run: first run, failed run, or a direct source changed. */
+  Dirty = 1 << 1,
+  /** Its run is on the stack. */
+  Busy = 1 << 2,
+  /** Its run put its edges into the sources' slots. */
+  Indexed = 1 << 3,
+  /** A watcher: handed to the host, never read. */
+  Watch = 1 << 4,
+  /** Woken by signals only; computed sources need no validation. */
+  Woken = 1 << 5,
+  /**
+   * Development builds only (C1 is a precondition): a computed whose
+   * validation is on the stack, no longer STALE and not yet clean. WOKEN's
+   * bit, so every mask stays a byte: WOKEN is a watcher's, CHECKING a
+   * computed's, and no node is both. A production build never sets it, so
+   * a mask that tests it is inert there.
+   */
+  Checking = 1 << 5,
+  /** Host policy: scheduled by the reference host. */
+  Auto = 1 << 6,
+  /** Host policy: already in its queue. */
+  Queued = 1 << 7,
+  /** Its run marked its unread edges UNREAD; pairs are found through subscribers. */
+  Marked = 1 << 8,
+}
+
+/** edge.ver of an edge the marked or indexed run has not read yet. */
+export const UNREAD = -1;
+/** Counters wrap inside the SMI range. */
+export const MASK = 0x3fffffff;
+/**
+ * A committed edge keeps its birth generation, and generations wrap: an edge
+ * 2^30 - 1 commits old would read as born in the next run (tentative). So a
+ * node restamps its edges with its own generation whenever a commit makes
+ * `gen & SETTLE` zero, twice a cycle, and no edge falls that far behind.
+ */
+export const SETTLE = 0x1fffffff;
+/** Scan budget of every bounded search: a constant keeps a run linear. */
+export const SCAN = 8;
+/**
+ * Work-stack slots kept at rest, and the length past which the outermost
+ * walk's end cuts the stack back to them. The gap keeps walks only a little
+ * deeper than KEEP from cutting and regrowing on every pass.
+ */
+export const KEEP = 256;
+export const TRIM = 512;
+
+// Intrusive graph operations independent of the execution context.
 
 export function node(fn: Node["fn"], value: unknown, flags: Flags): Node {
   return {

@@ -11,7 +11,7 @@ import {
   idle,
   stats,
 } from "../src/kernel";
-import type { Node } from "../src/model";
+import type { Node } from "../src/graph";
 import {
   checkGraph,
   edgeCount,

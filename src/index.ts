@@ -3,7 +3,7 @@
 // the node, and handle <-> node conversions are type assertions only (no
 // runtime wrapper). Every operation here exposes existing kernel and host
 // semantics; none adds state.
-import { Flag } from "./flags";
+import { Flag } from "./graph";
 import { depth, drainNow, draining, size, start, stop, watcher } from "./host";
 import {
   dispose as detach,
@@ -13,12 +13,35 @@ import {
   untracked,
   write,
 } from "./kernel";
-import type { Fn, Node } from "./model";
-import type { Computed, Effect, Readable, Signal } from "./types";
+import type { Fn, Node } from "./graph";
 
-export type { Computed, Effect, Readable, Signal } from "./types";
 export { batch } from "./host";
 export { untracked } from "./kernel";
+
+// Public handles: compile-time brands over the node, which is the runtime
+// handle. Variance is explicit: reading is covariant, a signal is also
+// written, so it is invariant.
+declare const READ: unique symbol;
+declare const WRITE: unique symbol;
+declare const COMPUTED: unique symbol;
+declare const EFFECT: unique symbol;
+
+/** Anything `get` accepts. */
+export interface Readable<out T> {
+  readonly [READ]: T;
+}
+
+export interface Signal<in out T> extends Readable<T> {
+  readonly [WRITE]: (value: T) => void;
+}
+
+export interface Computed<out T> extends Readable<T> {
+  readonly [COMPUTED]: true;
+}
+
+export interface Effect {
+  readonly [EFFECT]: true;
+}
 
 export function signal<T>(value: T): Signal<T> {
   return node(null, value, 0) as unknown as Signal<T>;

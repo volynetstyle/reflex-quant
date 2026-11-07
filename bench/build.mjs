@@ -54,7 +54,7 @@ manifest.quant = { source: "src", minifier: "esbuild" };
 // Frozen production oracle built from the Reflex baseline commit.
 const reflexDir = path.join(out, "reflex");
 mkdirSync(reflexDir, { recursive: true });
-copyFileSync(path.join(root, "bin/reflex-runtime/baseline-runtime.mjs"), path.join(reflexDir, "runtime.mjs"));
+copyFileSync(path.join(root, "reference/reflex/baseline-runtime.mjs"), path.join(reflexDir, "runtime.mjs"));
 copyFileSync(path.join(root, "bench/adapters/reflex.mjs"), path.join(reflexDir, "index.mjs"));
 manifest.reflex = { commit: "bf718774a5bf9c15cda769712d226d9fc4d4da23", build: "frozen production oracle" };
 

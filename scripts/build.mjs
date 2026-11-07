@@ -2,7 +2,7 @@
 // source maps, declarations for each format, research counters and
 // development diagnostics compiled out; and the development build,
 // dist/index.development.{js,cjs}, which diagnoses the C1 precondition
-// (SPEC) and is chosen by bundlers through the "development" condition.
+// (contract) and is chosen by bundlers through the "development" condition.
 //
 //   node scripts/build.mjs
 import { execFileSync } from "node:child_process";
@@ -48,17 +48,11 @@ await esbuild.build({ ...common, minify: false, sourcemap: false, banner: {}, fo
 // Same syntax optimizations as the release, retaining names for inspection.
 await esbuild.build({ ...common, minify: false, minifySyntax: true, sourcemap: false, banner: {}, format: "esm", outfile: path.join(root, ".cache/release/inspect.js") });
 
-// Inline the public handle types and the two re-exported signatures so
+// Inline the two re-exported signatures so
 // neither format needs to publish internal declarations.
 execFileSync(process.execPath, [tsc, "-p", path.join(root, "tsconfig.build.json")], { stdio: "inherit" });
 const types = path.join(dist, ".types");
 let declaration = readFileSync(path.join(types, "index.d.ts"), "utf8");
-for (const kind of ["import", "export"]) {
-  const line = new RegExp(`^${kind} type \\{[^}]+\\} from "\\./types";\\r?\\n`, "m");
-  if (!line.test(declaration)) throw new Error(`missing public type reference: ${kind} type { ... } from "./types"`);
-  declaration = declaration.replace(line, "");
-}
-declaration = readFileSync(path.join(types, "types.d.ts"), "utf8").replace(/^export \{\};\r?\n/m, "") + declaration;
 for (const [name, module] of [["batch", "host"], ["untracked", "kernel"]]) {
   const source = readFileSync(path.join(types, `${module}.d.ts`), "utf8");
   const signature = source.match(new RegExp(`^export declare function ${name}[^\\n]+$`, "m"))?.[0];

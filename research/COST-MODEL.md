@@ -243,7 +243,7 @@ walks over the source set in list order, which is random in memory (fill the
 slots, then clear them). Yet for a source with few subscribers the pair's
 edge is already in `s.subs`, and the read loads the source anyway.
 
-The release (LOG 28, `src/tracking.ts`) keeps the algorithm and changes the
+The release (LOG 28, `src/kernel.ts`) keeps the algorithm and changes the
 representation of the pass's lookup; it was first measured as the research
 variant `subs-lookup`:
 

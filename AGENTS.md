@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Quant is the minimal runtime that **follows from the Quant contract** (invariants and structural bounds in [SPEC.md](SPEC.md)). This is the research framing; do not break it.
+Quant is the minimal runtime that **follows from the Quant contract** (invariants and structural bounds in [CONTRACT.md](CONTRACT.md)). This is the research framing; do not break it.
 
 ## Inclusion criterion
 
@@ -25,4 +25,4 @@ That is collecting other runtimes' solutions, not minimizing. It turns derivatio
 
 ## Details
 
-The contract itself and full rules (invariants, layer boundaries, admission checklist, optimizations vs. conventions, change classification, research workflow) are in [SPEC.md](SPEC.md).
+The frozen invariants and bounds are in [CONTRACT.md](CONTRACT.md). Layer boundaries, the admission checklist, change classification and research workflow are in [ARCHITECTURE.md](ARCHITECTURE.md).

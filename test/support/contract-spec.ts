@@ -17,8 +17,8 @@
 //      the invariant through the public API.
 //
 // Everything else is inherited unchanged from SpecRuntime.
-import { SpecRuntime, type SpecComputed } from "../../bin/reflex-runtime/test/differential/internal/machine/spec-runtime";
-import { SpecMachine } from "../../bin/reflex-runtime/test/differential/internal/machine/SpecMachine";
+import { SpecRuntime, type SpecComputed } from "../../reference/reflex/test/differential/internal/machine/spec-runtime";
+import { SpecMachine } from "../../reference/reflex/test/differential/internal/machine/SpecMachine";
 
 type Internals = {
   validationCache: boolean;

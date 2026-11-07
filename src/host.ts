@@ -1,7 +1,7 @@
 // Policy around the kernel: the watcher lifecycle (check, consume the
 // cleanup, run), a FIFO queue for scheduled watchers, and batching.
-import { Flag } from "./flags";
-import type { Cleanup, Fn, Node } from "./model";
+import { Flag } from "./graph";
+import type { Cleanup, Fn, Node } from "./graph";
 import { check, dispose, exec, node, onWake, untracked } from "./kernel";
 
 const queue: (Node | null)[] = [];

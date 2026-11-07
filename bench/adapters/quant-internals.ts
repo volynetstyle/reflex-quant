@@ -2,8 +2,8 @@
 // handles (a handle is the node), the kernel and graph primitives the probes
 // time in isolation, and replicas of the private steps they need. Research
 // only; never part of a release.
-import { Flag, MASK } from "../../src/flags.ts";
-import type { Node } from "../../src/model.ts";
+import { Flag, MASK } from "../../src/graph.ts";
+import type { Node } from "../../src/graph.ts";
 
 export { batch, computed, dispose, effect, get, peek, set, signal, untracked, update } from "../../src/index.ts";
 export { index, read, write } from "../../src/kernel.ts";
@@ -13,7 +13,7 @@ export const name = "quant-internals";
 
 /** The flags `read` tests before it pulls. */
 export const PULL_FLAGS: number = Flag.Stale | Flag.Dirty | Flag.Busy;
-export { UNREAD } from "../../src/flags.ts";
+export { UNREAD } from "../../src/graph.ts";
 export const VERSION_MASK: number = MASK;
 
 /**

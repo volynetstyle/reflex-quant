@@ -6,8 +6,8 @@
 // edge from the first run reads as tentative once the counter wraps.
 import { describe, expect, it } from "vitest";
 import { batch, computed, dispose, effect, get, set, signal } from "../src/index";
-import { MASK, SETTLE } from "../src/flags";
-import type { Node } from "../src/model";
+import { MASK, SETTLE } from "../src/graph";
+import type { Node } from "../src/graph";
 import { checkGraph, deps } from "./support/graph";
 
 const n = (x: object) => x as unknown as Node;
