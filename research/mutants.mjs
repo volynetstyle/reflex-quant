@@ -66,6 +66,8 @@ export const mutants = [
     [K, "        w.flags |= Flag.Dirty;\n        e = e.next;\n        break;", "        w.flags |= Flag.Dirty;\n        return;"]],
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & Flag.Busy) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
+  ["retain-disposed-cursor", "S4/resource correctness: a retained disposed handle releases its dependency cursor",
+    [K, "function detach(n: Node): void {\n  cut(n, null);\n  n.last = null;", "function detach(n: Node): void {\n  cut(n, null);"]],
   ["no-cycle-check", "BUSY checked on read (cycle detection)",
     [K, "  if ((n.flags & (Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking)) !== 0)\n    pull(n);", "  if ((n.flags & (Flag.Stale | Flag.Dirty | Flag.Checking)) !== 0)\n    pull(n);"]],
   ["no-checking-read", "C1 (development diagnostic): CHECKING on read, so a node under validation is a cycle, not its previous value",

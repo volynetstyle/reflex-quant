@@ -38,6 +38,7 @@ export function edgeCount(nodes: readonly Node[]): number {
  * - every edge is in exactly one deps list and one subs list, of its own ends;
  * - one relation per (source, consumer) pair;
  * - no pass is running, no slot cell is left behind;
+ * - a retained dependency cursor belongs to that node's deps list;
  * - freshness: a live node that is neither STALE nor DIRTY has only clean
  *   sources, and every relation carries its source's current version, so a
  *   read at rest cannot return a value its sources have moved past (P3).
@@ -60,8 +61,10 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
     check((n.flags & Flag.Busy) === 0, `${label}: node ${id(n)} still Flag.Busy`);
     check(n.slot === null, `${label}: node ${id(n)} has a slot cell at rest`);
     const seen = new Set<Node>();
+    let cursorFound = n.last === null;
     let prev: Edge | null = null;
     for (let e = n.deps; e !== null; e = e.next) {
+      if (e === n.last) cursorFound = true;
       check(e.to === n, `${label}: deps edge of ${id(n)} points to ${id(e.to)}`);
       check(e.prev === prev, `${label}: broken prevDep in ${id(n)}`);
       check(!seen.has(e.from), `${label}: duplicate relation ${id(e.from)} -> ${id(n)}`);
@@ -70,6 +73,7 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
       inDeps.add(e);
       prev = e;
     }
+    check(cursorFound, `${label}: node ${id(n)} retains a detached dependency cursor`);
     prev = null;
     for (let e = n.subs; e !== null; e = e.nextSub) {
       check(e.from === n, `${label}: subs edge of ${id(n)} comes from ${id(e.from)}`);

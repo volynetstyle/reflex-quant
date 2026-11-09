@@ -932,6 +932,62 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   general speed claim. A minified ESM probe without banner or source map
   shrinks from 5,832 to 5,805 bytes (gzip 2,194 to 2,185).
 
+### 39. Final detach releases the dependency cursor (S4/resource correctness)
+
+- **Witness:** read a computed with d private numeric sources, dispose it,
+  and retain only its handle. Baseline 2d64f3c removes every subscription
+  and clears `deps`, but leaves `last` pointing to the former tail edge.
+  Its `from` retains a source; its `prev` chain reaches all d former edges
+  and their sources. The handle therefore reaches 2d + 1 graph objects
+  despite having no live upstream relations: 3 / 17 / 129 / 1025 objects
+  at widths 1 / 8 / 64 / 512. A deps/subs-only graph checker misses this
+  path, and functional observations alone cannot detect it.
+- **Classification:** structural/resource-correctness repair under S4's
+  retained-graph rationale. The reactive contract does not change; no new
+  mechanism, field, flag or lifecycle policy is introduced.
+- **Minimal repair:** after `cut(n, null)` in the shared final `detach`,
+  clear `n.last`. This covers ordinary disposal and both successful and
+  throwing exits after disposal during a run. An idle node disposed during
+  validation detaches immediately; its cursor is not used by that walk.
+  Clearing in `dispose` itself would be premature for a BUSY node: later
+  reads still use its cursor, and indexed teardown must run before cutting
+  its deps. Clearing every live pass's cursor adds unnecessary stores;
+  clearing the cached value would break the disposed computed's freeze.
+- **Structural evidence:** `checkGraph` now requires every non-null cursor
+  to belong to its node's deps list. The new retention suite follows all
+  graph pointer fields, including `last`, from the retained handle, so the
+  witness is deterministic and does not rely on GC timing. It covers empty
+  and wide graphs, repeated failed frontiers, indexed self-disposal and
+  subsequent reads, watcher self-disposal, return/throw exits, cleanup
+  ordering and cleanup failure, queued disposal, direct/indirect validation
+  with a later failure, lazy disposal, downstream subscribers and cached
+  object identity. There are 21 tests; the two zero-cursor boundary cases
+  already pass on the old implementation.
+- **Differential evidence:** the added shrinkable disposal corpus covers
+  never-run, successful, first-failed and failed-rerun watchers, throwing
+  disposal cleanups, branch changes, repeated attempts, shared sources,
+  surviving watchers and idempotent disposal. Observations are gated on the
+  frozen contract spec, and graph integrity is checked after every operation.
+  The existing differential language disposes watchers only; computed
+  disposal and in-pass/validation cases are checked through the public API,
+  without extending that language or the frozen spec.
+- **GC corroboration:** production bundles of baseline and repair, Node
+  25.2.0 with `--expose-gc`; retained handles, primitive cached values, weak
+  references to the former sources, eight full collections separated by
+  event-loop jobs. All 1 / 64 / 512 sources remain alive before the repair;
+  none remain alive afterwards. Frozen values are identical. These are
+  local corroborating measurements, not GC-timing assertions in the suite.
+  A cached object or a retained downstream relation can intentionally keep
+  other objects alive; the repair removes the cursor's stale path only.
+- **Validation:** development seed 7: 155 passed; production seed 20261109:
+  148 passed and seven development-only diagnostics skipped. Per mode,
+  QUANT_RUNS=20000, QUANT_SLOT_RUNS=1000 and QUANT_DISPOSE_RUNS=1000, plus
+  historical, bounded-exhaustive and recovery-exhaustive corpora. Mutant
+  `retain-disposed-cursor` is killed by 32 tests, including the new targeted
+  differential case; all 42 mutation anchors validate. Typecheck, lint,
+  source formatting, build and release checks pass. The production release
+  grows from 2244 to 2245 bytes gzip; no per-read work is added.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
@@ -952,6 +1008,10 @@ links. `unsub` clears prevSub/nextSub; `cut` clears the head's `prev`, and
 its `next` chain, which only reaches other garbage of the same cut and
 is read by `unsub` while the run is walked. Any new removal path must
 do the same.
+
+The node must release its cursor into removed deps too: final `detach`
+clears `last`. A running node retains that cursor until its pass unwinds,
+after restoring displaced slot cells (LOG 39).
 
 Written for V8: one node shape and one edge shape, each built at a single
 site; numeric fields are SMI counters (masked); conditions are explicit

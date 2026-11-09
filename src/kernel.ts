@@ -465,6 +465,7 @@ export function dispose(n: Node): void {
 
 function detach(n: Node): void {
   cut(n, null);
+  n.last = null;
   n.flags &= ~(Flag.Stale | Flag.Dirty | Flag.Woken);
 }
 
