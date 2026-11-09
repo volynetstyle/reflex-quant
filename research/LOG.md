@@ -1078,6 +1078,65 @@ it for cold execution, direct watchers, failed validation and push-only work.
   checks pass, including 18 release scenarios / 5,400 steps. Published ESM
   grows from 2245 to 2252 bytes gzip, with zero new persistent state.
 
+### 41. Verify inlining is profile- and tier-dependent
+
+- **Question:** the bytecode sizes in LOG 40 do not establish whether
+  `verify` is inlined. They measure code footprint, not a guaranteed call
+  removal or a speed improvement.
+- **Probe:** Node 25.2.0 / V8 14.1.146.11-node.13; production flags, both
+  name-retaining and fully minified public API bundles. The new
+  `bench/inlining.mjs` supplies cutoff and changing 3-link chains (400,000
+  updates) and a changing 1,200-link chain (50,000 updates), all with an
+  independently checked checksum. Trace with `--trace-opt`,
+  `--trace-turbo-inlining` and `--trace-maglev-inlining`; the last flag
+  disables concurrent Maglev for diagnostic output, so trace timings are
+  not benchmark timings. No inlining limits or optimization intrinsics are
+  changed. Generated minified function names are mapped from their AST.
+- **Maglev:** explicitly refuses current `verify`: "big function, size
+  (385) >= max-size (100)". The default single-function budget is 100.
+  The actual public-bundle bytecodes of baseline/current/inline-guards/
+  verify-finally are 402/385/435/407; the raw kernel probes in LOG 40 retain
+  more exports and measure three bytes more. Both layouts give the same
+  tier distinction.
+- **TurboFan:** on the hot shallow profiles, traces explicitly inline
+  `verify` into `pull` (and into callers after pull itself is inlined).
+  On the 1,200-link profile no such inlining was observed; `verify` gets
+  optimized as a separate function, including OSR. This holds for baseline,
+  current shared guard, inline guards and verify-finally in these runs.
+  Being below the default 460-byte single-function budget only permits
+  consideration; frequency, total budget and the caller's profile matter.
+- **The trim call is a separate question:** TurboFan explicitly inlines
+  current `trim` into `verify`, `mark` and `unindex` in the corresponding
+  hot validation, push and indexed-run probes, including when verify itself
+  remains separate. The 38-byte helper is not an always-small function at
+  the default 27-byte threshold. Cold/error sites are not promised inlined.
+- **Consequence:** keep LOG 40's choice as the smallest checked complete
+  code/state mechanism, not as a claim that 388 rather than 410 bytes makes
+  verify inline. Both can inline in TurboFan; both exceed Maglev's budget.
+  No runtime change follows from this audit. All three profile checksums
+  agree between dist/index.js and the name-retaining production twin.
+
+### 42. Engine feedback: literal masks help guards, but not every workload
+
+`research/ENGINE-FEEDBACK.md` records the Node 25.2.0 / V8 14.1 audit, IR
+and machine-code guard comparisons, warmup/steady deopts, field/element
+transitions, and three rejected source reshapes. `bench/feedback.mjs`
+provides reusable public-API workloads with a steady-state marker.
+
+The concrete positive finding is that an emitted literal MASK (including
+through a const enum) removes CheckedInt32Add, one integer conversion and
+one field load from the observed write graph; the overflow deopt exit is
+absent in final code. Merely `| 0` and a second mask through the existing
+module binding do not. The const-enum prototype passes 64 tests, but its
+five-round timing comparison includes a 1.057 ratio on wide indexed
+siblings, so it remains a research candidate rather than a runtime change.
+
+Local and explicitly guarded pop cursors do not remove the bounds checks.
+The local-cursor candidate passes 49 tests but has no consistent material
+timing gain. All six feedback profiles have zero post-warmup bailouts in
+the observed runs; existing guards still execute and are not thereby free.
+No new runtime mechanism, field, guard or type/range restriction is admitted.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

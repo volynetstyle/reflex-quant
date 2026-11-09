@@ -79,10 +79,13 @@ export const enum Flag {
   Marked = 1 << 8,
 }
 
+/** Counters wrap inside the SMI range. */
+export const enum CounterLimit {
+  Mask = 0x3fffffff,
+}
+
 /** edge.ver of an edge the marked or indexed run has not read yet. */
 export const UNREAD = -1;
-/** Counters wrap inside the SMI range. */
-export const MASK = 0x3fffffff;
 /**
  * A committed edge keeps its birth generation, and generations wrap: an edge
  * 2^30 - 1 commits old would read as born in the next run (tentative). So a

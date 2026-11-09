@@ -5,7 +5,7 @@
 import {
   Flag,
   KEEP,
-  MASK,
+  CounterLimit,
   SCAN,
   SETTLE,
   TRIM,
@@ -90,7 +90,7 @@ export function write(s: Node, value: unknown): void {
   if (Object.is(s.value, value)) return;
 
   s.value = value;
-  s.ver = (s.ver + 1) & MASK;
+  s.ver = (s.ver + 1) & CounterLimit.Mask;
 
   for (let e = s.subs; e !== null; e = e.nextSub) {
     const n = e.to;
@@ -315,7 +315,7 @@ function verify(root: Node, f: Flags): void {
  * owed, and then versions need no comparison.
  */
 export function check(w: Node): void {
-  const tentative = (w.gen + 1) & MASK;
+  const tentative = (w.gen + 1) & CounterLimit.Mask;
   let e = w.deps;
 
   // Until a run is owed, versions decide; then only the pulls remain. A
@@ -415,14 +415,14 @@ export function exec(n: Node): void {
 
   if ((last === null ? n.deps : last.next) !== null) cut(n, last);
 
-  n.gen = (n.gen + 1) & MASK;
+  n.gen = (n.gen + 1) & CounterLimit.Mask;
 
   // Every edge is committed now; see SETTLE.
   if ((n.gen & SETTLE) === 0) settle(n);
 
   if (Object.is(value, n.value) === false) {
     n.value = value;
-    n.ver = (n.ver + 1) & MASK;
+    n.ver = (n.ver + 1) & CounterLimit.Mask;
   }
 }
 
@@ -438,7 +438,7 @@ function fail(n: Node, base: number): void {
   if (n.fn === null) return detach(n);
 
   n.flags |= Flag.Dirty;
-  const tentative = (n.gen + 1) & MASK;
+  const tentative = (n.gen + 1) & CounterLimit.Mask;
   const last = n.last;
 
   for (let e = last === null ? n.deps : last.next; e !== null;) {
@@ -532,7 +532,7 @@ export function link(
     from: s,
     to: c,
     ver: s.ver,
-    gen: (c.gen + 1) & MASK,
+    gen: (c.gen + 1) & CounterLimit.Mask,
     prev: last,
     next,
     prevSub: tail,
