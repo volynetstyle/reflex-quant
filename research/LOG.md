@@ -742,6 +742,9 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
 
 ### 35. The work stack gives back what a deep walk grew (structural, retained memory)
 
+The placement argument here is historical and incomplete; LOG 40 corrects
+it for cold execution, direct watchers, failed validation and push-only work.
+
 - **Witness:** read a chain of 2,000 computeds, then validate it once. The
   shared work stack keeps 1,999 slots for good: walks null the slots they
   pop but never shrank the array. Retained memory followed the deepest walk
@@ -987,6 +990,93 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
   differential case; all 42 mutation anchors validate. Typecheck, lint,
   source formatting, build and release checks pass. The production release
   grows from 2244 to 2245 bytes gzip; no per-read work is added.
+
+### 40. Trim at stack-producer exits, without a depth register
+
+- **Correction to LOG 35:** successful `verify` is not a reclamation boundary
+  for all work. A cold DIRTY demand can grow the displaced-cell stack and
+  finish through `exec` alone; a watcher can execute directly without an
+  enclosing `pull`; failed validation unwinds without reaching its success
+  exit; a deep push need never be followed by any demand. Baseline 0d6f201
+  fails ten of the first thirteen focused capacity witnesses. The retained
+  scratch-buffer requirement is the one already motivating LOG 35, not a
+  new reactive semantic or a change to the frozen contract.
+- **Why the pasted `outerDemand` equivalence is too strong:** `active` names
+  the tracked consumer, not JS call depth. `untracked` temporarily sets it
+  to null inside a still-running computation. Also, graph walkers can hold
+  continuations in local variables without an occupied stack entry. Thus
+  `top === 0 && active === null` does not prove that no user/graph call is
+  suspended. The relevant safety fact is narrower: `top === 0` means the
+  work buffer has no occupied entries to truncate.
+- **Chosen repair:** put `stack.length > TRIM && top === 0` in the existing
+  `trim` helper. Call it on mark's completed walk, verify's success exit,
+  verify's fully unwound failure exit, and the end of unindex. These are the
+  exits of the only three stack producers: sibling edges in mark, validation
+  edges in verify, and cells claimed by an indexed pass. Both normal and
+  failed indexed execution unindex before pruning/disposal, so they share
+  one check. No work-depth register, active-context test, API export or host
+  policy is added. `read`, `peek`, `pull`, `write`, `exec` and `fail` stay
+  unchanged. The `idle` comment now describes its registers, not JS depth.
+- **Safety and completeness:** every producer returns to its saved base
+  and clears popped entries. A nonzero base prevents trimming while another
+  owner still has buffered entries; the last releasing owner checks at zero.
+  Local cursors, source slots and suspended callbacks do not occupy the
+  buffer and are unaffected by its length. The length check comes first,
+  so small buffers do not load `top`. KEEP=256, TRIM=512 and the same array
+  identity remain. A large sibling run can regrow after an earlier sibling
+  trimmed; each such regrowth is chargeable to the pushes it requires, so
+  work remains amortized O(pushes). This is a capacity/code-cost choice,
+  not a claim of universally fastest placement.
+- **Compared candidates** (production minified ESM probe, no banner or map):
+
+  | Placement | Bytes | Gzip | Coverage |
+  | --- | ---: | ---: | --- |
+  | baseline: successful verify only | 5817 | 2186 | incomplete |
+  | pasted pull/finally only | 5837 | 2198 | misses push-only work and direct watcher runs |
+  | shared guard at producer exits (chosen) | 5831 | 2193 | complete |
+  | verify/finally + mark/unindex | 5834 | 2193 | complete |
+  | duplicated inline guards at producer exits | 5886 | 2198 | complete |
+  | guards at write, exec/fail and verify boundaries, with active test | 5958 | 2209 | complete |
+
+  The pull/finally probe passes ten of the initial thirteen witnesses,
+  failing push-only work and both direct-watcher exits. Moving that guard
+  alone is insufficient; putting trim in public set/batch also misses
+  effect construction and direct kernel execution, and needs care when
+  drains throw. The producer-exit repair stays inside the kernel.
+- **Bytecode cost** (Node 25.2.0, production kernel probe retaining names):
+  shared trim changes mark 162→168, verify 405→388, unindex 79→85 and trim
+  11→38 bytes: +22 total. Read/peek/pull/write/exec/fail remain
+  88/27/61/240/260/182. Duplicated guards add 87 total; boundary guards add
+  150. Pull/finally grows pull 61→128 despite its incomplete coverage.
+  Verify/finally has the same gzip as the chosen repair, but verify is 410
+  bytes instead of 388 and the minified probe is three bytes larger. This
+  is the cheapest complete placement checked, not a universal lower bound.
+- **Timing cross-check:** five rounds with rotated variant order, separate
+  processes, production bundles, 180 ms/1,000-step warmup and seven samples
+  per process. Seven existing cases cover clean reads, chain, widths 8/256,
+  fanout, chaotic sharing and lifecycle; three additional cases cover
+  1,200-deep validation, push+pull, and eight indexed sibling branches of
+  width 600. Checksums agree. The chosen repair's median time ratios to the
+  incomplete baseline range 0.984–1.062. Variants trade places by workload;
+  there is no general speed win. In the sibling probe, after a full step the
+  baseline retains 601 slots and all complete candidates retain 256.
+- **Evidence:** `test/trim.test.ts` adds thirteen targeted cases and a
+  shrinkable sum-model differential case (widths 257–1024, depth 2–5,
+  changes, reversal, failure/recovery and tracked/untracked nesting). Tests
+  cover both hysteresis boundaries, normal/throw/disposed cold execution,
+  direct watcher execution, failed validation, no later demand after push,
+  and live validation entries under untracked. Removing each producer-exit
+  check is caught separately: no-trim-mark by 3 tests, no-trim-validation by
+  5, no-trim-failed-validation by 1, no-trim-unindex by 9; disabling all
+  trimming is caught by 17. These counts are representation evidence in
+  this architecture, not proofs that no alternative placement can work.
+- **Validation:** development seed 7: 169 passed; production seed 20261110:
+  162 passed, seven development-only diagnostic tests skipped. Each mode
+  runs 20,000 general, 1,000 nested-index, 1,000 disposal and 1,000 wide
+  sum-model generated programs, plus the fixed/exhaustive corpora. All 46
+  mutation anchors validate. Typecheck, lint, formatting, build and release
+  checks pass, including 18 release scenarios / 5,400 steps. Published ESM
+  grows from 2245 to 2252 bytes gzip, with zero new persistent state.
 
 ## Representation and edge removal note
 

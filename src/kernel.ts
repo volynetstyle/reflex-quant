@@ -26,8 +26,8 @@ let active: Node | null = null;
 /**
  * One LIFO work stack shared by all walks: sibling edges to resume (mark),
  * edges to climb back through (pull), and slot cells an indexed run displaced.
- * Every walk pops back to its own base before returning, and the outermost
- * one gives back what a deep walk grew (`trim`).
+ * Every walk pops back to its own base before returning. Once the stack is
+ * empty, an oversized buffer is cut back (`trim`).
  */
 const stack: WorkStack = new Array(256).fill(null);
 /** First free index of `stack`. */
@@ -45,7 +45,7 @@ export function onWake(fn: (w: Node) => void): void {
   wake = fn;
 }
 
-/** Nothing running, the work stack empty (tests). */
+/** No tracked consumer or occupied work-stack slot (tests). */
 export function idle(): boolean {
   return active === null && top === 0;
 }
@@ -65,21 +65,23 @@ export function stackLength(): number {
 }
 
 /**
- * At rest, cut a stack that a deep walk grew past TRIM back to KEEP slots,
+ * When empty, cut a stack that a deep walk grew past TRIM back to KEEP slots,
  * so one deep walk does not hold its depth in memory for good. Setting the
  * length right-trims V8's backing store in place: no allocation, and the
  * array stays packed.
  *
- * Only the end of an outermost validation calls it (top 0), whichever walk
- * grew the stack. A deep mark walk runs through computeds that are STALE
- * afterwards, so their next demand is such a validation; `write` and `mark`
- * stay as they were. The guard costs one length load and one compare per
- * validation, nothing per node.
+ * Only walks that push check at their exits: mark, verify (also on failure),
+ * and unindex. An empty stack has no entries to preserve even if a user
+ * callback or a graph cursor is suspended in local variables. `active`
+ * is a tracking context, not a call-depth counter (untracked clears it).
+ * The length test comes first: a small buffer pays no load of `top`.
  */
 function trim(): void {
-  if (__STATS__ && stack.length > peak) peak = stack.length;
+  if (stack.length > TRIM && top === 0) {
+    if (__STATS__ && stack.length > peak) peak = stack.length;
 
-  stack.length = KEEP;
+    stack.length = KEEP;
+  }
 }
 
 // ------------------------------------------------------------------- write
@@ -146,7 +148,10 @@ function mark(first: Edge): void {
       e = e.nextSub;
     }
 
-    if (top === base) return;
+    if (top === base) {
+      trim();
+      return;
+    }
 
     e = stack[--top] as Edge;
     stack[top] = null;
@@ -266,7 +271,7 @@ function verify(root: Node, f: Flags): void {
       // Climb; a parent whose child changed runs as well.
       for (;;) {
         if (top === base) {
-          if (stack.length > TRIM && base === 0) trim();
+          trim();
 
           return;
         }
@@ -298,6 +303,7 @@ function verify(root: Node, f: Flags): void {
           : p.flags | Flag.Dirty;
       stack[top] = null;
     }
+    trim();
     throw error;
   }
 }
@@ -509,6 +515,7 @@ function unindex(n: Node, base: number): void {
     stack[top] = null;
     cell.from.slot = cell;
   }
+  trim();
 }
 
 /** A new edge at the cursor, appended to the source's subscribers. */

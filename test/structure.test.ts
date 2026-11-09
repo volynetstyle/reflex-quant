@@ -279,11 +279,11 @@ describe("work stack at rest", () => {
     expect(idle()).toBe(true);
   });
 
-  it("a stack a deep mark grew is cut by the next outermost validation", () => {
+  it("a stack a deep mark grew is cut before the write returns", () => {
     // Every ci has a pending sibling (its leaf) while mark descends to c(i+1).
     const { s, end } = chain(2000, true);
     write(s, 1);
-    expect(stackLength()).toBeGreaterThan(TRIM);
+    expect(stackLength()).toBe(KEEP);
     expect(read(end)).toBe(2001);
     expect(stackLength()).toBe(KEEP);
   });

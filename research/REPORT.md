@@ -251,7 +251,7 @@ recorded the work they save, not because they save none (LOG 30).
 | iterative push and pull | "push and pull are not bounded by the call stack" (the recursive v2 kernel overflows) |
 | rollback of an `effect()` call that throws (W5) | "a failed first run leaves no live watcher and no relation", "a sibling's failure … rolls the new watcher back" (`construction-commits`) |
 | relations restamped twice a generation cycle (SETTLE) | a watcher driven by a computed keeps running after its generation wraps; F1, F3 and P4 under wrap (`no-settle`); both restamp phases (`settle-once-a-cycle`) |
-| work stack cut back at rest | "the end of a deep outermost validation cuts the stack back to KEEP" (`no-trim`) |
+| empty work stack releases oversized capacity at every producer exit | successful/failed validation, cold indexed runs, direct watchers and push without later demand (`no-trim`, placement ablations; LOG 40) |
 | final detach releases the dependency cursor (S4/resource correctness) | a retained disposed handle reaches only itself through graph fields, independent of former dependency width (`retain-disposed-cursor`, LOG 39) |
 | no run of a node disposed during its validation (W3) | "a computed disposed while it is validated…" (`disposed-run`, `disposed-run-climb`); "a later source failing in the same walk…" (`disposed-left-dirty`) |
 
@@ -261,7 +261,7 @@ recorded the work they save, not because they save none (LOG 30).
 | --- | --- |
 | correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD on an indexed or marked pass, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; BUSY (cycles, deferred disposal); WATCH delivery |
 | failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3) |
-| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the work stack cut back to KEEP at rest, so retained memory does not follow the deepest walk ever (LOG 35) |
+| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the empty work stack cut back to KEEP at producer exits, so retained memory does not follow the deepest walk ever (LOG 35, placement corrected in LOG 40) |
 | resource correctness | sever detached intrusive pointers; clear the dependency cursor at final detach so retained disposed handles do not root former dependencies (LOG 39) |
 | constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; a marked pass finds pairs through subscribers instead of the slot index (LOG 28); `readSignal`; delivery on the STALE transition; no version compares once owed |
 | convention | `subsTail` (FIFO sibling order; only order-asserting tests fail without it) |
