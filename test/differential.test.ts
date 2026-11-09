@@ -13,7 +13,8 @@ import { contractBoundaries } from "../reference/reflex/test/differential/catalo
 import { brief, quantNodes, runThreeWay, type ThreeWay } from "./support/machines";
 import { checkGraph } from "./support/graph";
 import { probes } from "./support/probes";
-import { programArbitrary } from "./support/generator";
+import { programArbitrary, slotStackProgramArbitrary } from "./support/generator";
+import { idle, stats } from "../src/kernel";
 
 interface Tally {
   total: number;
@@ -88,6 +89,18 @@ describe("four-way differential", () => {
   it("recovery exhaustive language", () => {
     const t = tally(asPrograms(enumerateRecoveryPrograms()));
     expect([t.quantBug, t.d1d2, t.reflexOwn]).toEqual([0, 0, 0]);
+  });
+
+  it("generated wide nested indexes: reorders, repeated reads, failed frontiers and recovery", () => {
+    fc.assert(fc.property(slotStackProgramArbitrary, (operations) => {
+      const indexes = stats.indexes;
+      const r = runThreeWay({ id: "nested-slot-stack", operations }, (_op, i) => {
+        checkGraph(quantNodes, `nested-slot-stack@${i}`);
+        expect(idle()).toBe(true);
+      });
+      expect(r.quantVsContract, describeRun(r)).toBe(-1);
+      expect(stats.indexes).toBeGreaterThan(indexes);
+    }), { numRuns: Number(process.env.QUANT_SLOT_RUNS ?? 200), seed: Number(process.env.QUANT_SEED ?? 7) });
   });
 
   it("generated programs: dynamic branches, failures, cleanups, disposal", () => {

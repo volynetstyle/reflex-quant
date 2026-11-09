@@ -46,8 +46,8 @@ export interface Edge {
   nextSub: Edge | null;
 }
 
-/** Shared LIFO of the kernel's walks: edges, and (source, cell) pairs. */
-export type WorkStack = (Node | Edge | null)[];
+/** Shared LIFO of the kernel's walks: resume edges and displaced slot cells. */
+export type WorkStack = (Edge | null)[];
 
 // Flag layout and constants used by the kernel and host.
 export const enum Flag {

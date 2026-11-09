@@ -38,7 +38,7 @@ export const mutants = [
   ["no-mark", "LOG 28: a marked pass sets UNREAD on its unread suffix",
     [T, "    if (__STATS__) stats.indexed++;\n    u.ver = UNREAD;", "    if (__STATS__) stats.indexed++;"]],
   ["no-displaced", "save/restore of an enclosing run's slot cells",
-    [K, "  if (s.slot !== null) {\n    stack[top++] = s;\n    stack[top++] = s.slot;\n  }\n  s.slot = e;", "  s.slot = e;"]],
+    [K, "  if (s.slot !== null) {\n    stack[top++] = s.slot;\n  }\n  s.slot = e;", "  s.slot = e;"]],
   ["no-unread", "UNREAD marking of the suffix while indexing",
     [K, "    if (unread) e.ver = UNREAD;\n", ""]],
   ["validate-tentative", "tentative edges excluded from watcher validation",

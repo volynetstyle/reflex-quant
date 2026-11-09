@@ -127,6 +127,10 @@ on WOKEN's bit: no node is both a watcher and a computed.
 `update`, `dispose`, `batch`, `untracked`; a handle is the node itself, so a
 signal costs one allocation.
 
+The work stack holds only edges: resume edges for push/pull and displaced
+slot cells for indexed runs. A displaced cell's immutable `from` recovers
+its source, so saving the source separately is redundant (LOG 38).
+
 V8 discipline (the rules of the Reflex runtime): one node shape and one
 edge shape, each built at a single literal site; every numeric field a
 masked Smi counter, so no field ever holds a double (`--trace-generalization`

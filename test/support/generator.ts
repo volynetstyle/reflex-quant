@@ -80,3 +80,67 @@ export const programArbitrary: fc.Arbitrary<Op[]> = fc
         return ops;
       });
   });
+
+/** Wide, shared readers force nested slot indexes, unlike the small general generator. */
+export const slotStackProgramArbitrary: fc.Arbitrary<Op[]> = fc
+  .record({ width: fc.integer({ min: 12, max: 32 }), depth: fc.integer({ min: 2, max: 5 }) })
+  .chain(({ width, depth }) => fc.tuple(
+    fc.shuffledSubarray(Array.from({ length: width }, (_, i) => `p${i}`), { minLength: width, maxLength: width }),
+    fc.array(fc.record({
+      source: fc.integer({ min: 0, max: width - 1 }),
+      value: fc.integer({ min: -5, max: 5 }),
+      failure: fc.integer({ min: 0, max: depth }),
+      narrow: fc.boolean(),
+    }), { minLength: 4, maxLength: 12 }),
+  ).map(([order, actions]) => {
+    const get = (id: string): Expr => ({ type: "read", id });
+    const constant = (value: Value): Expr => ({ type: "constant", value });
+    const sequence = (expressions: Expr[]): Expr => expressions.reduce(
+      (left, right): Expr => ({ type: "add", left, right }), constant(0),
+    );
+    const top = `c${depth - 1}`;
+    const ops: Op[] = [
+      ...Array.from({ length: width }, (_, i): Op => ({ type: "signal", id: `p${i}`, value: i })),
+      { type: "signal", id: "tick", value: 0 },
+      { type: "signal", id: "failure", value: 0 },
+      { type: "signal", id: "narrow", value: false },
+    ];
+    // More than SCAN subscribers precede every real reader. Reorders must
+    // index instead of succeeding through the bounded subscriber scan.
+    for (let i = 0; i < 10; i++) ops.push(
+      { type: "computed", id: `f${i}`, expression: sequence(order.map(get)) },
+      { type: "read", id: `f${i}` },
+    );
+    for (let level = 0; level < depth; level++) {
+      const rotated = [...order.slice(level), ...order.slice(0, level)];
+      ops.push({ type: "computed", id: `c${level}`, expression: sequence([
+        get("tick"),
+        { type: "if", condition: get("narrow"), then: sequence(rotated.slice(0, width >> 1).map(get)), else: {
+          type: "if", condition: get("tick"), then: sequence([...rotated].reverse().map(get)), else: sequence(rotated.map(get)),
+        } },
+        ...(level === 0 ? [] : [get(`c${level - 1}`)]),
+        get(rotated[0]!), get(rotated[width >> 1]!), get(rotated[0]!),
+        { type: "if", condition: { type: "equal", left: get("failure"), right: constant(level + 1) },
+          then: { type: "throw", message: `slot-${level}` }, else: constant(0) },
+      ]) });
+    }
+    ops.push({ type: "effect", id: "w", expression: get(top), cleanup: get(order[0]!) }, { type: "flush" });
+    const step = (tick: number, failure: number, narrow: boolean) => ops.push(
+      { type: "set", id: "tick", value: tick },
+      { type: "set", id: "failure", value: failure },
+      { type: "set", id: "narrow", value: narrow },
+      { type: "read", id: top }, { type: "flush" },
+    );
+    step(1, 0, false);
+    step(0, 0, false);
+    // Fail at each nesting level, then recover; random actions add changes
+    // to the frontier while failures are outstanding.
+    for (let level = 1; level <= depth; level++) step(level & 1, level, false);
+    actions.forEach((a, i) => {
+      ops.push({ type: "set", id: `p${a.source}`, value: a.value });
+      step(i & 1, a.failure, a.narrow);
+    });
+    step(1, 0, false);
+    ops.push({ type: "dispose", id: "w" }, { type: "set", id: order[0]!, value: 99 }, { type: "read", id: top }, { type: "flush" });
+    return ops;
+  }));

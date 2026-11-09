@@ -25,9 +25,9 @@ export { stats } from "./instrumentation";
 let active: Node | null = null;
 /**
  * One LIFO work stack shared by all walks: sibling edges to resume (mark),
- * edges to climb back through (pull), and (source, cell) pairs an indexed run
- * displaced. Every walk pops back to its own base before returning, and the
- * outermost one gives back what a deep walk grew (`trim`).
+ * edges to climb back through (pull), and slot cells an indexed run displaced.
+ * Every walk pops back to its own base before returning, and the outermost
+ * one gives back what a deep walk grew (`trim`).
  */
 const stack: WorkStack = new Array(256).fill(null);
 /** First free index of `stack`. */
@@ -488,10 +488,12 @@ export function index(c: Node, next: Edge | null): void {
   }
 }
 
-/** Point the source's slot at `e`, keeping a displaced cell (an enclosing run's) to give back. */
+/**
+ * Point the source's slot at `e`, keeping a displaced cell to give back.
+ * A cell's immutable `from` is its source, so the cell alone is enough.
+ */
 export function claim(s: Node, e: Edge): void {
   if (s.slot !== null) {
-    stack[top++] = s;
     stack[top++] = s.slot;
   }
   s.slot = e;
@@ -504,9 +506,7 @@ function unindex(n: Node, base: number): void {
   while (top > base) {
     const cell = stack[--top] as Edge;
     stack[top] = null;
-    const s = stack[--top] as Node;
-    stack[top] = null;
-    s.slot = cell;
+    cell.from.slot = cell;
   }
 }
 

@@ -873,6 +873,65 @@ Mutant ids refer to `research/mutants.mjs`; probe ids to
     exactly one subscriber lookup per new relation. That lookup is the
     price of exact identity when the identity really is new.
 
+### 38. Edge-only work stack (optimization, no new mechanism)
+
+- **Redundancy:** an occupied source slot satisfies `s.slot.from === s`.
+  `index` calls `claim(e.from, e)`; the other caller claims the edge just
+  created by `link(c, s, ...)`, whose `from` is `s`. Edge endpoints are
+  readonly and no graph operation changes them. Clearing a slot preserves
+  the invariant; restoring `cell.from.slot = cell` establishes it directly.
+  The saved source in a `(source, cell)` pair therefore carries no fact
+  that the saved cell does not already carry.
+- **Change:** save just the displaced edge and restore through its `from`.
+  Mark and validation already save only edges, so `WorkStack` narrows to
+  `(Edge | null)[]`. Every walk still captures its own `base`, pops back to
+  it, and clears every popped array slot. Success and failure still unindex
+  before pruning edges; disposal of a running node still defers teardown
+  until that node unwinds. No contract, mechanism, flag or persistent field
+  changes. The displaced-cell mechanism remains necessary for T2/T3.
+- **Bound:** for B suspended walker entries and P displaced cells, the
+  active stack uses B + P entries instead of B + 2P. Work stays O(P), with
+  one fewer push, pop and null store per displacement. The minimum retained
+  length KEEP and the trim rule are unchanged; this is not a claim that
+  total graph memory halves.
+- **Regression evidence** (`test/work-stack.test.ts`): 16 representation
+  tests cover three increasing widths, four nested indexed readers,
+  identical-cell restoration, late repeated reads, caught/escaping failures,
+  self/outer disposal with both normal return and throw, all those exits
+  above 20 suspended validation frames, and pending mark siblings below an
+  indexed run. Every completed operation checks graph integrity and idle
+  state. The old representation passes the 15 restoration/walker tests and
+  deliberately fails the new footprint assertion (1200 entries vs 600).
+- **Differential evidence:** the added shrinkable generator uses 12–32
+  shared sources, ten earlier subscribers and 2–5 nested readers, with
+  reorders, repeated prefix reads after nesting, narrowed frontiers, failures
+  at every depth, recovery, watcher cleanup and disposal. It checks the
+  graph and idle state after every operation, requires an index to have
+  occurred, and gates on equality with the frozen contract spec. Removing
+  displacement save/restore kills this differential test and all 16 new
+  representation tests (`no-displaced`: 18 failing tests including the
+  existing nesting witness). All 41 mutation anchors and the cost bundles
+  still build; both textual ablation anchors were updated.
+- **Validation:** development seed 7: 133 passed; production seed 20261109:
+  126 passed, seven development-only diagnostics skipped. Each full run
+  includes 20,000 general and 1,000 wide nested generated programs, plus
+  the historical, bounded-exhaustive and recovery-exhaustive corpora. The
+  unchanged baseline (48f83b4) also passes the differential suite with
+  4,000 general and 500 wide programs at seed 7, so both versions agree
+  with the same contract oracle. Typecheck, lint, source formatting, build
+  and release checks pass, including minified/unminified equality on 18
+  scenarios / 5,400 steps.
+- **Repeated local measurement** (Windows, Node 25.2.0, production flags;
+  baseline 48f83b4 vs this change): four nested readers, ten earlier
+  subscribers, all shared sources read forward/reverse on alternating
+  ticks. At widths 128 / 256 / 512, observed peak array lengths are
+  774 / 1542 / 3078 before and 387 / 771 / 1539 after, with equal values.
+  At width 32, seven alternating A/B rounds of 20,000 updates after 5,000
+  warmup updates give after/before time ratios 0.887–0.967 (median 0.916),
+  all with checksum 40,920,000. This is a local nesting workload, not a
+  general speed claim. A minified ESM probe without banner or source map
+  shrinks from 5,832 to 5,805 bytes (gzip 2,194 to 2,185).
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
