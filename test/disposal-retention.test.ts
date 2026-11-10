@@ -1,5 +1,5 @@
 // Structural resource witnesses: follow graph pointers from a retained
-// handle, including the cursor that a deps/subs-only traversal cannot see.
+// handle through every node and edge graph field.
 import { describe, expect, it } from "vitest";
 import {
   batch,
@@ -12,10 +12,9 @@ import {
   type Computed,
   type Effect,
 } from "../src/index";
-import { Flag } from "../src/graph";
 import type { Edge, Node } from "../src/graph";
-import { idle, index } from "../src/kernel";
-import { checkGraph } from "./support/graph";
+import { idle } from "../src/kernel";
+import { checkGraph, indexAfter } from "./support/graph";
 
 const n = (handle: object) => handle as Node;
 
@@ -36,7 +35,7 @@ function graphReachable(root: Node): number {
         item.prevSub,
         item.nextSub,
       );
-    else pending.push(item.deps, item.last, item.slot, item.subs, item.lastSub);
+    else pending.push(item.deps, item.slot, item.subs, item.lastSub);
   }
   return seen.size;
 }
@@ -45,11 +44,10 @@ function released(handle: object): void {
   const c = n(handle);
   expect(c.fn === null).toBe(true);
   expect(c.deps === null).toBe(true);
-  expect(c.last === null).toBe(true);
   expect(c.slot === null).toBe(true);
 }
 
-describe("disposed dependency cursor retention", () => {
+describe("disposed dependency retention", () => {
   it.each([0, 1, 8, 64, 512])(
     "a retained handle releases a %i-source dependency graph",
     (width) => {
@@ -62,8 +60,7 @@ describe("disposed dependency cursor retention", () => {
       const value = (width * (width + 1)) / 2;
       expect(get(c)).toBe(value);
       dispose(c);
-      // First establish that subscriptions were removed. Reachability through
-      // last must disappear too, even though the handle remains retained.
+      // Subscriptions and all graph paths disappear while the handle is retained.
       expect(n(c).deps === null).toBe(true);
       expect(sources.every((s) => n(s).subs === null)).toBe(true);
       expect(graphReachable(n(c))).toBe(1);
@@ -120,13 +117,12 @@ describe("disposed dependency cursor retention", () => {
         );
         if (armed) {
           const cn = n(c);
-          if ((cn.flags & Flag.Indexed) === 0) index(cn, cn.last!.next);
-          const cursor = cn.last;
+          const edge = indexAfter(cn, n(sources[0]!));
           dispose(c);
-          expect(cn.last === cursor && cursor !== null).toBe(true);
+          expect(edge.from.slot === edge && cn.deps !== null).toBe(true);
           get(fresh);
           get(sources[0]!);
-          expect(cn.last !== null).toBe(true);
+          expect(edge.from.slot === edge).toBe(true);
           if (throws) throw new Error("self-dispose");
         }
         return sum;
@@ -156,7 +152,7 @@ describe("disposed dependency cursor retention", () => {
         runs++;
         if (get(source) === 1) {
           dispose(e);
-          expect(n(e).last !== null).toBe(true);
+          expect(n(e).deps !== null).toBe(true);
           get(fresh);
           get(source);
           if (throws) throw new Error("watcher self-dispose");
@@ -178,7 +174,7 @@ describe("disposed dependency cursor retention", () => {
   );
 
   it.each([false, true])(
-    "clears the cursor before disposal cleanup (throw: %s)",
+    "releases dependencies before disposal cleanup (throw: %s)",
     (throws) => {
       const source = signal(0);
       const untracked = signal(0);
@@ -230,7 +226,7 @@ describe("disposed dependency cursor retention", () => {
 
   for (const through of [false, true])
     it.each([false, true])(
-      `releases a cursor during ${through ? "indirect" : "direct"} validation (later throw: %s)`,
+      `releases dependencies during ${through ? "indirect" : "direct"} validation (later throw: %s)`,
       (throws) => {
         const source = signal(0);
         const fault = signal(false);

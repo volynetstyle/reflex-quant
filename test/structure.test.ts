@@ -5,7 +5,7 @@ import { Flag, KEEP, TRIM } from "../src/graph";
 import { beforeEach, describe, expect, it } from "vitest";
 import { idle, node, read, stackHighWater, stackLength, stats, write } from "../src/kernel";
 import type { Node } from "../src/graph";
-import { edgeCount, resetStats } from "./support/graph";
+import { checkGraph, edgeCount, resetStats } from "./support/graph";
 import { run } from "../src/host";
 import { get as publicGet, set as publicSet } from "../src/index";
 import { foundRepeat, prefixRepeat } from "./support/p5";
@@ -212,6 +212,47 @@ describe("structural bounds", () => {
       resetStats();
       publicGet(w.c);
       expect([stats.dups, stats.sweeps, stats.indexes]).toEqual(indexed ? [1, 0, 1] : [1, 1, 0]);
+    }
+  });
+
+  it.each([false, true])("reverse retries keep mixed committed and tentative relations linear (shared: %s)", (shared) => {
+    for (const width of [64, 128, 256]) {
+      const committed = range(width).map(signal);
+      const tentative = range(width).map((i) => signal(width + i));
+      if (shared) read(computed(() => [...committed, ...tentative].forEach(read)));
+      const tick = signal(0);
+      const c = computed(() => {
+        const phase = read(tick);
+        const sources = phase === 0 ? committed
+          : phase === 1 ? tentative
+          : phase === 2 ? [...committed, ...tentative].reverse()
+          : [...committed].reverse();
+        let sum = 0;
+        for (const s of sources) sum += read(s) as number;
+        if (phase === 1 || phase === 2) throw new Error("retry");
+        return sum;
+      });
+      expect(read(c)).toBe(width * (width - 1) / 2);
+      write(tick, 1);
+      expect(() => read(c)).toThrow("retry");
+      expect(edgeCount([c])).toBe(2 * width + 1);
+      write(tick, 2);
+      resetStats();
+      expect(() => read(c)).toThrow("retry");
+      expect(stats.links).toBe(0);
+      expect(stats.sweeps + stats.indexes).toBe(1);
+      expect(stats.indexed).toBeLessThanOrEqual(2 * width + 1);
+      expect(stats.lookups).toBeLessThanOrEqual(2 * (2 * width + 1));
+      checkGraph([c]);
+      write(tick, 3);
+      expect(read(c)).toBe(width * (width - 1) / 2);
+      expect(edgeCount([c])).toBe(width + 1);
+      expect(tentative.every((s) => {
+        for (let e = s.subs; e !== null; e = e.nextSub) if (e.to === c) return false;
+        return true;
+      })).toBe(true);
+      checkGraph([c]);
+      expect(idle()).toBe(true);
     }
   });
 

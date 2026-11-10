@@ -22,8 +22,6 @@ export interface Node {
   fn: Fn | null;
   /** Sources, in read order. */
   deps: Edge | null;
-  /** The running pass's last accepted source edge. */
-  last: Edge | null;
   /** Subscribers, in birth order. */
   subs: Edge | null;
   lastSub: Edge | null;
@@ -36,7 +34,7 @@ export interface Node {
 export interface Edge {
   readonly from: Node;
   readonly to: Node;
-  /** from.ver when `to` read it; UNREAD while indexed and not yet read. */
+  /** from.ver when `to` read it; UNREAD in the pass's marked unread suffix. */
   ver: Version | typeof UNREAD;
   /** to.gen + 1 at birth: tentative while it still equals to.gen + 1. */
   gen: Generation;
@@ -57,8 +55,6 @@ export const enum Flag {
   Dirty = 1 << 1,
   /** Its run is on the stack. */
   Busy = 1 << 2,
-  /** Its run put its edges into the sources' slots. */
-  Indexed = 1 << 3,
   /** A watcher: handed to the host, never read. */
   Watch = 1 << 4,
   /** Woken by signals only; computed sources need no validation. */
@@ -75,8 +71,6 @@ export const enum Flag {
   Auto = 1 << 6,
   /** Host policy: already in its queue. */
   Queued = 1 << 7,
-  /** Its run marked its unread edges UNREAD; pairs are found through subscribers. */
-  Marked = 1 << 8,
 }
 
 /** Counters wrap inside the SMI range. */
@@ -112,7 +106,6 @@ export function node(fn: Node["fn"], value: unknown, flags: Flags): Node {
     ver: 0,
     fn,
     deps: null,
-    last: null,
     subs: null,
     lastSub: null,
     slot: null,
@@ -134,7 +127,6 @@ export function move(c: Node, e: Edge, last: Edge | null, next: Edge): void {
   if (last !== null) last.next = e;
   else c.deps = e;
   next.prev = e;
-  c.last = e;
 }
 
 /** Remove every edge of `c` after `last` (all of them when null). */

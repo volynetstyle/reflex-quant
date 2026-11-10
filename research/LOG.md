@@ -1137,6 +1137,66 @@ timing gain. All six feedback profiles have zero post-warmup bailouts in
 the observed runs; existing guards still execute and are not thereby free.
 No new runtime mechanism, field, guard or type/range restriction is admitted.
 
+### 43. Tracking phase facts need no persistent node state
+
+- **Classification:** representation simplification / implementation lemmas;
+  no new semantic or structural mechanism. The contract and kernel/host
+  delivery protocol are unchanged.
+- **Combined change:** remove `Node.last`, `Flag.Indexed` and `Flag.Marked`.
+  A node now has nine fields instead of ten; tracking uses no persistent
+  mode bits. `active` and `cursor` are execution registers saved/restored
+  together on both exits from `exec`. Capture the pass's final cursor before
+  restoring the enclosing registers, then use that edge for unindexing,
+  successful suffix pruning or failed-attempt pruning. `untracked` clears
+  only `active`, so nested untracked work cannot lose the enclosing cursor.
+- **Indexed certificate:** after the first indexed miss is consumed, the
+  cursor's source slot equals the cursor. Every subsequent accepted read in
+  that pass also owns its source slot. A different consumer cannot install
+  that edge (T2), and a nested indexed pass restores displaced cells before
+  returning (T3). Thus `last !== null && last.from.slot === last` replaces
+  the mode bit in lookup and on both execution exits. Direct representation
+  tests force indexing only after a known accepted read (`indexAfter`), not
+  before the first read; production tracking enters indexing and consumes
+  the miss in the same operation.
+- **Marked certificate:** unread edges form a continuous suffix, certified
+  by `next !== null && next.ver === UNREAD`. A sequential read consumes its
+  head; a move consumes a deeper unread edge and places it before the suffix;
+  a link inserts an already observed edge before it. Failure deletes only
+  unread tentative relations; retained committed relations stay in the suffix.
+  Once it is empty, bounded scans/subscriber lookup remain bounded per miss,
+  with indexing on budget exhaustion. An empty suffix needs no mark sweep.
+- **Resource consequence:** the LOG 39 retention path through a retained
+  node's `last` no longer exists. Final detach needs no cursor reset. A pass
+  still retains its local edge until it restores displaced slots and unwinds;
+  this preserves self-disposal followed by more reads, including throwing
+  exits. Retention tests continue to walk every remaining graph pointer.
+- **Existing reductions:** LOG 38 already made each displaced-slot record
+  one edge (`edge.from` recovers its source) and reused the same stack for
+  mark/pull continuations. LOG 25 already removed a separate retry flag.
+  These changes share the lifetime principle; they are not new mechanisms.
+- **Boundary:** generations and `SETTLE` remain. Committed/tentative evidence
+  must survive failure; eliminating generations would move that information
+  into another representation. If `ver` also encoded tentative state, the
+  `UNREAD` certificate and linear retry bound would need to be re-established.
+  `Woken + Queued -> Pending` is also excluded: it changes delivery-token
+  ownership and requires a nonthrowing wake hook or acknowledgement protocol.
+  `Stale`, `Dirty`, `Busy`, `slot`, relation versions, `lastSub` and host
+  draining/batching state are not removed by these arguments.
+- **Evidence:** all 169 existing development tests pass unchanged in count.
+  Two added S3 witnesses exercise reverse retries at widths 64, 128 and 256,
+  for private and shared sources, with mixed committed/tentative relations:
+  no new relations, at most one mark/index walk, linear indexed work and
+  lookups, then exact pruning on recovery. Production: 164 passed, seven C1
+  diagnostics skipped (171 total). Typecheck, lint, formatting, build and
+  release checks pass (ESM 2,262 B gzip; minified/unminified agree on 18
+  scenarios and 5,400 steps). All 46 ablation anchors and the Reflex idle
+  anchors validate;
+  the obsolete `retain-disposed-cursor` edit is retired, and
+  `no-cursor-restore` is killed by 64/171 tests, including differential tests.
+  The retained certificates remain covered: `no-mark` fails 7/171 tests,
+  `no-unread` 9/171 and `no-displaced` 25/171.
+  This is evidence for this construction, not a universal minimality theorem.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
@@ -1158,9 +1218,10 @@ its `next` chain, which only reaches other garbage of the same cut and
 is read by `unsub` while the run is walked. Any new removal path must
 do the same.
 
-The node must release its cursor into removed deps too: final `detach`
-clears `last`. A running node retains that cursor until its pass unwinds,
-after restoring displaced slot cells (LOG 39).
+The dependency cursor lives only in execution context, never in a node.
+`exec` restores the enclosing cursor on success and failure before pruning
+the completed pass. Its local final edge remains available until displaced
+slot cells have been restored (LOG 43, superseding LOG 39's node-field reset).
 
 Written for V8: one node shape and one edge shape, each built at a single
 site; numeric fields are SMI counters (masked); conditions are explicit

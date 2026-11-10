@@ -23,6 +23,8 @@ export { stats } from "./instrumentation";
 
 /** The running consumer, or null outside a tracking pass. */
 let active: Node | null = null;
+/** Last accepted edge of the running pass; saved with `active` on nesting. */
+let cursor: Edge | null = null;
 /**
  * One LIFO work stack shared by all walks: sibling edges to resume (mark),
  * edges to climb back through (pull), and slot cells an indexed run displaced.
@@ -45,7 +47,7 @@ export function onWake(fn: (w: Node) => void): void {
   wake = fn;
 }
 
-/** No tracked consumer or occupied work-stack slot (tests). */
+/** No tracked consumer or occupied work-stack slot (tests; untracked suspends cursor). */
 export function idle(): boolean {
   return active === null && top === 0;
 }
@@ -168,13 +170,13 @@ export function read(n: Node): unknown {
   if (c !== null) {
     if (__STATS__) stats.reads++;
 
-    const last = c.last;
+    const last = cursor;
     const next = last === null ? c.deps : last.next;
 
     if (next !== null && next.from === n) {
       if (__STATS__) stats.hits++;
 
-      c.last = next;
+      cursor = next;
       next.ver = n.ver;
     } else miss(c, n, last, next);
   }
@@ -378,6 +380,7 @@ export function untracked<T>(fn: () => T): T {
 /** Run `n.fn` as a tracking pass; commit value and edges on success. */
 export function exec(n: Node): void {
   const prev = active;
+  const prevCursor = cursor;
   const base = top;
 
   if (__STATS__) stats.runs++;
@@ -390,29 +393,31 @@ export function exec(n: Node): void {
         ? Flag.Stale | Flag.Dirty | Flag.Checking
         : Flag.Stale | Flag.Dirty)) |
     Flag.Busy;
-  n.last = null;
   active = n;
+  cursor = null;
   let value: unknown;
 
   try {
     value = n.fn!(n.value);
   } catch (error) {
+    const last = cursor as Edge | null;
     active = prev;
-    fail(n, base);
+    cursor = prevCursor;
+    fail(n, base, last);
     throw error;
   }
+  const last = cursor as Edge | null;
   active = prev;
+  cursor = prevCursor;
   const f = n.flags;
 
-  if ((f & Flag.Indexed) !== 0) unindex(n, base);
+  if (last !== null && last.from.slot === last) unindex(n, base);
 
-  n.flags = f & ~(Flag.Busy | Flag.Indexed | Flag.Marked);
+  n.flags = f & ~Flag.Busy;
 
   if (n.fn === null) return detach(n);
   // Commit only after a successful run. Dropping the unread suffix removes
   // sources that this pass no longer depends on.
-  const last = n.last as Edge | null;
-
   if ((last === null ? n.deps : last.next) !== null) cut(n, last);
 
   n.gen = (n.gen + 1) & CounterLimit.Mask;
@@ -430,17 +435,15 @@ export function exec(n: Node): void {
  * A failed run: keep committed edges and this run's reads as the wake set,
  * drop unread edges earlier failed runs left behind, owe a run.
  */
-function fail(n: Node, base: number): void {
-  if ((n.flags & Flag.Indexed) !== 0) unindex(n, base);
+function fail(n: Node, base: number, last: Edge | null): void {
+  if (last !== null && last.from.slot === last) unindex(n, base);
 
-  n.flags &= ~(Flag.Busy | Flag.Indexed | Flag.Marked);
+  n.flags &= ~Flag.Busy;
 
   if (n.fn === null) return detach(n);
 
   n.flags |= Flag.Dirty;
   const tentative = (n.gen + 1) & CounterLimit.Mask;
-  const last = n.last;
-
   for (let e = last === null ? n.deps : last.next; e !== null;) {
     const after: Edge | null = e.next;
 
@@ -471,7 +474,6 @@ export function dispose(n: Node): void {
 
 function detach(n: Node): void {
   cut(n, null);
-  n.last = null;
   n.flags &= ~(Flag.Stale | Flag.Dirty | Flag.Woken);
 }
 
@@ -481,7 +483,6 @@ function detach(n: Node): void {
 export function index(c: Node, next: Edge | null): void {
   if (__STATS__) stats.indexes++;
 
-  c.flags |= Flag.Indexed;
   let unread = false;
 
   for (let e = c.deps; e !== null; e = e.next) {
@@ -547,7 +548,7 @@ export function link(
   if (tail !== null) tail.nextSub = e;
   else s.subs = e;
   s.lastSub = e;
-  c.last = e;
+  cursor = e;
 }
 
 // Exact dependency tracking: resolve a read outside the stable cursor path.
@@ -569,13 +570,13 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
     return;
   }
 
-  const f = c.flags;
-
-  if ((f & Flag.Indexed) !== 0) return slot(c, s, last, next);
+  // An indexed pass owns its cursor's source slot. Nested passes restore it.
+  if (last !== null && last.from.slot === last) return slot(c, s, last, next);
   /** The pair's edge through the source's subscribers; undefined: unknown. */
   let found: Edge | null | undefined;
 
-  if ((f & Flag.Marked) === 0) {
+  // Marking, moves and links preserve a continuous UNREAD suffix.
+  if (next === null || next.ver !== UNREAD) {
     // A source without subscribers is absent.
     if (s.subs === null) return link(c, s, last, next);
     // An edge found by a scan is the pair's only one; absence needs one side
@@ -589,6 +590,7 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
       if (__STATS__) stats.scans++;
 
       e.ver = s.ver;
+      cursor = e;
       return move(c, e, last, next!);
     }
     let p = last !== null ? last.prev : null;
@@ -629,7 +631,7 @@ function slot(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 
   if (cell !== null && cell.to === c) return take(c, cell, s, last, next);
   link(c, s, last, next);
-  claim(s, c.last as Edge);
+  claim(s, cursor as Edge);
 }
 
 /**
@@ -655,13 +657,13 @@ function pair(s: Node, c: Node): Edge | null | undefined {
  * over edges, not sources); deeper, index.
  */
 function begin(c: Node, s: Node, e: Edge, next: Edge | null): void {
+  if (next === null) return;
+
   if (e !== s.subs) return index(c, next);
 
   if (__STATS__) stats.sweeps++;
 
-  c.flags |= Flag.Marked;
-
-  for (let u = next; u !== null; u = u.next) {
+  for (let u: Edge | null = next; u !== null; u = u.next) {
     if (__STATS__) stats.indexed++;
 
     u.ver = UNREAD;
@@ -688,4 +690,5 @@ function take(
 
   e.ver = s.ver;
   move(c, e, last, next!);
+  cursor = e;
 }

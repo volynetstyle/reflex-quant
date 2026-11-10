@@ -33,7 +33,7 @@ const displaced = [
   [K, "  if (s.slot !== null) {\n    stack[top++] = s.slot;\n  }\n  s.slot = e;", "  s.slot = e;"],
 ];
 const firstMiss = [
-  [T, "  if ((f & Flag.Marked) === 0) {\n    // A source without subscribers is absent.", "  index(c, next);\n  return slot(c, s, last, next);\n  if ((f & Flag.Marked) === 0) {\n    // A source without subscribers is absent."],
+  [T, "  if (next === null || next.ver !== UNREAD) {\n    // A source without subscribers is absent.", "  index(c, next);\n  return slot(c, s, last, next);\n  if (next === null || next.ver !== UNREAD) {\n    // A source without subscribers is absent."],
 ];
 
 /** variant -> [what it removes, ...edits] */

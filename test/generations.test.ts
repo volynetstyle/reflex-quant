@@ -6,11 +6,12 @@
 // edge from the first run reads as tentative once the counter wraps.
 import { describe, expect, it } from "vitest";
 import { batch, computed, dispose, effect, get, set, signal } from "../src/index";
-import { MASK, SETTLE } from "../src/graph";
+import { CounterLimit, SETTLE } from "../src/graph";
 import type { Node } from "../src/graph";
 import { checkGraph, deps } from "./support/graph";
 
 const n = (x: object) => x as unknown as Node;
+const MASK = CounterLimit.Mask;
 const gens = (x: object) => {
   const out: number[] = [];
   for (let e = n(x).deps; e !== null; e = e.next) out.push(e.gen);

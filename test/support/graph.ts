@@ -2,7 +2,7 @@ import { Flag } from "../../src/graph";
 // Structural checks over the quant graph. Failures throw plain Errors with
 // indices and counts only: never hand a node or edge to an assertion library
 // (inspecting one walks the whole cyclic graph).
-import { stats } from "../../src/kernel";
+import { index, stats } from "../../src/kernel";
 import type { Edge, Node } from "../../src/graph";
 
 export function check(condition: boolean, message: string): void {
@@ -13,6 +13,16 @@ export function deps(n: Node): Node[] {
   const out: Node[] = [];
   for (let e = n.deps; e !== null; e = e.next) out.push(e.from);
   return out;
+}
+
+/** Force indexing after an accepted read without exposing execution registers. */
+export function indexAfter(c: Node, s: Node): Edge {
+  for (let e = c.deps; e !== null; e = e.next) {
+    if (e.from !== s) continue;
+    if (s.slot !== e) index(c, e.next);
+    return e;
+  }
+  throw new Error("indexAfter requires an accepted source read");
 }
 
 export function subs(n: Node): Node[] {
@@ -38,7 +48,6 @@ export function edgeCount(nodes: readonly Node[]): number {
  * - every edge is in exactly one deps list and one subs list, of its own ends;
  * - one relation per (source, consumer) pair;
  * - no pass is running, no slot cell is left behind;
- * - a retained dependency cursor belongs to that node's deps list;
  * - freshness: a live node that is neither STALE nor DIRTY has only clean
  *   sources, and every relation carries its source's current version, so a
  *   read at rest cannot return a value its sources have moved past (P3).
@@ -61,10 +70,8 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
     check((n.flags & Flag.Busy) === 0, `${label}: node ${id(n)} still Flag.Busy`);
     check(n.slot === null, `${label}: node ${id(n)} has a slot cell at rest`);
     const seen = new Set<Node>();
-    let cursorFound = n.last === null;
     let prev: Edge | null = null;
     for (let e = n.deps; e !== null; e = e.next) {
-      if (e === n.last) cursorFound = true;
       check(e.to === n, `${label}: deps edge of ${id(n)} points to ${id(e.to)}`);
       check(e.prev === prev, `${label}: broken prevDep in ${id(n)}`);
       check(!seen.has(e.from), `${label}: duplicate relation ${id(e.from)} -> ${id(n)}`);
@@ -73,7 +80,6 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
       inDeps.add(e);
       prev = e;
     }
-    check(cursorFound, `${label}: node ${id(n)} retains a detached dependency cursor`);
     prev = null;
     for (let e = n.subs; e !== null; e = e.nextSub) {
       check(e.from === n, `${label}: subs edge of ${id(n)} comes from ${id(e.from)}`);

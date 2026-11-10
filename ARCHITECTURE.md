@@ -60,6 +60,35 @@ The kernel mechanism owns facts intrinsic to maintaining the reactive dependency
 
 A mechanism belongs here only when a semantic or structural obligation forces some mechanism of that kind.
 
+#### State lifetime in the current construction
+
+Persistent state must carry a fact needed after the current phase that cannot
+be reconstructed from graph topology, execution context or committed evidence
+within the structural bounds. A recoverable phase fact does not need a node
+field or flag (research/LOG.md, entry 43).
+
+- Nodes and edges retain graph relations, semantic state, observed versions
+  and committed/tentative evidence (`Node.gen`, `Edge.gen`, `SETTLE`).
+- `active` and `cursor` belong to one execution. Nested execution saves and
+  restores both on success and failure; `untracked` suspends `active` while
+  preserving the enclosing cursor.
+- An indexed pass owns its cursor's source slot:
+  `cursor !== null && cursor.from.slot === cursor`. The displaced-edge stack
+  restores this certificate before an enclosing execution resumes.
+- All remaining `UNREAD` edges form a continuous dependency suffix. Its head's
+  `ver === UNREAD` certifies that it is already marked. Consuming, moving or
+  inserting an edge preserves this shape; failure prunes tentative edges
+  without breaking it.
+- The shared work stack stores an existing `Edge` for each suspended walk or
+  displaced slot. `edge.from` already identifies the displaced source.
+
+These are implementation lemmas of the current generation-based construction,
+not a proof that every correct runtime must use this representation. In
+particular, overloading `Edge.ver` with tentative state would require a new
+proof of the unread-suffix certificate and S3. Watcher delivery remains a
+separate kernel/host protocol: `Woken` and `Queued` are not merged by these
+tracking lemmas.
+
 ### 2. Reference host policy
 
 `src/host.ts` owns policy required to realize the selected watcher contract:

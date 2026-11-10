@@ -13,7 +13,7 @@ import {
   stackLength,
   write,
 } from "../src/kernel";
-import { checkGraph, deps } from "./support/graph";
+import { checkGraph, deps, indexAfter } from "./support/graph";
 
 const signal = (value: number) => node(null, value, 0);
 const computed = (fn: () => unknown) => node(fn, undefined, Flag.Dirty);
@@ -68,7 +68,7 @@ describe("displaced slot cells", () => {
             let sum = 0;
             for (const s of t & 1 ? [...sources].reverse() : sources)
               sum += read(s) as number;
-            if ((c.flags & Flag.Indexed) === 0) index(c, c.last!.next);
+            indexAfter(c, sources[t & 1 ? 0 : sources.length - 1]!);
             const cells = shared.map((s) => s.slot);
             expect(
               cells.every(
@@ -150,7 +150,7 @@ describe("displaced slot cells", () => {
     const outer: Node = computed(() => {
       read(tick);
       for (const s of sources) read(s);
-      index(outer, outer.last!.next);
+      indexAfter(outer, sources[sources.length - 1]!);
       const cells = sources.map((s) => s.slot);
       read(inner);
       expect(sources.every((s, i) => s.slot === cells[i])).toBe(true);

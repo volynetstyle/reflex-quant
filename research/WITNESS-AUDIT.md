@@ -14,6 +14,16 @@ otherwise); **safety** (execution is lost, the graph breaks, or the stack dies);
 host behavior); **convention** (deterministic choice the contract leaves open);
 **lemma** (needed only by Quant's chosen construction).
 
+**LOG 43 update.** The tracking cursor is execution-local; `Indexed` and
+`Marked` are recovered from slot ownership and the continuous `UNREAD` suffix.
+The old `retain-disposed-cursor` ablation is retired with `Node.last`.
+`no-cursor-restore` is a T3 implementation lemma in cluster G: without
+restoring the enclosing execution register, 64 of 171 tests fail, including
+differential tests. `no-mark`, `no-unread` and `no-displaced` still fail
+7, 9 and 25 tests respectively. The historical table and counts below refer
+to their original snapshot; they do not imply that the removed flags or
+node field are necessary.
+
 ## Per-ablation classification
 
 | Ablation | Class | What the failing test proves | Obligation (cluster) |

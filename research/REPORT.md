@@ -16,6 +16,17 @@ round 2) postdate that commit: tests 116/116 against the development build
 and 109/109 (7 diagnosis tests skipped) against the production build, ESM
 release 2,221 B gzip.
 
+**Current representation update (LOG 43).** `Node.last`, `Flag.Indexed` and
+`Flag.Marked` have been removed together. Tracking keeps `active`/`cursor`
+in execution context; slot ownership and a continuous `UNREAD` suffix certify
+the lookup phase. Nodes have nine fields, and the shared work stack continues
+to store edges only (LOG 38). Generations/`SETTLE` and the separate kernel/host
+delivery bits remain. The 169 existing development tests pass; two new reverse
+retry witnesses cover S3 with mixed committed/tentative relations, bringing
+the suite to 171 (production: 164 passed, seven diagnosis tests skipped).
+The older measurements and ablation totals below retain their stated snapshot;
+the final-detach cursor reset is superseded by removing the node cursor itself.
+
 **Result.** The invariants admit a substantially different architecture of
 about the same per-object size: versions instead of change bits, bounded
 exact searches backed by an on-demand mark or source-side index instead of
@@ -252,7 +263,7 @@ recorded the work they save, not because they save none (LOG 30).
 | rollback of an `effect()` call that throws (W5) | "a failed first run leaves no live watcher and no relation", "a sibling's failure … rolls the new watcher back" (`construction-commits`) |
 | relations restamped twice a generation cycle (SETTLE) | a watcher driven by a computed keeps running after its generation wraps; F1, F3 and P4 under wrap (`no-settle`); both restamp phases (`settle-once-a-cycle`) |
 | empty work stack releases oversized capacity at every producer exit | successful/failed validation, cold indexed runs, direct watchers and push without later demand (`no-trim`, placement ablations; LOG 40) |
-| final detach releases the dependency cursor (S4/resource correctness) | a retained disposed handle reaches only itself through graph fields, independent of former dependency width (`retain-disposed-cursor`, LOG 39) |
+| disposed handles do not retain former dependencies (S4/resource correctness) | graph-field reachability is independent of former dependency width (LOG 39); LOG 43 removes the node cursor, retiring `retain-disposed-cursor`, and checks nested execution with `no-cursor-restore` |
 | no run of a node disposed during its validation (W3) | "a computed disposed while it is validated…" (`disposed-run`, `disposed-run-climb`); "a later source failing in the same walk…" (`disposed-left-dirty`) |
 
 ## Q4. Optimization versus semantics
@@ -262,11 +273,11 @@ recorded the work they save, not because they save none (LOG 30).
 | correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD on an indexed or marked pass, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; BUSY (cycles, deferred disposal); WATCH delivery |
 | failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3) |
 | asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the empty work stack cut back to KEEP at producer exits, so retained memory does not follow the deepest walk ever (LOG 35, placement corrected in LOG 40) |
-| resource correctness | sever detached intrusive pointers; clear the dependency cursor at final detach so retained disposed handles do not root former dependencies (LOG 39) |
+| resource correctness | sever detached intrusive pointers; keep the dependency cursor in execution context so disposed handles cannot root former dependencies through it (LOG 43, superseding LOG 39's final-detach reset) |
 | constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; a marked pass finds pairs through subscribers instead of the slot index (LOG 28); `readSignal`; delivery on the STALE transition; no version compares once owed |
 | convention | `subsTail` (FIFO sibling order; only order-asserting tests fail without it) |
 | development diagnostic | CHECKING and the BUSY test of sources in `verify` and `check` (the C1 precondition; compiled out of the production build, LOG 33) |
-| removed as unnecessary | the run() guard against a watcher on the stack (no API path reaches it) |
+| removed as unnecessary | the run() guard against a watcher on the stack (no API path reaches it); `Node.last`, `Flag.Indexed`, `Flag.Marked` (execution-local cursor and topology certificates, LOG 43) |
 
 ## Q5. Complexity comparison
 

@@ -7,7 +7,6 @@ import type { Node } from "../src/graph";
 import {
   dispose,
   idle,
-  index,
   node,
   read,
   stackHighWater,
@@ -16,7 +15,7 @@ import {
   write,
 } from "../src/kernel";
 import { run, stop, watcher } from "../src/host";
-import { checkGraph } from "./support/graph";
+import { checkGraph, indexAfter } from "./support/graph";
 
 const signal = (value: number) => node(null, value, 0);
 const computed = (fn: () => unknown) => node(fn, undefined, Flag.Dirty);
@@ -30,7 +29,7 @@ function indexed(
   const inner: Node = computed(() => {
     let value = 0;
     for (const s of sources) value += read(s) as number;
-    if ((inner.flags & Flag.Indexed) === 0) index(inner, inner.last!.next);
+    indexAfter(inner, sources[width - 1]!);
     if (armed) {
       if (exit.startsWith("dispose")) dispose(outer);
       if (exit.endsWith("throw")) throw new Error("indexed");
@@ -40,7 +39,7 @@ function indexed(
   const outer: Node = computed(() => {
     let value = 0;
     for (const s of sources) value += read(s) as number;
-    if ((outer.flags & Flag.Indexed) === 0) index(outer, outer.last!.next);
+    indexAfter(outer, sources[width - 1]!);
     return value + (read(inner) as number) + (read(sources[0]!) as number);
   });
   return {
@@ -89,7 +88,7 @@ describe("work stack reclamation", () => {
               let value = 0;
               for (let i = 0; i < width; i++)
                 value += read(sources[t & 1 ? width - i - 1 : i]!) as number;
-              if ((c.flags & Flag.Indexed) === 0) index(c, c.last!.next);
+              indexAfter(c, sources[t & 1 ? 0 : width - 1]!);
               if (below !== undefined)
                 value += (
                   untrack ? untracked(() => read(below)) : read(below)
