@@ -152,6 +152,29 @@ export const scenarios = [
       return (i) => (cond.set((i & 1) === 0), c.get());
     },
   },
+  {
+    id: "track.fresh-after-reorder-64",
+    group: "track",
+    note: "reverse 64 retained sources, insert 64 newly subscribed sources after the first read, drop the previous set",
+    setup(api) {
+      const width = 64;
+      const tick = api.signal(0);
+      const retained = range(width).map((i) => api.signal(i));
+      const pools = range(2).map((side) => range(width).map((i) => api.signal(side * width + i)));
+      const c = api.computed(() => {
+        const reverse = tick.get() & 1;
+        const fresh = pools[reverse];
+        let sum = 0;
+        for (let i = 0; i < width; i++) {
+          sum += retained[reverse ? width - i - 1 : i].get();
+          if (i === 0) for (const source of fresh) sum += source.get();
+        }
+        return sum;
+      });
+      c.get();
+      return (i) => (tick.set(i), c.get());
+    },
+  },
   // --------------------------------------------------------------- push
   {
     id: "push.chain-cutoff-100",

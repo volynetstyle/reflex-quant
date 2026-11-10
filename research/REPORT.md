@@ -27,6 +27,15 @@ the suite to 171 (production: 164 passed, seven diagnosis tests skipped).
 The older measurements and ablation totals below retain their stated snapshot;
 the final-detach cursor reset is superseded by removing the node cursor itself.
 
+**Object access update (LOG 44).** Tracking and propagation reuse loaded
+source/slot/subscriber pointers within callback-free regions. A null subscriber
+head proves absence before the unread-suffix mode test. The stable read body
+and validation bodies are unchanged. This is a constant-factor
+optimization, not a change to the mechanism basis. [ACCESS-AUDIT.md](./ACCESS-AUDIT.md)
+records source access budgets, compiler feedback, rejected hot-path reshapes
+and validation (172 development tests, 165 production tests with seven
+diagnosis tests skipped).
+
 **Result.** The invariants admit a substantially different architecture of
 about the same per-object size: versions instead of change bits, bounded
 exact searches backed by an on-demand mark or source-side index instead of

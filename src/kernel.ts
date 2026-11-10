@@ -106,7 +106,11 @@ export function write(s: Node, value: unknown): void {
         n.flags = f | Flag.Stale;
 
         if ((f & Flag.Watch) !== 0) wake(n);
-        else if (n.subs !== null) mark(n.subs);
+        else {
+          const subs = n.subs;
+
+          if (subs !== null) mark(subs);
+        }
       }
     } else if ((f & Flag.Watch) !== 0) {
       n.flags = f | Flag.Dirty | Flag.Woken;
@@ -117,7 +121,9 @@ export function write(s: Node, value: unknown): void {
     } else {
       n.flags = f | Flag.Dirty | Flag.Stale;
 
-      if (n.subs !== null) mark(n.subs);
+      const subs = n.subs;
+
+      if (subs !== null) mark(subs);
     }
   }
 }
@@ -140,10 +146,14 @@ function mark(first: Edge): void {
       } else if ((f & Flag.Stale) === 0) {
         n.flags = f | Flag.Stale;
 
-        if (n.subs !== null) {
-          if (e.nextSub !== null) stack[top++] = e.nextSub;
+        const subs = n.subs;
 
-          e = n.subs;
+        if (subs !== null) {
+          const next = e.nextSub;
+
+          if (next !== null) stack[top++] = next;
+
+          e = subs;
           continue;
         }
       }
@@ -501,9 +511,9 @@ export function index(c: Node, next: Edge | null): void {
  * A cell's immutable `from` is its source, so the cell alone is enough.
  */
 export function claim(s: Node, e: Edge): void {
-  if (s.slot !== null) {
-    stack[top++] = s.slot;
-  }
+  const cell = s.slot;
+
+  if (cell !== null) stack[top++] = cell;
   s.slot = e;
 }
 
@@ -564,21 +574,26 @@ export function link(
  * change between the two reads stays visible to the next validation.
  */
 function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
-  if (last !== null && last.from === s) {
-    if (__STATS__) stats.repeats++;
+  if (last !== null) {
+    const from = last.from;
 
-    return;
+    if (from === s) {
+      if (__STATS__) stats.repeats++;
+
+      return;
+    }
+    // An indexed pass owns its cursor's source slot. Nested passes restore it.
+    if (from.slot === last) return slot(c, s, last, next);
   }
-
-  // An indexed pass owns its cursor's source slot. Nested passes restore it.
-  if (last !== null && last.from.slot === last) return slot(c, s, last, next);
   /** The pair's edge through the source's subscribers; undefined: unknown. */
   let found: Edge | null | undefined;
+  const first = s.subs;
+
+  // A source without subscribers is absent, whatever the unread suffix mode.
+  if (first === null) return link(c, s, last, next);
 
   // Marking, moves and links preserve a continuous UNREAD suffix.
   if (next === null || next.ver !== UNREAD) {
-    // A source without subscribers is absent.
-    if (s.subs === null) return link(c, s, last, next);
     // An edge found by a scan is the pair's only one; absence needs one side
     // scanned completely (this reader's list, or the source's subscribers).
     let e = next !== null ? next.next : null;
@@ -610,10 +625,10 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
     // suffix and let the rest of the pass find its pairs that way, with no
     // slot to fill or clear. Found deeper: every lookup would walk other
     // readers' edges, so index; either way the found edge is taken at once.
-    found = e === null && p === null ? null : pair(s, c);
+    found = e === null && p === null ? null : pair(first, c);
 
-    if (found !== null && found !== undefined) begin(c, s, found, next);
-  } else found = pair(s, c);
+    if (found !== null && found !== undefined) begin(c, found, first, next);
+  } else found = pair(first, c);
 
   if (found === null) return link(c, s, last, next);
 
@@ -638,12 +653,12 @@ function slot(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
  * The pair's edge among the source's first SCAN subscribers: null if the list
  * ends first (absent), undefined if the budget runs out (unknown).
  */
-function pair(s: Node, c: Node): Edge | null | undefined {
+function pair(first: Edge | null, c: Node): Edge | null | undefined {
   if (__STATS__) stats.lookups++;
 
   let budget = SCAN;
 
-  for (let e = s.subs; e !== null; e = e.nextSub) {
+  for (let e = first; e !== null; e = e.nextSub) {
     if (e.to === c) return e;
 
     if (--budget === 0) return undefined;
@@ -656,10 +671,10 @@ function pair(s: Node, c: Node): Edge | null | undefined {
  * source's first subscriber marks the unread suffix, from `next` on (a walk
  * over edges, not sources); deeper, index.
  */
-function begin(c: Node, s: Node, e: Edge, next: Edge | null): void {
+function begin(c: Node, e: Edge, first: Edge | null, next: Edge | null): void {
   if (next === null) return;
 
-  if (e !== s.subs) return index(c, next);
+  if (e !== first) return index(c, next);
 
   if (__STATS__) stats.sweeps++;
 

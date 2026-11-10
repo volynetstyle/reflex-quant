@@ -17,9 +17,11 @@ export let draining = false;
 
 /** Queue a scheduled watcher once; the kernel calls this when it wakes one. */
 export function wake(w: Node): void {
-  if ((w.flags & (Flag.Auto | Flag.Queued)) !== Flag.Auto) return;
+  const flags = w.flags;
 
-  w.flags |= Flag.Queued;
+  if ((flags & (Flag.Auto | Flag.Queued)) !== Flag.Auto) return;
+
+  w.flags = flags | Flag.Queued;
   queue[size++] = w;
 }
 

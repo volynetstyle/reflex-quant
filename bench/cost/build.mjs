@@ -30,10 +30,10 @@ const I = "index.ts";
 const prefixScan =
   "    let p = last !== null ? last.prev : null;\n    budget = SCAN;\n    while (p !== null && p.from !== s && --budget !== 0) p = p.prev;\n    if (p !== null && p.from === s) {\n      if (__STATS__) stats.dups++;\n      return;\n    }\n";
 const displaced = [
-  [K, "  if (s.slot !== null) {\n    stack[top++] = s.slot;\n  }\n  s.slot = e;", "  s.slot = e;"],
+  [K, "  const cell = s.slot;\n  if (cell !== null) stack[top++] = cell;\n  s.slot = e;", "  s.slot = e;"],
 ];
 const firstMiss = [
-  [T, "  if (next === null || next.ver !== UNREAD) {\n    // A source without subscribers is absent.", "  index(c, next);\n  return slot(c, s, last, next);\n  if (next === null || next.ver !== UNREAD) {\n    // A source without subscribers is absent."],
+  [T, "  const first = s.subs;", "  index(c, next);\n  return slot(c, s, last, next);\n  const first = s.subs;"],
 ];
 
 /** variant -> [what it removes, ...edits] */
@@ -86,17 +86,17 @@ export const surfaceVariants = {
 export const reorderVariants = {
   "index-always": [
     "release 59f7085: a pair found among the subscribers indexes the pass",
-    [T, "  if (e !== s.subs) return index(c, next);", "  return index(c, next);"],
+    [T, "  if (e !== first) return index(c, next);", "  return index(c, next);"],
   ],
   "refresh-repeats": [
     "release dd13a76, before P5: a repeated read refreshes the observed version (fails the P5 semantic tests; kept to time the change)",
-    [T, "    if (__STATS__) stats.repeats++;\n    return;", "    if (__STATS__) stats.repeats++;\n    last.ver = s.ver;\n    return;"],
+    [T, "      if (__STATS__) stats.repeats++;\n      return;", "      if (__STATS__) stats.repeats++;\n      last.ver = s.ver;\n      return;"],
     [T, "      if (__STATS__) stats.dups++;\n      return;\n    }", "      if (__STATS__) stats.dups++;\n      p.ver = s.ver;\n      return;\n    }"],
     [T, "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    return;", "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    e.ver = s.ver;\n    return;"],
   ],
   "mark-any": [
     "release 7b14509: a pair found anywhere within the budget marks the pass (deeper pairs walk other readers' edges per read)",
-    [T, "  if (e !== s.subs) return index(c, next);\n", ""],
+    [T, "  if (e !== first) return index(c, next);\n", ""],
   ],
 };
 

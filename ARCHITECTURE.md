@@ -181,6 +181,30 @@ Such optimizations must be classified as **optimization**, not counted as mechan
 
 A benchmark win can choose between admissible implementations. It cannot expand the semantic contract.
 
+### Hot-path access discipline
+
+Resolve a decision from the cheapest evidence already available: local
+values and comparisons first, then fields of a node or edge already in hand,
+then dependent pointer loads, bounded searches, whole-list walks and allocation.
+This is a design order to verify on the target engine, not a universal CPU
+cost table.
+
+Reuse a loaded field or known relation while it remains valid. Check whether
+a traversal already holds a node before chasing another edge back to it. Avoid testing
+a field twice when the first result can directly select the action. Keep
+extra work for misses out of the stable read path.
+
+A user callback, nested evaluation, wake hook or cleanup can mutate the graph,
+flags and cached values. Reload mutable facts after those boundaries unless
+an invariant proves the saved value is still valid. Do not move a sibling load
+before a callback that can unlink that sibling.
+
+Count source accesses and inspect emitted/optimized code separately: an engine
+may already eliminate a repeated load, while an extra local or parameter can
+change compilation. Compare production bundles repeatedly, including narrow
+stable reads and negative controls, before accepting a hot-path reshape.
+Record regressions and rejected candidates with the evidence for the result.
+
 ## Conventions
 
 An implementation choice may remain for determinism or reproducibility even when the contract does not require it.

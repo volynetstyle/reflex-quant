@@ -1197,6 +1197,39 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   `no-unread` 9/171 and `no-displaced` 25/171.
   This is evidence for this construction, not a universal minimality theorem.
 
+### 44. Reuse graph evidence before chasing another object
+
+- **Classification:** optimization; no contract, mechanism basis, object
+  shape, persistent register or allocation-site change.
+- **Change:** keep the previous source pointer across repeat/indexed tests;
+  pass the already read subscriber head to pair lookup and mode selection;
+  prove a fresh source absent before inspecting suffix mode; reuse occupied
+  slot cells, propagation heads/siblings and host flags.
+- **Lifetime:** snapshots stay inside regions that cannot invoke user code.
+  Mutable fields are reloaded after execution, validation, wake and cleanup
+  boundaries. Stable read and validation bodies are unchanged. Extra repeat checks before
+  stable cursor hits were not introduced.
+- **Audit:** [ACCESS-AUDIT.md](./ACCESS-AUDIT.md) records the exact access
+  paths, compiler feedback and rejected flags/generation/expanded-loop/ascent
+  candidates. Fewer accesses in TypeScript are not sufficient
+  performance evidence; some are already eliminated by V8 and some reshapes
+  regress a narrow hot path.
+- **Evidence:** 172/172 development tests; 165 production tests pass and seven
+  diagnosis tests skip. The added structural witness eliminates a lookup for
+  a fresh source read inside an already marked pass. All 46 ablation anchors
+  and Reflex idle anchors validate; cost-probe builds, typecheck, lint,
+  formatting, build and release checks pass. `no-fresh-source`, `no-displaced`
+  and `repeat-refresh` are killed by 2, 25 and 3 tests respectively.
+  Reusing the settled node on ascent saved a LoadField but added a pointer
+  check, with no established material timing gain, so the original comparison
+  remains. The ESM bundle grows from 2,262 to 2,280 B gzip.
+- **Timing:** the new `track.fresh-after-reorder-64` benchmark exercises
+  fresh subscriptions inside a marked reverse pass. Seven local rounds:
+  2,631.6 to 2,527.9 ns/step (0.961 ratio of medians, 0.952 median paired
+  ratio). Broad screens cover 21 cases, with final and rejected variants
+  recorded in the audit. Stable/lifecycle timing spread is explicit; this
+  is not a blanket or portable speedup claim.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

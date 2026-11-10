@@ -171,6 +171,33 @@ describe("structural bounds", () => {
     expect(stats.indexes).toBe(0);
   });
 
+  it("a fresh source needs no lookup after the pass has marked its unread suffix", () => {
+    const width = 64;
+    const ps = range(width).map(signal);
+    const fresh = signal(1000);
+    const tick = signal(0);
+    const c = computed(() => {
+      const reverse = read(tick) !== 0;
+      let sum = 0;
+      for (let i = 0; i < width; i++) {
+        sum += read(ps[reverse ? width - i - 1 : i]!) as number;
+        if (reverse && i === width / 2) sum += read(fresh) as number;
+      }
+      return sum;
+    });
+    read(c);
+    write(tick, 1);
+    resetStats();
+    expect(read(c)).toBe(width * (width - 1) / 2 + 1000);
+    // Only the reordered old relations need pair lookups. The fresh read is
+    // proven absent from its already loaded subscriber head, even mid-sweep.
+    expect(stats.lookups).toBe(width - 1);
+    expect([stats.links, stats.sweeps, stats.indexes]).toEqual([1, 1, 0]);
+    expect(edgeCount([c])).toBe(width + 2);
+    checkGraph([c]);
+    expect(idle()).toBe(true);
+  });
+
   it("LOG 29: over shared sources, the first reader marks its pass and deeper readers index", () => {
     const n = 64;
     const ps = range(n).map(signal);
