@@ -1,0 +1,8 @@
+---
+// Build-time syntax highlighting (Shiki). Ships no JS. Light/dark follow prefers-color-scheme
+// through the --shiki-light / --shiki-dark variables (styles.css).
+import { Code } from "astro:components";
+interface Props { code: string; lang?: "ts" | "js" | "sh" }
+const { code, lang = "ts" } = Astro.props;
+---
+<Code code={code.trim()} lang={lang} themes={{ light: "github-light", dark: "github-dark" }} defaultColor={false} />

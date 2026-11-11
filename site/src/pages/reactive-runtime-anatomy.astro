@@ -5,8 +5,84 @@ import Base from "../layouts/Base.astro";
 import Install from "../components/Install.astro";
 import ScenarioChart from "../components/ScenarioChart.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
+import Example from "../components/Example.astro";
+import Playground from "../components/Playground.astro";
+import Snippet from "../components/Snippet.astro";
 import { BLOB, href } from "../site";
 import { AGG } from "../bench";
+
+// Runnable demos. Each output below was checked against the development build of 1.1.2.
+const SHAPES = `
+interface Node { flags; value; ver; fn; deps; subs; lastSub; slot; gen }  // 9 fields
+interface Edge { from; to; ver; gen; prev; next; prevSub; nextSub }     // 8 fields`;
+
+const PROOFS = `
+// "this pass is indexed": the consumer owns its cursor's slot
+cursor !== null && cursor.from.slot === cursor
+// "this pass is marked": unread edges form one contiguous suffix
+next !== null && next.ver === UNREAD`;
+
+const CUTOFF = `
+import { computed, effect, get, set, signal } from "reflex-quant";
+
+const n = signal(1);
+const parity = computed(() => (get(n) % 2 === 0 ? "even" : "odd"));
+effect(() => console.log("effect:", get(parity)));
+
+set(n, 3); // parity recomputes to "odd" again: cutoff, the effect stays quiet
+set(n, 4); // "even": the effect runs`;
+
+const ABA = `
+import { computed, get, set, signal } from "reflex-quant";
+
+const A = signal(1);
+let runs = 0;
+const B = computed(() => (runs++, get(A) * 10));
+
+get(B);
+set(A, 2);
+set(A, 1); // back to 1, but the version moved twice
+console.log(get(B), "runs:", runs); // 10 runs: 2`;
+
+const P5 = `
+import { computed, get, set, signal } from "reflex-quant";
+
+const a = signal(1);
+const c = computed(() => {
+  const first = get(a);
+  if (first === 1) set(a, 2);
+  return first + get(a);
+});
+
+console.log(get(c)); // 3
+console.log(get(c)); // 4
+console.log(get(c)); // 4`;
+
+const FAIL = `
+import { computed, get, set, signal } from "reflex-quant";
+
+const ready = signal(false);
+const c = computed(() => {
+  if (!get(ready)) throw new Error("not ready");
+  return "ready";
+});
+
+try { get(c); } catch (e) { console.log("threw:", e.message); }
+set(ready, true); // the failed run's dependency still wakes it
+console.log(get(c));`;
+
+const BATCH = `
+import { batch, effect, get, set, signal } from "reflex-quant";
+
+const a = signal(0);
+effect(() => console.log("effect sees", get(a)));
+
+batch(() => {
+  set(a, 1);
+  set(a, 2);
+  console.log("inside batch", get(a)); // 2: writes commit immediately
+});                                    // only the effect waited
+console.log("after batch");`;
 ---
 <Base
   path="/reactive-runtime-anatomy/"
@@ -38,8 +114,7 @@ import { AGG } from "../bench";
   <p>A UI framework can replace the host (its own phases, ownership, async) without touching the graph.</p>
 
   <h2>Two objects. One edge lives in two lists.</h2>
-  <pre><code>{`interface Node { flags; value; ver; fn; deps; subs; lastSub; slot; gen }   // 9 fields
-interface Edge { from; to; ver; gen; prev; next; prevSub; nextSub }      // 8 fields`}</code></pre>
+  <Snippet code={SHAPES} />
   <figure>
     <svg viewBox="0 0 600 230" class="mid" role="img" aria-label="Edge B→X sits in X's dependency list and in B's subscriber list at once">
       <text x="10" y="122" class="m">X.deps</text>
@@ -75,7 +150,7 @@ interface Edge { from; to; ver; gen; prev; next; prevSub; nextSub }      // 8 fi
       <figcaption><span class="on-false">Only <code>full</code> and <code>first</code> are edges. Writing <code>last</code> wakes nothing.</span><span class="on-true">The branch flips: <code>last</code> becomes an edge. Flip back and it is dropped again.</span></figcaption>
     </figure>
   </div>
-  <pre><code>{`const name = computed(() => (get(full) ? \`\${get(first)} \${get(last)}\` : get(first)));`}</code></pre>
+  <Example />
 
   <p>Harder case: the <em>same</em> sources, read in a different order.</p>
   <div class="vs">
@@ -96,10 +171,7 @@ interface Edge { from; to; ver; gen; prev; next; prevSub; nextSub }      // 8 fi
   <p>"Not found in 8" never means "absent". The scan is a price limit, not a precision limit, so tracking never turns quadratic when hundreds of reads are shuffled.</p>
 
   <h3>State proven by structure, not stored</h3>
-  <pre><code>{`// "this pass is indexed": the consumer owns its cursor's slot
-cursor !== null && cursor.from.slot === cursor
-// "this pass is marked": unread edges form one contiguous suffix
-next !== null && next.ver === UNREAD`}</code></pre>
+  <Snippet code={PROOFS} />
   <p>In 1.1.2 two mode flags were deleted: the invariants on edge order and slot ownership already prove them.</p>
 
   <h2>Push dirty, pull values</h2>
@@ -115,6 +187,7 @@ next !== null && next.ver === UNREAD`}</code></pre>
     <figcaption><strong>DIRTY</strong>: a source surely changed, run it. <strong>STALE</strong>: something upstream <em>might</em> have changed, check versions first. D runs once, after B and C: no glitch.</figcaption>
   </figure>
   <p>A write only marks. A read (or an effect's turn) pulls: validate sources in read order, stop at the first changed one, run. If the new result is <code>Object.is</code>-equal to the old one, its version does not move and everything below stays clean: <strong>cutoff</strong>.</p>
+  <Playground code={CUTOFF} />
 
   <h3>Versions, not values</h3>
   <table class="num">
@@ -124,6 +197,7 @@ next !== null && next.ver === UNREAD`}</code></pre>
     <tr><td><code>set(A, 1)</code></td><td>1</td><td>12</td><td>10 ≠ 12 → re-run</td></tr>
   </table>
   <p>The value came back (A→B→A), but the change is not lost. One counter gives both properties: no lost changes, and cutoff for unchanged results.</p>
+  <Playground code={ABA} />
 
   <h2>Effects check more than computeds</h2>
   <p>A computed may run as soon as <em>one</em> source changed. An effect first validates <em>all</em> its committed sources, because its next step, running the old cleanup, is irreversible:</p>
@@ -135,12 +209,7 @@ next !== null && next.ver === UNREAD`}</code></pre>
   </ol>
 
   <h2>A write inside a run is not forgotten</h2>
-  <pre><code>{`const a = signal(1);
-const c = computed(() => {
-  const first = get(a);
-  if (first === 1) set(a, 2);
-  return first + get(a);
-});`}</code></pre>
+  <Playground code={P5} />
   <div class="timeline">
     <div><b>3</b><span>1st get(c): read 1, then 2</span></div>
     <div><b>4</b><span>2nd get(c): the debt forces a re-run, a is 2</span></div>
@@ -156,6 +225,7 @@ const c = computed(() => {
     <tr><td>3</td><td>A E</td><td>throws</td><td>A B C + E (D dropped)</td></tr>
   </table>
   <p>B and C belong to the last good run, so they stay. D or E may be what fixes the error, so a change there must still wake the node. No rollback log: an edge created during a run is stamped with the <em>next</em> generation, <code>node.gen + 1</code>. A successful run bumps <code>node.gen</code> once, which commits every new edge at once. When the 30-bit counter nears wrap-around, a rare linear pass renumbers the edges.</p>
+  <Playground code={FAIL} />
 
   <h2>One stack, three jobs</h2>
   <div class="cols">
@@ -170,11 +240,7 @@ const c = computed(() => {
   </div>
 
   <h2><code>batch()</code> is not a transaction</h2>
-  <pre><code>{`batch(() => {
-  set(a, 1);
-  set(a, 2);
-  console.log(get(a)); // 2: every write commits immediately
-});                    // only effects wait until here`}</code></pre>
+  <Playground code={BATCH} />
   <p>No rollback, no isolation: batching defers effect delivery, nothing else. If one effect throws, the rest of the queue still runs and the first error reaches the caller.</p>
 
   <h2>What it costs</h2>

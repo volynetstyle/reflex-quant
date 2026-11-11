@@ -1,0 +1,20 @@
+---
+// A highlighted, runnable snippet. Static until clicked: Run loads a small worker runner,
+// Edit loads CodeMirror. The code runs reflex-quant 1.1.2 from jsDelivr in a Web Worker.
+import Snippet from "./Snippet.astro";
+interface Props { code: string; title?: string }
+const { code, title } = Astro.props;
+---
+<div class="pg" data-pg data-code={code.trim()}>
+  {title && <div class="pg-title">{title}</div>}
+  <div class="pg-code"><Snippet code={code} lang="js" /></div>
+  <div class="pg-bar">
+    <button type="button" data-run>▶ Run</button>
+    <button type="button" data-edit>Edit</button>
+    <span class="pg-hint">runs reflex-quant 1.1.2 in your browser</span>
+  </div>
+  <div class="pg-out" role="log" aria-live="polite" hidden></div>
+</div>
+<script>
+  import "../scripts/playground-boot";
+</script>
