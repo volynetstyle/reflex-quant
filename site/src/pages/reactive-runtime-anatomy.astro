@@ -8,6 +8,7 @@ import EvidenceLinks from "../components/EvidenceLinks.astro";
 import Example from "../components/Example.astro";
 import Playground from "../components/Playground.astro";
 import Snippet from "../components/Snippet.astro";
+import StackViz from "../components/StackViz.astro";
 import { BLOB, href } from "../site";
 import { AGG } from "../bench";
 
@@ -233,6 +234,8 @@ console.log("after batch");`;
     <div class="card"><h3>Pull</h3>Saves the edge to climb back up; on a throw, marks the path for re-run.</div>
     <div class="card"><h3>Tracking</h3>Saves the slot a nested pass displaced, restored via <code>edge.from</code>.</div>
   </div>
+  <p>Watch it on application code: the same snippet, run by Quant and by a naive run-on-read runtime.</p>
+  <StackViz />
   <p>All three save an <code>Edge</code>, so one array serves them all, and graph depth is bounded by memory instead of the JavaScript call stack. Storing only the edge (its source is <code>edge.from</code>) halved the stack peak in a nested-index test:</p>
   <div class="vs">
     <div class="stat"><b>1,542</b><span>peak stack slots, before</span></div>

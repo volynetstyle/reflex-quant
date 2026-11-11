@@ -1,0 +1,46 @@
+---
+// Application snippets executed step by step. The Quant recorder (src/scripts/sim.ts) reproduces
+// reflex-quant 1.1.2's callback order and output on every scenario; "naive" is a run-on-read
+// runtime with recursive push, for comparison.
+import { SCENARIOS } from "../scripts/sim";
+---
+<figure class="sv" data-stackviz>
+  <div class="sv-tabs" role="group" aria-label="Example">
+    {SCENARIOS.map((s, k) => <button type="button" data-sc={s.id} aria-pressed={k === 0 ? "true" : "false"}>{s.title}</button>)}
+  </div>
+  <div class="sv-tabs sv-modes" role="group" aria-label="Runtime">
+    <span class="sv-blurb"></span>
+    <button type="button" data-mode="quant" aria-pressed="true">Reflex Quant</button>
+    <button type="button" data-mode="naive" aria-pressed="false">Naive runtime</button>
+  </div>
+  <div class="sv-graph" aria-hidden="true"></div>
+  <p class="sv-note" aria-live="polite"></p>
+  <div class="sv-cols">
+    <div class="sv-col">
+      <div class="sv-h sv-left-h"></div>
+      <div class="sv-left"></div>
+      <div class="sv-meter"></div>
+    </div>
+    <div class="sv-col">
+      <div class="sv-h">Your code</div>
+      <pre class="sv-code sv-app"></pre>
+      <div class="sv-log" aria-label="Console output"></div>
+    </div>
+  </div>
+  <div class="sv-ctl">
+    <button type="button" data-sv="reset" aria-label="Restart">⏮</button>
+    <button type="button" data-sv="prev" aria-label="Previous step">◀</button>
+    <button type="button" data-sv="play">▶ Play</button>
+    <button type="button" data-sv="next" aria-label="Next step">▶|</button>
+    <span class="sv-count"></span>
+  </div>
+  <figcaption>
+    The Quant run is recorded from a model of the kernel and host that reproduces reflex-quant 1.1.2 on every example:
+    the same callbacks, in the same order, with the same output. <code>stack[]</code> holds edges: a <em>sibling</em> the
+    push will come back to, or the <em>way back</em> up a pull. Edges in the graph are the live dependencies, so a branch
+    switch adds and drops them. The naive runtime re-runs whatever is stale when read, nesting closures, and has no cutoff.
+  </figcaption>
+</figure>
+<script>
+  import "../scripts/stackviz";
+</script>

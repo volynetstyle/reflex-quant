@@ -49,6 +49,7 @@ const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": graph })
 <title>{title}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={url} />
+
 <meta name="author" content="Andrii Volynets" />
 <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
 <meta property="og:type" content={home ? "website" : "article"} />
@@ -65,5 +66,6 @@ const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": graph })
 <meta name="twitter:image" content={abs("/og.jpg")} />
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
+<meta name="google-site-verification" content="38rxDnCITiskyTKc-wEw2_MglRHqPka9ZKtkO38y9Lo" />
 <link rel="sitemap" type="application/xml" href={abs("/sitemap-index.xml")} />
 <script type="application/ld+json" set:html={ld} />
