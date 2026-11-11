@@ -16,6 +16,7 @@ export const NAV: [string, string][] = [
   ["/", "Reflex Quant"],
   ["/javascript-signals-runtime/", "Signals runtime"],
   ["/dynamic-dependency-tracking/", "Dependency tracking"],
+  ["/reactive-runtime-anatomy/", "Anatomy"],
   ["/benchmarks/", "Benchmarks"],
   ["/alien-signals-comparison/", "vs alien-signals"],
   ["/vue-reactivity-comparison/", "vs Vue reactivity"],

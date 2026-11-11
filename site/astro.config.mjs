@@ -6,6 +6,6 @@ export default defineConfig({
   site: SITE,
   base: BASE,
   trailingSlash: "always",
-  build: { format: "directory" },
+  build: { format: "directory", inlineStylesheets: "always" },
   integrations: [sitemap({ lastmod: new Date(UPDATED) })],
 });

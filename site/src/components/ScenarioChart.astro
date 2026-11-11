@@ -1,0 +1,62 @@
+---
+// Diverging bar chart of quant / best-rival time per scenario, log scale centred on 1.0.
+// Static SVG: hover via <title>, a table view below, no client JS.
+import { AGG, ROWS, RUN } from "../bench";
+
+const W = 680, LABEL = 200, PAD = 52, ROW = 24, BAR = 14, TOP = 26;
+const lo = Math.log2(0.5), hi = Math.log2(1.6);
+const plotW = W - LABEL - PAD;
+const x = (r: number) => LABEL + ((Math.log2(r) - lo) / (hi - lo)) * plotW;
+const x1 = x(1);
+const H = TOP + ROWS.length * ROW + 8;
+const ticks = [0.5, 0.75, 1, 1.25, 1.5];
+
+// Bar from the 1.0 baseline to the value: square at the baseline, 4px rounded data-end.
+function bar(r: number, y: number) {
+  const xe = x(r), rad = Math.min(4, Math.abs(xe - x1) / 2);
+  const t = y, b = y + BAR;
+  if (xe >= x1)
+    return `M${x1},${t}H${xe - rad}Q${xe},${t} ${xe},${t + rad}V${b - rad}Q${xe},${b} ${xe - rad},${b}H${x1}Z`;
+  return `M${x1},${t}H${xe + rad}Q${xe},${t} ${xe},${t + rad}V${b - rad}Q${xe},${b} ${xe + rad},${b}H${x1}Z`;
+}
+---
+<figure class="chart">
+  <svg viewBox={`0 0 ${W} ${H + 16}`} role="img" aria-labelledby="sc-title sc-desc">
+    <title id="sc-title">Reflex Quant time relative to the faster of Reflex and alien-signals, per scenario</title>
+    <desc id="sc-desc">Bars left of 1.0 mean Quant is faster; bars right mean the better rival is faster. Geometric mean {AGG.best}.</desc>
+    <text class="axis" x={x1 - 6} y="12" text-anchor="end">← Quant faster</text>
+    <text class="axis" x={x1 + 6} y="12">rival faster →</text>
+    {ticks.map((t) => (
+      <g>
+        <line class={t === 1 ? "base" : "grid"} x1={x(t)} x2={x(t)} y1={TOP - 4} y2={H - 4} />
+      </g>
+    ))}
+    {ROWS.map(([name, best, vsReflex, vsAlien], i) => {
+      const y = TOP + i * ROW + (ROW - BAR) / 2;
+      const win = best < 1;
+      return (
+        <g class="row">
+          <title>{`${name}: ${best.toFixed(2)}× the better rival (${vsReflex.toFixed(2)}× Reflex, ${vsAlien.toFixed(2)}× alien-signals)`}</title>
+          <rect class="hit" x="0" y={TOP + i * ROW} width={W} height={ROW} />
+          <text class="label" x={LABEL - 10} y={y + BAR - 3} text-anchor="end">{name}</text>
+          <path class={win ? "win" : "lose"} d={bar(best, y)} />
+          <text class="value" x={win ? x(best) - 6 : x(best) + 6} y={y + BAR - 3} text-anchor={win ? "end" : "start"}>{best.toFixed(2)}</text>
+        </g>
+      );
+    })}
+    {ticks.map((t) => (
+      <text class="axis" x={x(t)} y={H + 12} text-anchor="middle">{t}×</text>
+    ))}
+  </svg>
+  <figcaption>
+    Quant time ÷ the faster rival's time, lower is better (log scale). CI run <a href={RUN.url}>{RUN.id}</a>, {RUN.machine}.
+  </figcaption>
+  <details>
+    <summary>Table view</summary>
+    <table class="num">
+      <tr><th>Scenario</th><th>÷ best</th><th>÷ Reflex</th><th>÷ alien-signals</th></tr>
+      {ROWS.map(([n, b, r, a]) => <tr><td><code>{n}</code></td><td>{b.toFixed(2)}</td><td>{r.toFixed(2)}</td><td>{a.toFixed(2)}</td></tr>)}
+      <tr><th>Geometric mean</th><th>{AGG.best}</th><th>{AGG.reflex}</th><th>{AGG.alien}</th></tr>
+    </table>
+  </details>
+</figure>

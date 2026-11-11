@@ -1,0 +1,209 @@
+---
+// Implementation intent ("how a signals runtime is built"), distinct from the concept article
+// at /javascript-signals-runtime/. Condensed from site/draft.md; every number is sourced.
+import Base from "../layouts/Base.astro";
+import Install from "../components/Install.astro";
+import ScenarioChart from "../components/ScenarioChart.astro";
+import EvidenceLinks from "../components/EvidenceLinks.astro";
+import { BLOB, href } from "../site";
+import { AGG } from "../bench";
+---
+<Base
+  path="/reactive-runtime-anatomy/"
+  title="Inside a Signals Runtime: Anatomy of a 2 KB Reactive Engine"
+  headline="Anatomy of a Reactive Engine: How Reflex Quant Is Built"
+  description="How a 2 KB JavaScript signals runtime works inside: one edge in two lists, exact dependency tracking, push-pull with cutoff, error recovery and one shared work stack."
+  faq={[
+    ["How is a signals library implemented?", "As a graph of nodes (signals, computeds, effects) and edges (dependencies). Writes push invalidation down the graph; reads pull fresh values up, re-running a computation only when a source it read has actually changed."],
+    ["Why not just store dependencies in a Set?", "A Set rebuilt on every run allocates on every execution and loses read order. Reusing the previous run's edges, in read order, makes stable and reordered reads allocation-free."],
+    ["What happens when a computed throws?", "In Reflex Quant it commits nothing, keeps the dependencies of its last successful run plus those of the failed attempt, and runs again on the next read."],
+  ]}
+>
+  <p class="lede">Every reactive library starts simple. Then dependencies change at runtime, computations throw, effects dispose themselves, writes happen mid-run, and graphs grow to thousands of nodes. Each case tempts one more flag, one more index, one more queue.</p>
+  <p>Reflex Quant asks the opposite question: <strong>fix the semantics first, then keep only the machinery they force.</strong> This is what was left.</p>
+
+  <div class="stats">
+    <div class="stat"><b>~2.2 KB</b><span>gzip, whole runtime</span></div>
+    <div class="stat"><b>10</b><span>public operations</span></div>
+    <div class="stat"><b>2</b><span>object types: Node, Edge</span></div>
+    <div class="stat"><b>0</b><span>call-stack recursion</span></div>
+  </div>
+
+  <h2>Three layers, one owner per fact</h2>
+  <div class="cols">
+    <div class="card"><h3>Kernel</h3>What depends on what, what changed, what must re-check. The only source of truth about dependencies.</div>
+    <div class="card"><h3>Host</h3>Delivers work to effects: queue, batching, cleanup order. Never decides whether a dependency exists.</div>
+    <div class="card"><h3>Surface</h3>The typed API. A handle <em>is</em> the node, with a type brand: no wrapper object.</div>
+  </div>
+  <p>A UI framework can replace the host (its own phases, ownership, async) without touching the graph.</p>
+
+  <h2>Two objects. One edge lives in two lists.</h2>
+  <pre><code>{`interface Node { flags; value; ver; fn; deps; subs; lastSub; slot; gen }   // 9 fields
+interface Edge { from; to; ver; gen; prev; next; prevSub; nextSub }      // 8 fields`}</code></pre>
+  <figure>
+    <svg viewBox="0 0 600 230" class="mid" role="img" aria-label="Edge B→X sits in X's dependency list and in B's subscriber list at once">
+      <text x="10" y="122" class="m">X.deps</text>
+      <rect class="n" x="70" y="100" width="90" height="34" rx="6" /><text x="115" y="122" text-anchor="middle">A → X</text>
+      <rect class="n hi" x="200" y="100" width="90" height="34" rx="6" /><text x="245" y="122" text-anchor="middle">B → X</text>
+      <rect class="n" x="330" y="100" width="90" height="34" rx="6" /><text x="375" y="122" text-anchor="middle">C → X</text>
+      <path class="e" d="M160 117H200M290 117H330" />
+      <text x="430" y="122" class="m">prev / next: read order</text>
+      <text x="245" y="16" text-anchor="middle" class="m">B.subs</text>
+      <rect class="n" x="200" y="26" width="90" height="34" rx="6" /><text x="245" y="48" text-anchor="middle">B → W</text>
+      <rect class="n" x="200" y="174" width="90" height="34" rx="6" /><text x="245" y="196" text-anchor="middle">B → Y</text>
+      <path class="e" d="M245 60V100M245 134V174" />
+      <text x="300" y="196" class="m">prevSub / nextSub: delivery order</text>
+    </svg>
+    <figcaption>The consumer's list drives tracking and validation; the source's list drives invalidation. Same object, so nothing to synchronize.</figcaption>
+  </figure>
+  <p>Each edge also carries <code>ver</code> (which version of the source the consumer saw) and <code>gen</code> (whether a successful run confirmed it). Facts that other runtimes keep in separate tables (read history, dirty sets, rollback logs) live on the relation itself.</p>
+
+  <h2>Exact tracking: depend on what you read, not what you wrote</h2>
+  <div class="toggle">
+    <input type="radio" name="full" id="ff" checked /><label for="ff">full = false</label>
+    <input type="radio" name="full" id="ft" /><label for="ft">full = true</label>
+    <figure>
+      <svg viewBox="0 0 420 210" class="small" role="img" aria-label="Dependency graph of name: last is a dependency only while full is true">
+        <path class="e on" d="M70 52L200 110" /><path class="e on" d="M210 52V110" /><path class="e off e-last" d="M350 52L220 110" />
+        <path class="e on" d="M210 144V170" />
+        <rect class="n" x="20" y="18" width="100" height="34" rx="6" /><text x="70" y="40" text-anchor="middle">full</text>
+        <rect class="n" x="160" y="18" width="100" height="34" rx="6" /><text x="210" y="40" text-anchor="middle">first</text>
+        <rect class="n" x="300" y="18" width="100" height="34" rx="6" /><text x="350" y="40" text-anchor="middle">last</text>
+        <rect class="n hi" x="160" y="110" width="100" height="34" rx="6" /><text x="210" y="132" text-anchor="middle">name</text>
+        <rect class="n" x="160" y="170" width="100" height="34" rx="6" /><text x="210" y="192" text-anchor="middle">effect</text>
+      </svg>
+      <figcaption><span class="on-false">Only <code>full</code> and <code>first</code> are edges. Writing <code>last</code> wakes nothing.</span><span class="on-true">The branch flips: <code>last</code> becomes an edge. Flip back and it is dropped again.</span></figcaption>
+    </figure>
+  </div>
+  <pre><code>{`const name = computed(() => (get(full) ? \`\${get(first)} \${get(last)}\` : get(first)));`}</code></pre>
+
+  <p>Harder case: the <em>same</em> sources, read in a different order.</p>
+  <div class="vs">
+    <div class="stat"><b>0 / 0</b><span>Reflex Quant: edges created / removed per pass</span></div>
+    <div class="stat"><b>255 / 255</b><span>alien-signals 3.2.1: relinks per pass</span></div>
+  </div>
+  <p class="note">Structure counter <code>reorder.rotate-256</code>: 256 sources rotated every pass. Quant moves existing edges; it does not rebuild them. <a href={href("/dynamic-dependency-tracking/")}>More on dynamic tracking</a>.</p>
+
+  <h3>How a read finds its edge, cheapest proof first</h3>
+  <ol class="ladder">
+    <li><span><strong>Cursor hit.</strong> The next edge in the list is this source: advance.</span><em>O(1), no lookup</em></li>
+    <li><span><strong>Repeat.</strong> Same source as the last read.</span><em>O(1)</em></li>
+    <li><span><strong>Slot.</strong> This pass already indexed the sources: <code>source.slot</code> points at the edge.</span><em>O(1)</em></li>
+    <li><span><strong>No subscribers.</strong> The source has none, so the edge cannot exist: create it.</span><em>O(1)</em></li>
+    <li><span><strong>Bounded scan</strong> of <code>SCAN = 8</code> edges: found, proven absent, or unknown.</span><em>≤ 8 steps</em></li>
+    <li><span><strong>Index once</strong>, then every later miss in the pass is a slot lookup.</span><em>one linear pass</em></li>
+  </ol>
+  <p>"Not found in 8" never means "absent". The scan is a price limit, not a precision limit, so tracking never turns quadratic when hundreds of reads are shuffled.</p>
+
+  <h3>State proven by structure, not stored</h3>
+  <pre><code>{`// "this pass is indexed": the consumer owns its cursor's slot
+cursor !== null && cursor.from.slot === cursor
+// "this pass is marked": unread edges form one contiguous suffix
+next !== null && next.ver === UNREAD`}</code></pre>
+  <p>In 1.1.2 two mode flags were deleted: the invariants on edge order and slot ownership already prove them.</p>
+
+  <h2>Push dirty, pull values</h2>
+  <figure>
+    <svg viewBox="0 0 420 270" class="small" role="img" aria-label="Diamond: signal A written; B and C are DIRTY; D and effect E are STALE">
+      <path class="e on" d="M200 52L120 92M220 52L300 92M120 126L200 162M300 126L220 162M210 196V222" />
+      <rect class="n hi" x="160" y="18" width="100" height="34" rx="6" /><text x="210" y="40" text-anchor="middle">A  set()</text>
+      <rect class="n" x="60" y="92" width="110" height="34" rx="6" /><text x="115" y="114" text-anchor="middle">B  DIRTY</text>
+      <rect class="n" x="250" y="92" width="110" height="34" rx="6" /><text x="305" y="114" text-anchor="middle">C  DIRTY</text>
+      <rect class="n" x="155" y="162" width="110" height="34" rx="6" /><text x="210" y="184" text-anchor="middle">D  STALE</text>
+      <rect class="n" x="140" y="222" width="140" height="34" rx="6" /><text x="210" y="244" text-anchor="middle">effect E  STALE</text>
+    </svg>
+    <figcaption><strong>DIRTY</strong>: a source surely changed, run it. <strong>STALE</strong>: something upstream <em>might</em> have changed, check versions first. D runs once, after B and C: no glitch.</figcaption>
+  </figure>
+  <p>A write only marks. A read (or an effect's turn) pulls: validate sources in read order, stop at the first changed one, run. If the new result is <code>Object.is</code>-equal to the old one, its version does not move and everything below stays clean: <strong>cutoff</strong>.</p>
+
+  <h3>Versions, not values</h3>
+  <table class="num">
+    <tr><th>Step</th><th>A.value</th><th>A.ver</th><th>edge A→B .ver</th></tr>
+    <tr><td>B reads A</td><td>1</td><td>10</td><td>10</td></tr>
+    <tr><td><code>set(A, 2)</code></td><td>2</td><td>11</td><td>10</td></tr>
+    <tr><td><code>set(A, 1)</code></td><td>1</td><td>12</td><td>10 ≠ 12 → re-run</td></tr>
+  </table>
+  <p>The value came back (A→B→A), but the change is not lost. One counter gives both properties: no lost changes, and cutoff for unchanged results.</p>
+
+  <h2>Effects check more than computeds</h2>
+  <p>A computed may run as soon as <em>one</em> source changed. An effect first validates <em>all</em> its committed sources, because its next step, running the old cleanup, is irreversible:</p>
+  <ol>
+    <li>validate every committed source (a throw stops here, cleanup intact);</li>
+    <li>still DIRTY? if no result changed, nothing runs;</li>
+    <li>run the previous cleanup, untracked;</li>
+    <li>run the effect; its return value is the next cleanup.</li>
+  </ol>
+
+  <h2>A write inside a run is not forgotten</h2>
+  <pre><code>{`const a = signal(1);
+const c = computed(() => {
+  const first = get(a);
+  if (first === 1) set(a, 2);
+  return first + get(a);
+});`}</code></pre>
+  <div class="timeline">
+    <div><b>3</b><span>1st get(c): read 1, then 2</span></div>
+    <div><b>4</b><span>2nd get(c): the debt forces a re-run, a is 2</span></div>
+    <div><b>4</b><span>3rd get(c): settled</span></div>
+  </div>
+  <p>The edge keeps the version of the <em>first</em> read, so the change made mid-run leaves a debt of one more run. Rereading <code>a</code> would otherwise erase the evidence.</p>
+
+  <h2>Failure must not rewrite history</h2>
+  <table>
+    <tr><th>Run</th><th>Reads</th><th>Outcome</th><th>Edges kept</th></tr>
+    <tr><td>1</td><td>A B C</td><td>ok</td><td>A B C <span class="badge">committed</span></td></tr>
+    <tr><td>2</td><td>A D</td><td>throws</td><td>A B C + D <span class="badge">tentative</span></td></tr>
+    <tr><td>3</td><td>A E</td><td>throws</td><td>A B C + E (D dropped)</td></tr>
+  </table>
+  <p>B and C belong to the last good run, so they stay. D or E may be what fixes the error, so a change there must still wake the node. No rollback log: an edge created during a run is stamped with the <em>next</em> generation, <code>node.gen + 1</code>. A successful run bumps <code>node.gen</code> once, which commits every new edge at once. When the 30-bit counter nears wrap-around, a rare linear pass renumbers the edges.</p>
+
+  <h2>One stack, three jobs</h2>
+  <div class="cols">
+    <div class="card"><h3>Push</h3>Saves the next sibling to come back to after a deep branch.</div>
+    <div class="card"><h3>Pull</h3>Saves the edge to climb back up; on a throw, marks the path for re-run.</div>
+    <div class="card"><h3>Tracking</h3>Saves the slot a nested pass displaced, restored via <code>edge.from</code>.</div>
+  </div>
+  <p>All three save an <code>Edge</code>, so one array serves them all, and graph depth is bounded by memory instead of the JavaScript call stack. Storing only the edge (its source is <code>edge.from</code>) halved the stack peak in a nested-index test:</p>
+  <div class="vs">
+    <div class="stat"><b>1,542</b><span>peak stack slots, before</span></div>
+    <div class="stat"><b>771</b><span>after, same graph (LOG 38)</span></div>
+  </div>
+
+  <h2><code>batch()</code> is not a transaction</h2>
+  <pre><code>{`batch(() => {
+  set(a, 1);
+  set(a, 2);
+  console.log(get(a)); // 2: every write commits immediately
+});                    // only effects wait until here`}</code></pre>
+  <p>No rollback, no isolation: batching defers effect delivery, nothing else. If one effect throws, the rest of the queue still runs and the first error reaches the caller.</p>
+
+  <h2>What it costs</h2>
+  <p>A single read or write is not cheaper than in alien-signals. Exact tracking has a price per operation; the payoff is the graph work that never happens.</p>
+  <div class="stats">
+    <div class="stat"><b>{AGG.best}×</b><span>geomean vs the better rival</span></div>
+    <div class="stat"><b>{AGG.reflex}×</b><span>vs Reflex</span></div>
+    <div class="stat"><b>{AGG.alien}×</b><span>vs alien-signals</span></div>
+    <div class="stat"><b>{AGG.faster} / {AGG.n}</b><span>faster than both</span></div>
+  </div>
+  <ScenarioChart />
+  <p>Quant wins on batched writes, chaotic shared graphs and branch switches. It loses on reorders and sorts, where Reflex's specialised algorithms are faster: some of Reflex's machinery does buy speed, at the price of complexity. Full methodology: <a href={href("/benchmarks/")}>benchmarks</a>.</p>
+
+  <h2>How it is checked</h2>
+  <div class="stats">
+    <div class="stat"><b>27,061</b><span>bounded programs</span></div>
+    <div class="stat"><b>18,660</b><span>recovery programs</span></div>
+    <div class="stat"><b>100,000</b><span>generated programs</span></div>
+    <div class="stat"><b>34</b><span>mechanism ablations, each fails a test</span></div>
+  </div>
+  <p>Each program runs against an executable contract, checking graph integrity after every operation. An ablation shows that <em>this</em> implementation breaks without a mechanism, not that every possible design needs it. "Minimal" means the smallest known set for this contract, not a proven lower bound.</p>
+
+  <h2>What Quant deliberately leaves out</h2>
+  <p>Effect scopes, ownership trees, a render scheduler, async resources, transactions, automatic cleanup of unwatched computeds. Under the project's rule, a mechanism enters the core only if the contract or the asymptotics break without it. Frameworks can build these on top, because the kernel does not own them.</p>
+
+  <p class="thesis">A runtime gets simpler not by solving fewer problems, but by storing each truth in one place. The price: correctness now rests on a few strong invariants instead of many synchronized fields.</p>
+
+  <h2>Try it</h2>
+  <Install />
+  <EvidenceLinks items={["source", "contract", "log", "report", "churn", "history"]} />
+  <p>Read next: <a href={href("/javascript-signals-runtime/")}>what a signals runtime must guarantee</a>, <a href={href("/alien-signals-comparison/")}>alien-signals vs Reflex Quant</a>. Design notes: <a href={`${BLOB}/research/COST-MODEL.md`}>cost model</a>, <a href={`${BLOB}/research/ENGINE-FEEDBACK.md`}>V8 feedback audit</a>.</p>
+</Base>
