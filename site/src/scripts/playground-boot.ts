@@ -11,26 +11,26 @@ function source(pg: HTMLElement): string {
 async function runIn(pg: HTMLElement) {
   const out = pg.querySelector<HTMLElement>(".pg-out")!;
   const btn = pg.querySelector<HTMLButtonElement>("[data-run]")!;
-  btn.disabled = true;
-  out.hidden = false;
-  out.replaceChildren();
-  out.dataset.state = "running";
+  if (btn.getAttribute("aria-busy") === "true") return;
+  btn.setAttribute("aria-busy", "true");
+  // No flicker: the previous output stays until the new one is complete, then swaps in one step.
+  // Only a run slower than 200 ms (first CDN load) dims the old output.
+  const slow = setTimeout(() => (out.dataset.state = "running"), 200);
+  const next = document.createDocumentFragment();
+  const line = (kind: string, text: string) =>
+    next.append(Object.assign(document.createElement("div"), { className: `pg-line pg-${kind}`, textContent: text }));
   try {
     const { run } = await import("./runner");
-    let lines = 0;
-    await run(source(pg), (l) => {
-      lines++;
-      const div = document.createElement("div");
-      div.className = `pg-line pg-${l.kind}`;
-      div.textContent = l.text;
-      out.append(div);
-    });
-    if (!lines) out.append(Object.assign(document.createElement("div"), { className: "pg-line pg-info", textContent: "(no output)" }));
+    await run(source(pg), (l) => line(l.kind, l.text));
+    if (!next.childNodes.length) line("info", "(no output)");
   } catch (e) {
-    out.append(Object.assign(document.createElement("div"), { className: "pg-line pg-error", textContent: String(e) }));
+    line("error", String(e));
   } finally {
-    out.dataset.state = "done";
-    btn.disabled = false;
+    clearTimeout(slow);
+    out.replaceChildren(next);
+    out.hidden = false;
+    delete out.dataset.state;
+    btn.removeAttribute("aria-busy");
   }
 }
 

@@ -1,62 +1,69 @@
 ---
-// Diverging bar chart of quant / best-rival time per scenario, log scale centred on 1.0.
-// Static SVG: hover via <title>, a table view below, no client JS.
+// Dot plot: each library's time relative to Quant (Quant = 1×), log scale, one row per scenario,
+// sorted by how far alien-signals falls behind. Static SVG: hover via <title>, table view below.
+// Series: Quant blue ●, Reflex aqua ■, alien-signals orange ◆ (palette validated; shapes are the
+// secondary encoding, the table view covers aqua's 2.8:1 contrast in light mode).
 import { AGG, ROWS, RUN } from "../bench";
 
-const W = 680, LABEL = 200, PAD = 52, ROW = 24, BAR = 14, TOP = 26;
-const lo = Math.log2(0.5), hi = Math.log2(1.6);
-const plotW = W - LABEL - PAD;
-const x = (r: number) => LABEL + ((Math.log2(r) - lo) / (hi - lo)) * plotW;
-const x1 = x(1);
-const H = TOP + ROWS.length * ROW + 8;
-const ticks = [0.5, 0.75, 1, 1.25, 1.5];
+const rows = ROWS.map(([name, best, qr, qa]) => ({ name, best, reflex: 1 / qr, alien: 1 / qa })).sort(
+  (a, b) => b.alien - a.alien,
+);
+const JOKE = "static.read-clean";
+const geo = (a: number[]) => Math.exp(a.reduce((t, v) => t + Math.log(v), 0) / a.length).toFixed(2);
+const gReflex = geo(rows.map((r) => r.reflex)), gAlien = geo(rows.map((r) => r.alien));
 
-// Bar from the 1.0 baseline to the value: square at the baseline, 4px rounded data-end.
-function bar(r: number, y: number) {
-  const xe = x(r), rad = Math.min(4, Math.abs(xe - x1) / 2);
-  const t = y, b = y + BAR;
-  if (xe >= x1)
-    return `M${x1},${t}H${xe - rad}Q${xe},${t} ${xe},${t + rad}V${b - rad}Q${xe},${b} ${xe - rad},${b}H${x1}Z`;
-  return `M${x1},${t}H${xe + rad}Q${xe},${t} ${xe},${t + rad}V${b - rad}Q${xe},${b} ${xe + rad},${b}H${x1}Z`;
-}
+const W = 720, LABEL = 190, RIGHT = 70, ROW = 26, TOP = 30;
+const lo = Math.log2(0.5), hi = Math.log2(8);
+const x = (v: number) => LABEL + ((Math.log2(v) - lo) / (hi - lo)) * (W - LABEL - RIGHT);
+const H = TOP + rows.length * ROW + 6;
+const ticks = [0.5, 1, 2, 4, 8];
+const f = (v: number) => (v >= 10 ? v.toFixed(0) : v.toFixed(2));
+const diamond = (cx: number, cy: number, r = 5.5) => `M${cx},${cy - r}L${cx + r},${cy}L${cx},${cy + r}L${cx - r},${cy}Z`;
 ---
-<figure class="chart">
-  <svg viewBox={`0 0 ${W} ${H + 16}`} role="img" aria-labelledby="sc-title sc-desc">
-    <title id="sc-title">Reflex Quant time relative to the faster of Reflex and alien-signals, per scenario</title>
-    <desc id="sc-desc">Bars left of 1.0 mean Quant is faster; bars right mean the better rival is faster. Geometric mean {AGG.best}.</desc>
-    <text class="axis" x={x1 - 6} y="12" text-anchor="end">← Quant faster</text>
-    <text class="axis" x={x1 + 6} y="12">rival faster →</text>
-    {ticks.map((t) => (
-      <g>
-        <line class={t === 1 ? "base" : "grid"} x1={x(t)} x2={x(t)} y1={TOP - 4} y2={H - 4} />
-      </g>
-    ))}
-    {ROWS.map(([name, best, vsReflex, vsAlien], i) => {
-      const y = TOP + i * ROW + (ROW - BAR) / 2;
-      const win = best < 1;
+<figure class="chart dots">
+  <div class="legend" aria-hidden="true">
+    <span><svg width="12" height="12"><circle cx="6" cy="6" r="5" class="s-quant" /></svg>Reflex Quant</span>
+    <span><svg width="12" height="12"><rect x="1" y="1" width="10" height="10" rx="1" class="s-reflex" /></svg>Reflex</span>
+    <span><svg width="12" height="12"><path d={diamond(6, 6, 5.5)} class="s-alien" /></svg>alien-signals</span>
+  </div>
+  <svg viewBox={`0 0 ${W} ${H + 18}`} role="img" aria-labelledby="sc-title sc-desc">
+    <title id="sc-title">Time of Reflex and alien-signals relative to Reflex Quant, per scenario</title>
+    <desc id="sc-desc">Quant is fixed at 1×. Points to the right are slower than Quant. Geometric means: Reflex {gReflex}×, alien-signals {gAlien}×.</desc>
+    <text class="axis" x={x(1) - 6} y="12" text-anchor="end">← faster than Quant</text>
+    <text class="axis" x={x(1) + 6} y="12">slower than Quant →</text>
+    {ticks.map((t) => <line class={t === 1 ? "base" : "grid"} x1={x(t)} x2={x(t)} y1={TOP - 6} y2={H} />)}
+    {rows.map((r, i) => {
+      const cy = TOP + i * ROW + ROW / 2;
+      const xs = [1, r.reflex, r.alien].map(x);
+      const joke = r.name === JOKE;
       return (
         <g class="row">
-          <title>{`${name}: ${best.toFixed(2)}× the better rival (${vsReflex.toFixed(2)}× Reflex, ${vsAlien.toFixed(2)}× alien-signals)`}</title>
+          <title>{`${r.name}: Quant 1×, Reflex ${r.reflex.toFixed(2)}×, alien-signals ${r.alien.toFixed(2)}× (time relative to Quant)`}</title>
           <rect class="hit" x="0" y={TOP + i * ROW} width={W} height={ROW} />
-          <text class="label" x={LABEL - 10} y={y + BAR - 3} text-anchor="end">{name}</text>
-          <path class={win ? "win" : "lose"} d={bar(best, y)} />
-          <text class="value" x={win ? x(best) - 6 : x(best) + 6} y={y + BAR - 3} text-anchor={win ? "end" : "start"}>{best.toFixed(2)}</text>
+          <text class="label" x={LABEL - 12} y={cy + 4} text-anchor="end">{r.name}</text>
+          <line class="span" x1={Math.min(...xs)} x2={Math.max(...xs)} y1={cy} y2={cy} />
+          <rect class="s-reflex ring" x={x(r.reflex) - 5} y={cy - 5} width="10" height="10" rx="1" />
+          <path class="s-alien ring" d={diamond(x(r.alien), cy)} />
+          <circle class="s-quant ring" cx={x(1)} cy={cy} r="5" />
+          {joke
+            ? <text class="value joke" x={x(1) + 10} y={cy + 4}>alien wins: turns out the fastest graph is no graph at all :)</text>
+            : <text class="value" x={Math.max(...xs) + 10} y={cy + 4}>{r.alien < 1 ? `alien ${f(r.alien)}×` : `${f(r.alien)}×`}</text>}
         </g>
       );
     })}
-    {ticks.map((t) => (
-      <text class="axis" x={x(t)} y={H + 12} text-anchor="middle">{t}×</text>
-    ))}
+    {ticks.map((t) => <text class="axis" x={x(t)} y={H + 14} text-anchor="middle">{t}×</text>)}
   </svg>
   <figcaption>
-    Quant time ÷ the faster rival's time, lower is better (log scale). CI run <a href={RUN.url}>{RUN.id}</a>, {RUN.machine}.
+    Time relative to Reflex Quant (Quant = 1×, log scale, lower is faster). Sorted by alien-signals: the more the
+    scenario looks like a graph, with reorders, fan-in and shared nodes, the further it falls behind. Labels show alien-signals.
+    CI run <a href={RUN.url}>{RUN.id}</a>, {RUN.machine}.
   </figcaption>
   <details>
     <summary>Table view</summary>
     <table class="num">
-      <tr><th>Scenario</th><th>÷ best</th><th>÷ Reflex</th><th>÷ alien-signals</th></tr>
-      {ROWS.map(([n, b, r, a]) => <tr><td><code>{n}</code></td><td>{b.toFixed(2)}</td><td>{r.toFixed(2)}</td><td>{a.toFixed(2)}</td></tr>)}
-      <tr><th>Geometric mean</th><th>{AGG.best}</th><th>{AGG.reflex}</th><th>{AGG.alien}</th></tr>
+      <tr><th>Scenario</th><th>Quant</th><th>Reflex</th><th>alien-signals</th></tr>
+      {rows.map((r) => <tr><td><code>{r.name}</code></td><td>1.00</td><td>{r.reflex.toFixed(2)}</td><td>{r.alien.toFixed(2)}</td></tr>)}
+      <tr><th>Geometric mean</th><th>1.00</th><th>{gReflex}</th><th>{gAlien}</th></tr>
     </table>
   </details>
 </figure>
