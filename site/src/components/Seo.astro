@@ -56,7 +56,13 @@ const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": graph })
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:url" content={url} />
-<meta name="twitter:card" content="summary" />
+<meta property="og:image" content={abs("/og.jpg")} />
+<meta property="og:image:type" content="image/jpeg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Reflex Quant: lightweight, high-performance JavaScript signals runtime" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content={abs("/og.jpg")} />
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
 <link rel="sitemap" type="application/xml" href={abs("/sitemap-index.xml")} />
