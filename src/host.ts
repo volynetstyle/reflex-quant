@@ -1,6 +1,6 @@
 // Policy around the kernel: the watcher lifecycle (check, consume the
 // cleanup, run), a FIFO queue for scheduled watchers, and batching.
-import { Flag } from "./graph";
+import { Flag, KEEP, TRIM } from "./graph";
 import type { Cleanup, Fn, Node } from "./graph";
 import { check, dispose, exec, node, onWake, untracked } from "./kernel";
 
@@ -122,9 +122,30 @@ export function start(w: Node): void {
   drain(false, undefined);
 }
 
-/** The drain loop, opened by the caller: FIFO, the first error rethrown at the end. */
+/**
+ * The drain loop, opened by the caller: FIFO, the first error rethrown at the
+ * end.
+ *
+ * A watcher leaves QUEUED when it is taken, so each delivery in one drain
+ * takes a new slot. Slots before `i` are spent. Once at least TRIM are spent
+ * and they make up at least half of the queue, the live tail moves to the
+ * front. That costs O(live) <= O(spent), so the move is amortized O(1) per
+ * delivery. The queue then holds less than TRIM + 2 * (watchers queued at
+ * once) slots instead of one slot per delivery. Without the move, a long
+ * drain grew the queue until a store threw `RangeError` inside `wake`.
+ * `size` had already been advanced, so the next take read a hole outside the
+ * per-run `try`, and `draining` stayed true for good. At rest the queue is
+ * cut back to KEEP, as the work stack is.
+ */
 function drain(failed: boolean, first: unknown): void {
   for (let i = 0; i < size; i++) {
+    if (i >= TRIM && i + i >= size) {
+      queue.copyWithin(0, i, size);
+      // [i, size) now duplicates the moved tail; [size - i, i) is spent.
+      queue.fill(null, i, size);
+      size -= i;
+      i = 0;
+    }
     const queuedWatcher = queue[i]!;
     queue[i] = null;
     queuedWatcher.flags &= ~Flag.Queued;
@@ -138,17 +159,39 @@ function drain(failed: boolean, first: unknown): void {
     }
   }
   size = 0;
+  if (queue.length > TRIM) queue.length = KEEP;
   draining = false;
 
   if (failed) throw first;
 }
 
+/**
+ * The outermost batch end runs what the body deferred, also when the body
+ * threw; then the body's error is the batch's error (F5), and a deferred
+ * watcher's failure leaves only that watcher cold (F3).
+ */
 export function batch<T>(fn: () => T): T {
   depth++;
+  let value: T;
 
   try {
-    return fn();
-  } finally {
-    if (--depth === 0) flush();
+    value = fn();
+  } catch (error) {
+    if (--depth === 0) {
+      try {
+        flush();
+      } catch {
+        // F5: a later error does not replace the body's.
+      }
+    }
+    throw error;
   }
+  if (--depth === 0) flush();
+
+  return value;
+}
+
+/** Slots the queue holds now (tests). */
+export function queueLength(): number {
+  return queue.length;
 }

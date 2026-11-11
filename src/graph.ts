@@ -90,7 +90,7 @@ export const SETTLE = 0x1fffffff;
 /** Scan budget of every bounded search: a constant keeps a run linear. */
 export const SCAN = 8;
 /**
- * Work-stack slots kept at rest, and the length past which the outermost
+ * Work-stack (and host-queue) slots kept at rest, and the length past which the outermost
  * walk's end cuts the stack back to them. The gap keeps walks only a little
  * deeper than KEEP from cutting and regrowing on every pass.
  */

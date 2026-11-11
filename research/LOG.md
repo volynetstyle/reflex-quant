@@ -1230,6 +1230,81 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   recorded in the audit. Stable/lifecycle timing spread is explicit; this
   is not a blanket or portable speedup claim.
 
+### 45. The host queue holds queued watchers, not deliveries (S8)
+
+- **Classification:** structural bound, added to the contract as S8; no
+  flag, node shape or surface change.
+- **Defect (1.1.2 and earlier):** a watcher leaves QUEUED when `drain` takes
+  it, so each delivery in one drain takes a new slot. After the drain, `size`
+  returns to 0, but the backing array keeps its length. With W = 1, one
+  self-invalidating watcher (W2) delivered 100,000 times in one drain left a
+  100,000-slot queue, and the queue kept that length afterwards. Queue
+  storage was O(deliveries), not O(pending obligations). That alone meets
+  the inclusion criterion, with no engine failure needed.
+- **Consequence under unbounded growth (not reproduced):** a dense queue
+  that keeps growing will eventually reach an engine limit on the backing
+  store or on allocation. This is an engine limit, not Array's 2^32 - 1
+  length. If the indexed store in `wake` throws after `size++`, `size`
+  counts a slot that was never written. The store sits inside `mark`, which
+  has no unwind. The next take reads the hole outside the per-run `try`, and
+  `draining` then stays true, so every later `flush` looks reentrant.
+- **Repair:** at each take, the drain checks two conditions: at least TRIM
+  slots are spent, and they make up at least half the queue. When both
+  hold, it moves the live tail to the front (`copyWithin`) and nulls the
+  duplicates the move leaves behind. The move costs O(live) <= O(spent),
+  which is amortized O(1) per delivery. At rest, a queue longer than TRIM
+  is cut back to KEEP, as the work stack is (LOG 40).
+- **Bound:** let h be the spent slots and t <= W the live ones at a take,
+  where W is the most watchers queued at once. Without a move, h < TRIM or
+  h < t <= W. The run adds at most W - t + 1 slots, so size stays within
+  max(TRIM + W, 2W). The contract states only the class: O(W) plus
+  constant slack, with no storage for completed deliveries (S8). TRIM, KEEP
+  and the way compaction is done can change without changing S8.
+- **Not added:** a `try/finally` around drain bookkeeping. Once the queue is
+  bounded, `wake` performs only flag operations and a store into an O(W)
+  array, so the only thing left that can throw is engine OOM. A `finally`
+  that reset `draining` would not repair a mark that `wake` interrupted, so
+  it would hide the broken state rather than restore a correct one. Wake
+  stays no-throw by construction, not by recovery.
+- **Evidence:** the "S8 host queue capacity" witnesses in
+  `test/structure.test.ts` cover W = 1 and W = 4 * TRIM. They are checked
+  against max(TRIM + W, 2W), plus a burst retained after the drain. On the
+  baseline, the first two report a 100,000-slot peak and 100,000 slots
+  retained. The ablations `no-queue-compact` and `no-queue-trim` are killed.
+  Five local rounds of `batch.writes-32`, `lifecycle.mount-100`,
+  `diamond.8x8`, `static.chain-100` and `branch.switch-100` show no change
+  beyond round-to-round spread.
+
+### 46. First error at a batch end and in a rollback (F5)
+
+- **Classification:** semantic contract change (F5 added); no new state.
+- **Defect:** `drain` already rethrew the first error among siblings, but
+  two error meetings outside it let a later error win:
+  - a batch body throws A, and the deferred watcher run at the outermost
+    batch end throws B. `finally { flush() }` replaced A with B, although W4
+    says batching defers watcher execution only;
+  - a first run, or a sibling in the drain the `effect()` call opened,
+    throws A, and the W5 rollback's cleanup throws B. B reached the caller.
+- **Choice:** the first error in causal order defines the failed operation.
+  This is drain's existing rule, extended to the two remaining meetings.
+  Later errors are dropped, as later sibling errors already were. Their
+  watcher is cold (F3) and fails again on its next delivery, so nothing is
+  lost that the contract preserves. `SuppressedError` or `AggregateError`
+  would make every error observable, which would be a separate obligation;
+  nothing in the contract requires it, so it is not added.
+- **Repair:** `batch` catches the body's error, still flushes at the
+  outermost end, swallows a flush error, and rethrows the body's error. A
+  body that succeeds flushes as before. `effect` wraps the rollback `stop`
+  the same way. `stop` detaches before it runs the cleanup, so a throwing
+  cleanup still leaves no live watcher (W5).
+- **Evidence:** the three "F5 first error" tests in `test/semantics.test.ts`
+  fail on the baseline (they report "watcher", "watcher" and "cleanup") and
+  pass after. The ablations `batch-error-replaces` and
+  `rollback-error-replaces` are killed. `construction-commits` was
+  re-anchored and is still killed. 178/178 development tests pass, and 171
+  production tests pass with seven skipped. With LOG 45, the ESM bundle
+  grows from 2,279 to 2,349 B gzip.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

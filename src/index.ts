@@ -69,7 +69,14 @@ export function effect(fn: () => void | (() => void)): Effect {
   try {
     start(effectNode);
   } catch (error) {
-    stop(effectNode);
+    // W5: roll the unpublished watcher back. The rollback detaches before it
+    // runs the cleanup, so a throwing cleanup still leaves nothing live, and
+    // its error does not replace the run's (F5).
+    try {
+      stop(effectNode);
+    } catch {
+      // F5
+    }
     throw error;
   }
 

@@ -13,7 +13,7 @@ Nothing outside this contract defines correctness: not explanatory documents, no
 
 ### Semantic invariants
 
-P5 and W5 lie outside the executable spec: its program language has no write inside a computation, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API.
+P5, F5 and W5 lie outside the executable spec: its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API.
 
 Graph and tracking
 - **T1 exact tracking.** A computation observes exactly the sources it read; dynamic branches add and drop relations.
@@ -32,6 +32,7 @@ Failure
 - **F2 failed read.** A read that threw is not an observation.
 - **F3 failed watcher.** An established watcher (W5) whose run fails is cold and wakes on committed sources ∪ last-attempt reads.
 - **F4 obligation survives.** An execution obligation survives a failure.
+- **F5 first error.** An operation that fails rethrows the first error raised in it. Obligations it still discharges afterwards run, and their errors do not replace that first error. Those obligations are the later watchers of the same drain, the watchers a failing batch body deferred, and the rollback of a failed `effect()` call (W5).
 
 Watchers and lifecycle
 - **W1 cleanup first.** The previous cleanup is consumed before a rerun.
@@ -64,4 +65,5 @@ A program that breaks a precondition is erroneous, and no invariant covers it. T
 - **S5** repeated failures do not accumulate relations;
 - **S6** nesting does not rebuild global state;
 - **S7** traversal is bounded and stack-safe.
+- **S8** host queue storage is O(W) plus constant slack, where W is the most scheduled watchers queued at once. Completed deliveries do not accumulate queue storage.
 

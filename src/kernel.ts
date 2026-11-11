@@ -21,6 +21,8 @@ import { stats } from "./instrumentation";
 export { node } from "./graph";
 export { stats } from "./instrumentation";
 
+const compare = Object.is;
+
 /** The running consumer, or null outside a tracking pass. */
 let active: Node | null = null;
 /** Last accepted edge of the running pass; saved with `active` on nesting. */
@@ -89,7 +91,7 @@ function trim(): void {
 // ------------------------------------------------------------------- write
 
 export function write(s: Node, value: unknown): void {
-  if (Object.is(s.value, value)) return;
+  if (compare(s.value, value)) return;
 
   s.value = value;
   s.ver = (s.ver + 1) & CounterLimit.Mask;
@@ -435,7 +437,7 @@ export function exec(n: Node): void {
   // Every edge is committed now; see SETTLE.
   if ((n.gen & SETTLE) === 0) settle(n);
 
-  if (Object.is(value, n.value) === false) {
+  if (compare(value, n.value) === false) {
     n.value = value;
     n.ver = (n.ver + 1) & CounterLimit.Mask;
   }

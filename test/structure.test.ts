@@ -6,8 +6,8 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { idle, node, read, stackHighWater, stackLength, stats, write } from "../src/kernel";
 import type { Node } from "../src/graph";
 import { checkGraph, edgeCount, resetStats } from "./support/graph";
-import { run } from "../src/host";
-import { get as publicGet, set as publicSet } from "../src/index";
+import { queueLength, run } from "../src/host";
+import { batch as publicBatch, dispose as publicDispose, effect as publicEffect, get as publicGet, set as publicSet, signal as publicSignal } from "../src/index";
 import { foundRepeat, prefixRepeat } from "./support/p5";
 
 const signal = (v: unknown) => node(null, v, 0);
@@ -366,5 +366,60 @@ describe("work stack at rest", () => {
     write(s, 2);
     read(end);
     expect(stackLength()).toBe(length);
+  });
+});
+
+describe("S8 host queue capacity", () => {
+  // During a drain, size <= max(TRIM + W, 2W) with W the watchers queued at
+  // once: with h slots spent and t <= W live, no move yet means h < TRIM or
+  // h < t, and a run adds at most W - t + 1 slots (LOG 45).
+  const bound = (w: number) => Math.max(TRIM + w, 2 * w);
+
+  it("a long drain holds O(queued watchers) slots, not O(deliveries)", () => {
+    // One watcher invalidates itself N times in one drain (W2): one watcher
+    // is queued at any time, but every delivery used to take a fresh slot.
+    const N = 100_000;
+    const s = publicSignal(0);
+    let peakLength = 0;
+    publicEffect(() => {
+      const v = publicGet(s);
+      const length = queueLength();
+      if (length > peakLength) peakLength = length;
+      if (v < N) publicSet(s, v + 1);
+    });
+    expect(publicGet(s)).toBe(N);
+    expect(peakLength).toBeLessThanOrEqual(bound(1));
+    expect(queueLength()).toBeLessThanOrEqual(KEEP);
+  });
+
+  it("many watchers invalidating themselves stay within max(TRIM + W, 2W)", () => {
+    const W = 4 * TRIM;
+    const rounds = 40;
+    const sources = range(W).map(() => publicSignal(0));
+    let peakLength = 0;
+    const effects = publicBatch(() =>
+      sources.map((s) =>
+        publicEffect(() => {
+          const v = publicGet(s);
+          const length = queueLength();
+          if (length > peakLength) peakLength = length;
+          if (v < rounds) publicSet(s, v + 1);
+        }),
+      ),
+    );
+    for (const s of sources) expect(publicGet(s)).toBe(rounds);
+    expect(peakLength).toBeGreaterThan(W);
+    expect(peakLength).toBeLessThanOrEqual(bound(W));
+    expect(queueLength()).toBeLessThanOrEqual(KEEP);
+    for (const e of effects) publicDispose(e);
+  });
+
+  it("a burst of queued watchers does not keep its high water after the drain", () => {
+    const s = publicSignal(0);
+    const effects = publicBatch(() => range(4 * TRIM).map(() => publicEffect(() => void publicGet(s))));
+    expect(queueLength()).toBeLessThanOrEqual(KEEP);
+    publicSet(s, 1);
+    expect(queueLength()).toBeLessThanOrEqual(KEEP);
+    for (const e of effects) publicDispose(e);
   });
 });

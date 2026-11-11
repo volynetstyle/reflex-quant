@@ -705,3 +705,67 @@ describe("W3 disposal during validation", () => {
   const n = (x: object) => x as unknown as Node;
   const nodes = (...xs: object[]) => xs as unknown as Node[];
 });
+
+describe("F5 first error", () => {
+  // An operation that fails rethrows the first error it caught. Obligations
+  // it still finishes afterwards (deferred watchers, rollback) run, but their
+  // errors do not replace it.
+
+  it("a batch body's error survives a deferred watcher's error", () => {
+    const source = signal(0);
+    let runs = 0;
+    const stop = effect(() => {
+      if (get(source) === 1) {
+        runs++;
+        throw new Error("watcher");
+      }
+    });
+    expect(() =>
+      batch(() => {
+        set(source, 1);
+        throw new Error("body");
+      }),
+    ).toThrow("body");
+    // The deferred watcher still ran at the batch end, and failed cold (F3).
+    expect(runs).toBe(1);
+    expect(idle()).toBe(true);
+    stop();
+  });
+
+  it("an inner batch's error passes through the outer batch end unchanged", () => {
+    const source = signal(0);
+    const stop = effect(() => {
+      if (get(source) === 1) throw new Error("watcher");
+    });
+    expect(() =>
+      batch(() => {
+        set(source, 1);
+        batch(() => {
+          throw new Error("body");
+        });
+      }),
+    ).toThrow("body");
+    stop();
+  });
+
+  it("a failed effect() call reports its run's error, not its rollback's", () => {
+    const out = signal(0);
+    const failing = watch(() => {
+      if (get(out) === 1) throw new Error("sibling");
+    });
+    let cleanups = 0;
+    expect(() =>
+      watch(() => {
+        set(out, 1);
+        return () => {
+          cleanups++;
+          throw new Error("cleanup");
+        };
+      }),
+    ).toThrow("sibling");
+    // W5 still holds: the rollback consumed the cleanup.
+    expect(cleanups).toBe(1);
+    expect(idle()).toBe(true);
+    dispose(failing);
+  });
+});

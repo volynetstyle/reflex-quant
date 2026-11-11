@@ -1,7 +1,7 @@
 # The smallest known runtime implied by the Quant contract
 
 Experiment: derive a reactive runtime from a frozen contract (invariants
-T1–W5, bounds S1–S7, decisions D1, D2 and D6, precondition C1 in
+T1–W5, bounds S1–S8, decisions D1, D2 and D6, precondition C1 in
 [CONTRACT.md](../CONTRACT.md)) that
 was extracted from Reflex's semantic contract and executable spec, not from
 its implementation; Reflex is provenance, not authority; keep every mechanism
@@ -61,6 +61,18 @@ Source IDs in the tables (V, C, R, W, L) are Reflex's; CONTRACT.md IDs are
 Quant's: tracking T1–T3 (exact tracking, uniqueness, nesting); change P1–P4
 (version fact, cutoff, glitch freedom, V3); failure F1–F4 (C1–C3, C4/R3,
 W2, R2); watchers W1–W4 (W1, L1–L5, disposal, batching).
+
+F5 (first error) and S8 (bounded host queue) have no Reflex source ID: this
+experiment added both, after the host showed defects they rule out.
+S8 (LOG 45): one watcher that invalidated itself N times in one drain left
+an N-slot queue. That is storage that follows completed deliveries, a
+structural class S1–S7 did not cover, because they bound the graph only.
+F5 (LOG 46): a batch body's error could be replaced by a deferred watcher's
+error. Likewise, a failed `effect()` call's error could be replaced by its
+rollback's cleanup error. `drain` already kept the first error among
+siblings. F5 extends that same rule to the two remaining places where
+two errors meet, so W4 (batching defers execution only) and W5 (the error
+reaches the caller) name one well-defined error.
 
 Sources: `test/differential/docs/SEMANTIC_CONTRACT.md`, the spec runtime
 (`internal/machine/spec-runtime.ts`), `docs/RUNTIME.md`, `docs/DISPOSE.md`,
@@ -190,7 +202,10 @@ feedback, grow-store and benchmark-sink deopts, none repeating.
 - **Host:** a watcher runs as validate all committed sources → if owed,
   consume and run the cleanup untracked → execute. Effects run only inside
   a FIFO drain loop; batch defers the drain. An `effect()` call that throws
-  stops its watcher before rethrowing (W5).
+  stops its watcher before rethrowing (W5). Every drain, batch end and
+  rollback rethrows the first error and discards later ones (F5). The drain
+  moves its live tail to the front once spent slots dominate, so the queue
+  holds O(queued watchers), not O(deliveries) (S8, LOG 45).
 
 ## Q1. What survived
 
@@ -269,6 +284,8 @@ recorded the work they save, not because they save none (LOG 30).
 | repeat check before the scans | bounded language (`no-repeat-check`: a duplicate relation) |
 | drain-loop-only effects | "effects created inside a batch or another effect run after it" (`run-direct`, `start-outside-drain`) |
 | iterative push and pull | "push and pull are not bounded by the call stack" (the recursive v2 kernel overflows) |
+| first error kept at a batch end and in a rollback (F5) | "a batch body's error survives a deferred watcher's error", "an inner batch's error passes through the outer batch end unchanged" (`batch-error-replaces`); "a failed effect() call reports its run's error, not its rollback's" (`rollback-error-replaces`) |
+| drain compaction and queue trim at rest (S8) | "a long drain holds O(queued watchers) slots, not O(deliveries)", "many watchers invalidating themselves stay within max(TRIM + W, 2W)" (`no-queue-compact`); "a burst of queued watchers does not keep its high water after the drain" (`no-queue-trim`) |
 | rollback of an `effect()` call that throws (W5) | "a failed first run leaves no live watcher and no relation", "a sibling's failure … rolls the new watcher back" (`construction-commits`) |
 | relations restamped twice a generation cycle (SETTLE) | a watcher driven by a computed keeps running after its generation wraps; F1, F3 and P4 under wrap (`no-settle`); both restamp phases (`settle-once-a-cycle`) |
 | empty work stack releases oversized capacity at every producer exit | successful/failed validation, cold indexed runs, direct watchers and push without later demand (`no-trim`, placement ablations; LOG 40) |
@@ -280,8 +297,8 @@ recorded the work they save, not because they save none (LOG 30).
 | Class | Mechanisms |
 | --- | --- |
 | correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD on an indexed or marked pass, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; BUSY (cycles, deferred disposal); WATCH delivery |
-| failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3) |
-| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the empty work stack cut back to KEEP at producer exits, so retained memory does not follow the deepest walk ever (LOG 35, placement corrected in LOG 40) |
+| failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3); first error kept at a batch end and in a rollback (F5, LOG 46) |
+| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the empty work stack cut back to KEEP at producer exits, so retained memory does not follow the deepest walk ever (LOG 35, placement corrected in LOG 40); drain compaction and the queue cut back to KEEP at rest, so host storage follows queued watchers, not deliveries (S8, LOG 45) |
 | resource correctness | sever detached intrusive pointers; keep the dependency cursor in execution context so disposed handles cannot root former dependencies through it (LOG 43, superseding LOG 39's final-detach reset) |
 | constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; a marked pass finds pairs through subscribers instead of the slot index (LOG 28); `readSignal`; delivery on the STALE transition; no version compares once owed |
 | convention | `subsTail` (FIFO sibling order; only order-asserting tests fail without it) |
