@@ -19,7 +19,7 @@
   "bugs": {
     "url": "https://github.com/volynetstyle/reflex-quant/issues"
   },
-  "homepage": "https://github.com/volynetstyle/reflex-quant#readme",
+  "homepage": "https://volynetstyle.github.io/reflex-quant/",
   "type": "module",
   "sideEffects": false,
   "main": "./dist/index.cjs",
@@ -60,7 +60,8 @@
     "test": "vitest run --config vitest.config.ts",
     "test:production": "vitest run --config vitest.config.ts --mode production",
     "typecheck": "tsc -p tsconfig.json",
-    "prepublishOnly": "npm run typecheck && npm run build && npm run check"
+    "prepublishOnly": "npm run typecheck && npm run build && npm run check",
+    "site": "npm --prefix site run build"
   },
   "devDependencies": {
     "alien-signals": "3.2.1",

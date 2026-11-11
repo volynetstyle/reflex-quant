@@ -1,0 +1,63 @@
+---
+// All head metadata in one place: title, description, canonical, Open Graph, JSON-LD.
+import { abs, AUTHOR, ORIGIN, SOFTWARE, UPDATED, type Faq } from "../site";
+
+interface Props {
+  path: string;
+  title: string;
+  description: string;
+  headline: string;
+  kind: string;
+  faq?: Faq;
+}
+const { path, title, description, headline, kind, faq } = Astro.props;
+const url = abs(path);
+const home = path === "/";
+
+const graph: object[] = [
+  SOFTWARE,
+  home
+    ? { "@type": "WebSite", "@id": `${ORIGIN}/#site`, url, name: "Reflex Quant", author: AUTHOR }
+    : {
+        "@type": kind,
+        headline,
+        description,
+        url,
+        mainEntityOfPage: url,
+        author: AUTHOR,
+        datePublished: UPDATED,
+        dateModified: UPDATED,
+        about: { "@id": `${ORIGIN}/#software` },
+        inLanguage: "en",
+      },
+  {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Reflex Quant", item: abs("/") },
+      ...(home ? [] : [{ "@type": "ListItem", position: 2, name: headline, item: url }]),
+    ],
+  },
+];
+// FAQPage is semantic markup only: Google stopped showing FAQ rich results in May 2026.
+if (faq)
+  graph.push({
+    "@type": "FAQPage",
+    mainEntity: faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+  });
+const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": graph }).replace(/</g, "\u003c");
+---
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={url} />
+<meta name="author" content="Andrii Volynets" />
+<meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large" />
+<meta property="og:type" content={home ? "website" : "article"} />
+<meta property="og:site_name" content="Reflex Quant" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={url} />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<link rel="sitemap" type="application/xml" href={abs("/sitemap-index.xml")} />
+<script type="application/ld+json" set:html={ld} />

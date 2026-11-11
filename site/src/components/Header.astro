@@ -1,0 +1,8 @@
+---
+import { href, NAV, REPO } from "../site";
+const { path } = Astro.props as { path: string };
+---
+<header>
+  {NAV.map(([p, label]) => <a href={href(p)} aria-current={p === path ? "page" : undefined}>{label}</a>)}
+  <a href={REPO}>GitHub</a>
+</header>

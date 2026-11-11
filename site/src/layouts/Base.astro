@@ -1,0 +1,46 @@
+---
+import "../styles.css";
+import Seo from "../components/Seo.astro";
+import Header from "../components/Header.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
+import { BLOB, NPM, REPO, UPDATED, type Faq } from "../site";
+
+interface Props {
+  path: string;
+  title: string;
+  description: string;
+  /** Visible h1 and schema headline; defaults to title. */
+  headline?: string;
+  kind?: "TechArticle" | "Article";
+  faq?: Faq;
+}
+const { path, title, description, headline = title, kind = "TechArticle", faq } = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <Seo {path} {title} {description} {headline} {kind} {faq} />
+  </head>
+  <body>
+    <Header {path} />
+    <main>
+      <Breadcrumbs {path} {headline} />
+      <article>
+        <h1>{headline}</h1>
+        <slot />
+        {faq && (
+          <>
+            <h2>FAQ</h2>
+            {faq.map(([q, a]) => (<><h3>{q}</h3><p>{a}</p></>))}
+          </>
+        )}
+      </article>
+    </main>
+    <footer>
+      Reflex Quant, MIT license, by Andrii Volynets. <a href={REPO}>Source</a> · <a href={NPM}>npm</a> ·
+      <a href={`${BLOB}/CONTRACT.md`}>Contract</a> · <a href={`${BLOB}/research/REPORT.md`}>Research report</a>. Last updated {UPDATED}.
+    </footer>
+  </body>
+</html>

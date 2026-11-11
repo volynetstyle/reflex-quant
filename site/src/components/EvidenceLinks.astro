@@ -1,0 +1,17 @@
+---
+// Links from a page to the evidence on GitHub. Pass the keys the page relies on.
+import { BLOB, REPO } from "../site";
+const ALL = {
+  source: [`${REPO}/tree/main/src`, "Source"],
+  contract: [`${BLOB}/CONTRACT.md`, "CONTRACT.md: invariants and structural bounds"],
+  report: [`${BLOB}/research/REPORT.md`, "REPORT.md: research report and benchmark tables"],
+  log: [`${BLOB}/research/LOG.md`, "LOG.md: one counterexample per mechanism"],
+  history: [`${BLOB}/research/HISTORY.md`, "HISTORY.md: benchmarks across every CI run"],
+  churn: [`${BLOB}/research/EDGE-CHURN.md`, "EDGE-CHURN.md: dependency edge churn study"],
+  bench: [`${REPO}/tree/main/bench`, "bench/: scenarios, adapters and structure counters"],
+} as const;
+type Key = keyof typeof ALL;
+const { items } = Astro.props as { items: Key[] };
+---
+<h2>Evidence</h2>
+<ul>{items.map((k) => <li><a href={ALL[k][0]}>{ALL[k][1]}</a></li>)}</ul>

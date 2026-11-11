@@ -1,0 +1,7 @@
+---
+import { href } from "../site";
+const { path, headline } = Astro.props as { path: string; headline: string };
+---
+{path !== "/" && (
+  <nav aria-label="Breadcrumb"><a href={href("/")}>Reflex Quant</a> › <span aria-current="page">{headline}</span></nav>
+)}

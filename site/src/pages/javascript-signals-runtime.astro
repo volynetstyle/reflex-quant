@@ -1,0 +1,58 @@
+---
+// Informational intent: how signals runtimes work, not what Quant is.
+import Base from "../layouts/Base.astro";
+import Install from "../components/Install.astro";
+import Example from "../components/Example.astro";
+import BenchmarkSummary from "../components/BenchmarkSummary.astro";
+import EvidenceLinks from "../components/EvidenceLinks.astro";
+import { BLOB, href, REPO } from "../site";
+---
+<Base
+  path="/javascript-signals-runtime/"
+  title="How JavaScript Signals Work: What a Reactive Runtime Actually Needs"
+  headline="JavaScript Signals: What a Reactive Runtime Actually Needs"
+  description="How a JavaScript signals runtime works inside: the reactive dependency graph, push-pull propagation, glitch freedom, cutoff, stack safety and failure semantics."
+  faq={[
+    ["What are signals in JavaScript?", "Signals are reactive values: reading one inside a computed or effect records a dependency, and writing one re-runs exactly the computations that depend on it."],
+    ["What is glitch freedom?", "A guarantee that no computation observes a mix of old and new values during one update, and that each node executes at most once per change."],
+    ["Why do signal libraries use push-pull?", "Pushing invalidation is cheap and lets reads stay lazy; pulling values on read avoids recomputing unread branches and enables cutoff."],
+  ]}
+>
+  <p class="lede">Building a 2.2 KB reactive engine with exact dynamic dependencies, stack-safe propagation and executable semantics.</p>
+  <p>Signals are now the common core of Solid, Preact Signals, Angular, Vue's reactivity system and the TC39 Signals proposal. The API is always similar: a writable <em>signal</em>, a derived <em>computed</em>, a side-effecting <em>effect</em>. The interesting part is underneath. This article works from the other direction: start from the guarantees a signals runtime must give, and keep only the machinery those guarantees force. The result is <a href={REPO}>Reflex Quant</a>.</p>
+
+  <h2>1. The guarantees</h2>
+  <table>
+    <tr><th>Guarantee</th><th>Meaning</th></tr>
+    <tr><td>Exact tracking</td><td>A computation depends on exactly the sources its last run read.</td></tr>
+    <tr><td>Uniqueness</td><td>One relation per (source, consumer) pair, whatever the read order or repetition.</td></tr>
+    <tr><td>Version fact</td><td>A change is a committed value that differs by <code>Object.is</code>.</td></tr>
+    <tr><td>Cutoff</td><td>A computed that recomputes to the same value does not propagate.</td></tr>
+    <tr><td>Glitch freedom</td><td>No consumer sees a mix of old and new values; each node executes at most once per wave.</td></tr>
+    <tr><td>Failure</td><td>A computed that throws commits nothing and executes again on its next demand.</td></tr>
+  </table>
+  <p>The full list, with structural bounds on memory and work, is in <a href={`${BLOB}/CONTRACT.md`}>CONTRACT.md</a>.</p>
+
+  <h2>2. Push dirty, pull values</h2>
+  <p>A write cannot eagerly recompute everything downstream: that wastes work on branches nobody reads and causes glitches in diamonds. Nor can a read re-run everything upstream. Signals runtimes therefore <strong>push invalidation</strong> (mark consumers possibly stale) and <strong>pull values</strong> (a read validates its sources, oldest first, and re-executes only if one actually changed). Cutoff falls out of the pull: if a validated computed has the same value, its consumers stay clean.</p>
+
+  <h2>3. Dynamic dependencies are the hard part</h2>
+  <p>With conditional reads, the dependency set changes on every run. A naive runtime clears all edges and rebuilds them, which allocates on every execution. Quant keeps the previous run's relations and moves them into place as they are read again, so a stable or merely reordered read set allocates nothing. Details: <a href={href("/dynamic-dependency-tracking/")}>dynamic dependency tracking</a>.</p>
+
+  <h2>4. No recursion</h2>
+  <p>A recursive propagate or validate overflows the JavaScript call stack on long chains. Quant runs both on one explicit work stack, so depth is bounded by heap, not by the engine's stack limit.</p>
+
+  <h2>5. Effects are a host concern</h2>
+  <p>The graph machine knows nothing about scheduling. Watchers (effects) live in a separate host layer that queues, batches and delivers them, and whose queue is itself bounded: one effect invalidated many times in one drain occupies one slot.</p>
+
+  <h2>6. How to know it is correct</h2>
+  <p>A runtime this small is only interesting if it is also right. Quant is run differentially against an executable specification on 27,061 bounded programs, 18,660 recovery programs and 100,000 generated ones, checking graph integrity after every operation. Each of its 34 mechanisms was removed in turn (ablation); every removal fails a test. See <a href={`${BLOB}/research/REPORT.md`}>the research report</a>.</p>
+
+  <h2>7. What it costs</h2>
+  <BenchmarkSummary />
+
+  <h2>Try it</h2>
+  <Install />
+  <Example />
+  <EvidenceLinks items={["source", "contract", "report", "log"]} />
+</Base>

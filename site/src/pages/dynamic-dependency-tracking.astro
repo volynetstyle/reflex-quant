@@ -1,0 +1,35 @@
+---
+import Base from "../layouts/Base.astro";
+import Example from "../components/Example.astro";
+import EvidenceLinks from "../components/EvidenceLinks.astro";
+---
+<Base
+  path="/dynamic-dependency-tracking/"
+  title="Dynamic Dependency Tracking in JavaScript Signals"
+  headline="Dynamic Dependency Tracking Without Rebuilding the Graph"
+  description="How a signals runtime tracks dependencies that change between runs: exact tracking, edge reuse, reordering without allocation, and uniqueness of relations."
+  faq={[
+    ["What is dynamic dependency tracking?", "Recording, on each execution of a computed or effect, exactly which reactive sources it read, so that dependencies follow the code's branches instead of being declared up front."],
+  ]}
+>
+  <p class="lede">How Reflex Quant keeps a computation's dependencies exact across branches, repeats and reorders while allocating nothing when the read set is stable.</p>
+
+  <h2>The problem</h2>
+  <p>In <code>computed(() =&gt; get(flag) ? get(a) : get(b))</code> the dependency set depends on data. After each run the runtime must observe exactly what was read: drop <code>a</code> when the branch switches to <code>b</code>, never hold two relations to the same source, and not leak relations when the computation throws.</p>
+
+  <h2>Three common strategies</h2>
+  <table>
+    <tr><th>Strategy</th><th>Cost</th></tr>
+    <tr><td>Clear and rebuild every run</td><td>Allocation proportional to the read set on every execution.</td></tr>
+    <tr><td>Compare in order with the previous list</td><td>Cheap when order is stable; a reorder relinks everything after the first mismatch.</td></tr>
+    <tr><td>Reuse relations regardless of order</td><td>No allocation for any permutation of a known read set; needs a way to find the old relation.</td></tr>
+  </table>
+
+  <h2>What Quant does</h2>
+  <p>Quant reuses existing relations and moves them into read order. On the <code>reorder.rotate-256</code> structure benchmark (256 sources, rotated every pass) Quant creates and removes no relations per pass; alien-signals relinks 255. Run it yourself: <code>node bench/structure.mjs</code>.</p>
+  <p>Why this mechanism is in the core, and what breaks without it, is recorded in the design log and the edge churn study below.</p>
+
+  <h2>Example</h2>
+  <Example />
+  <EvidenceLinks items={["log", "churn", "bench"]} />
+</Base>

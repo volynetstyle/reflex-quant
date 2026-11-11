@@ -37,7 +37,8 @@
     "mechanism": "a source without subscribers is absent before any scan (optimization)",
     "killed": true,
     "failed": [
-      "structure.test.ts > LOG 22: a source nobody reads is linked without a scan's proof or a lookup"
+      "structure.test.ts > LOG 22: a source nobody reads is linked without a scan's proof or a lookup",
+      "structure.test.ts > a fresh source needs no lookup after the pass has marked its unread suffix"
     ]
   },
   {
@@ -63,6 +64,7 @@
     "killed": true,
     "failed": [
       "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
+      "structure.test.ts > a fresh source needs no lookup after the pass has marked its unread suffix",
       "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
       "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths"
     ]
@@ -74,8 +76,10 @@
     "failed": [
       "semantics.test.ts > one rule on every path that recognises a repeated read",
       "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
+      "structure.test.ts > a fresh source needs no lookup after the pass has marked its unread suffix",
       "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
       "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
+      "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: false)",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index"
     ]
@@ -85,7 +89,31 @@
     "mechanism": "save/restore of an enclosing run's slot cells",
     "killed": true,
     "failed": [
-      "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)"
+      "differential.test.ts > generated wide nested indexes: reorders, repeated reads, failed frontiers and recovery",
+      "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
+      "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)",
+      "trim.test.ts > wide nested runs agree with an independent sum model across change, failure and recovery",
+      "trim.test.ts > keeps the hysteresis boundary: TRIM stays, TRIM + 1 shrinks",
+      "trim.test.ts > reclaims a cold dirty execution after return",
+      "trim.test.ts > reclaims a cold dirty execution after throw",
+      "trim.test.ts > reclaims a cold dirty execution after dispose",
+      "trim.test.ts > reclaims a cold dirty execution after dispose-throw",
+      "work-stack.test.ts > uses one stack slot per displaced edge at three increasing widths",
+      "work-stack.test.ts > restores the enclosing cells on success",
+      "work-stack.test.ts > restores the enclosing cells on throw",
+      "work-stack.test.ts > restores the enclosing cells on caught",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self-throw",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer-throw",
+      "work-stack.test.ts > restores the enclosing cells on success above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on throw above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on caught above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self-throw above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer-throw above suspended validation frames",
+      "work-stack.test.ts > keeps pending mark siblings below a nested indexed run"
     ]
   },
   {
@@ -93,9 +121,11 @@
     "mechanism": "UNREAD marking of the suffix while indexing",
     "killed": true,
     "failed": [
+      "differential.test.ts > generated wide nested indexes: reorders, repeated reads, failed frontiers and recovery",
       "semantics.test.ts > one rule on every path that recognises a repeated read",
       "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
       "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
+      "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: true)",
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
@@ -117,6 +147,7 @@
     "killed": true,
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification",
+      "torture-lifecycle.test.ts > failures across a full reorder keep the committed frontier and only the last attempt's reads",
       "torture-structure.test.ts > a failed computed retains only the current attempt frontier"
     ]
   },
@@ -127,6 +158,11 @@
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification",
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "generations.test.ts > a failed watcher keeps a committed edge its failed run did not read (F3)",
+      "generations.test.ts > a failed computed keeps its committed frontier (F1)",
+      "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: false)",
+      "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: true)",
+      "torture-lifecycle.test.ts > failures across a full reorder keep the committed frontier and only the last attempt's reads",
       "tracking.test.ts > failure halfway: committed ∪ attempt reads survive, nothing accumulates",
       "tracking.test.ts > repeated identical failures do not grow the graph"
     ]
@@ -142,6 +178,8 @@
       "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
       "semantics.test.ts > A→B→A after the first observation is a change (P1): the next demand executes again",
       "semantics.test.ts > one rule on every path that recognises a repeated read",
+      "structure.test.ts > a long drain holds O(queued watchers) slots, not O(deliveries)",
+      "structure.test.ts > many watchers invalidating themselves stay within max(TRIM + W, 2W)",
       "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
     ]
   },
@@ -170,6 +208,7 @@
     "failed": [
       "differential.test.ts > historical faults and contract boundaries",
       "differential.test.ts > recovery exhaustive language",
+      "differential.test.ts > generated wide nested indexes: reorders, repeated reads, failed frontiers and recovery",
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
       "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)"
     ]
@@ -181,6 +220,7 @@
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification",
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "disposal-differential.test.ts > releases successful, failed, never-run and throwing-cleanup watchers with unchanged observations",
       "semantics.test.ts > an effect failing after its first run keeps the obligation (R2)"
     ]
   },
@@ -191,6 +231,7 @@
     "failed": [
       "differential.test.ts > phase 0 probes pin their classification",
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "generations.test.ts > an owed watcher validates every committed source before its cleanup (P4)",
       "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
       "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
     ]
@@ -200,8 +241,89 @@
     "mechanism": "disposal deferred to the end of the node's own run",
     "killed": true,
     "failed": [
+      "disposal-retention.test.ts > keeps an indexed cursor until self-disposal finishes (throw: false)",
+      "disposal-retention.test.ts > keeps an indexed cursor until self-disposal finishes (throw: true)",
+      "disposal-retention.test.ts > releases a watcher disposed inside its own run (throw: false)",
+      "disposal-retention.test.ts > releases a watcher disposed inside its own run (throw: true)",
       "semantics.test.ts > dispose inside the callback, then more reads: no ghost relation",
-      "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot"
+      "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot",
+      "trim.test.ts > reclaims a cold dirty execution after dispose",
+      "trim.test.ts > reclaims a cold dirty execution after dispose-throw",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer-throw",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer-throw above suspended validation frames"
+    ]
+  },
+  {
+    "id": "no-cursor-restore",
+    "mechanism": "T3: nested execution restores the enclosing pass's cursor on success and failure",
+    "killed": true,
+    "failed": [
+      "differential.test.ts > phase 0 probes pin their classification",
+      "differential.test.ts > historical faults and contract boundaries",
+      "differential.test.ts > bounded exhaustive language",
+      "differential.test.ts > recovery exhaustive language",
+      "differential.test.ts > generated wide nested indexes: reorders, repeated reads, failed frontiers and recovery",
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "disposal-retention.test.ts > releases dependencies during direct validation (later throw: false)",
+      "disposal-retention.test.ts > releases dependencies during direct validation (later throw: true)",
+      "disposal-retention.test.ts > releases dependencies during indirect validation (later throw: false)",
+      "disposal-retention.test.ts > releases dependencies during indirect validation (later throw: true)",
+      "disposal-retention.test.ts > preserves frozen values and downstream subscriptions",
+      "generations.test.ts > a watcher whose generation wrapped still validates its committed computed (no failure)",
+      "semantics.test.ts > diamond: one execution per node, no glitch",
+      "semantics.test.ts > layered diamond 8x8: each node executes once per write",
+      "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
+      "semantics.test.ts > a read of a node under validation is a cycle, not its previous value",
+      "semantics.test.ts > the answer does not depend on how the cycle's nodes were invalidated",
+      "semantics.test.ts > validation reaching an executing node is a cycle and leaves no clean node behind",
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above",
+      "semantics.test.ts > a reentrant demand without a data cycle fails as a direct read does",
+      "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
+      "semantics.test.ts > a computed disposed while it is validated is not run again; its value freezes",
+      "semantics.test.ts > a later source failing in the same walk does not leave the disposed computed owing a run",
+      "surface.test.ts > returning prev is a cutoff (P2): equality without a comparator",
+      "torture-lifecycle.test.ts > a throwing peek restores the outer tracking context and records nothing",
+      "torture-lifecycle.test.ts > validation surfaces it to the writer, before the effect's own try/catch runs (P4)",
+      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty",
+      "torture-semantics.test.ts > a cycle introduced through a validating ancestor fails loudly",
+      "torture-structure.test.ts > nested indexed failure restores the enclosing reader's slot state",
+      "tracking.test.ts > old twin: a source re-read after nested passes subscribed to it stays unique",
+      "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
+      "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)",
+      "tracking.test.ts > failure halfway: committed ∪ attempt reads survive, nothing accumulates",
+      "tracking.test.ts > push and pull are not bounded by the call stack (20,000-deep chain)",
+      "trim.test.ts > wide nested runs agree with an independent sum model across change, failure and recovery",
+      "trim.test.ts > keeps the hysteresis boundary: TRIM stays, TRIM + 1 shrinks",
+      "trim.test.ts > reclaims a cold dirty execution after return",
+      "trim.test.ts > reclaims a cold dirty execution after throw",
+      "trim.test.ts > reclaims a cold dirty execution after dispose",
+      "trim.test.ts > reclaims a cold dirty execution after dispose-throw",
+      "trim.test.ts > reclaims a deep validation (throw: false)",
+      "trim.test.ts > reclaims a deep validation (throw: true)",
+      "trim.test.ts > reclaims a deep mark without waiting for any later demand",
+      "trim.test.ts > covers direct watcher execution outside pull (throw: false)",
+      "trim.test.ts > covers direct watcher execution outside pull (throw: true)",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: false)",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: true)",
+      "trim.test.ts > an empty stack may be reclaimed inside untracked while a user callback is suspended",
+      "work-stack.test.ts > uses one stack slot per displaced edge at three increasing widths",
+      "work-stack.test.ts > restores the enclosing cells on success",
+      "work-stack.test.ts > restores the enclosing cells on throw",
+      "work-stack.test.ts > restores the enclosing cells on caught",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self-throw",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer-throw",
+      "work-stack.test.ts > restores the enclosing cells on success above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on throw above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on caught above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self-throw above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-outer-throw above suspended validation frames",
+      "work-stack.test.ts > keeps pending mark siblings below a nested indexed run"
     ]
   },
   {
@@ -241,7 +363,8 @@
     "mechanism": "C1 (development diagnostic): a node its validation finds clean leaves the walk (its one extra store)",
     "killed": true,
     "failed": [
-      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal"
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "work-stack.test.ts > restores the enclosing cells on success above suspended validation frames"
     ]
   },
   {
@@ -255,9 +378,15 @@
       "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
       "semantics.test.ts > one rule on every path that recognises a repeated read",
       "structure.test.ts > the end of a deep outermost validation cuts the stack back to KEEP",
-      "structure.test.ts > a stack a deep mark grew is cut by the next outermost validation",
+      "structure.test.ts > a stack a deep mark grew is cut before the write returns",
       "structure.test.ts > a validation no deeper than TRIM leaves the stack as it is",
-      "tracking.test.ts > push and pull are not bounded by the call stack (20,000-deep chain)"
+      "tracking.test.ts > push and pull are not bounded by the call stack (20,000-deep chain)",
+      "trim.test.ts > reclaims a deep validation (throw: false)",
+      "trim.test.ts > reclaims a deep mark without waiting for any later demand",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: false)",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: true)",
+      "work-stack.test.ts > restores the enclosing cells on caught above suspended validation frames",
+      "work-stack.test.ts > keeps pending mark siblings below a nested indexed run"
     ]
   },
   {
@@ -272,7 +401,9 @@
       "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above",
       "semantics.test.ts > a reentrant demand without a data cycle fails as a direct read does",
       "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
-      "torture-semantics.test.ts > a cycle introduced through a validating ancestor fails loudly"
+      "torture-semantics.test.ts > a cycle introduced through a validating ancestor fails loudly",
+      "trim.test.ts > reclaims a deep validation (throw: true)",
+      "work-stack.test.ts > restores the enclosing cells on throw above suspended validation frames"
     ]
   },
   {
@@ -313,17 +444,99 @@
     "mechanism": "W3: a failed walk does not leave a node disposed during it owing a run",
     "killed": true,
     "failed": [
+      "disposal-retention.test.ts > releases dependencies during direct validation (later throw: true)",
+      "disposal-retention.test.ts > releases dependencies during indirect validation (later throw: true)",
       "semantics.test.ts > a later source failing in the same walk does not leave the disposed computed owing a run"
     ]
   },
   {
     "id": "no-trim",
-    "mechanism": "the end of an outermost validation cuts a stack a deep walk grew back to KEEP (retained memory)",
+    "mechanism": "empty work stacks release oversized capacity after push, validation and indexed runs (retained memory)",
     "killed": true,
     "failed": [
       "structure.test.ts > the end of a deep outermost validation cuts the stack back to KEEP",
-      "structure.test.ts > a stack a deep mark grew is cut by the next outermost validation",
-      "structure.test.ts > a validation no deeper than TRIM leaves the stack as it is"
+      "structure.test.ts > a stack a deep mark grew is cut before the write returns",
+      "structure.test.ts > a validation no deeper than TRIM leaves the stack as it is",
+      "trim.test.ts > wide nested runs agree with an independent sum model across change, failure and recovery",
+      "trim.test.ts > keeps the hysteresis boundary: TRIM stays, TRIM + 1 shrinks",
+      "trim.test.ts > reclaims a cold dirty execution after return",
+      "trim.test.ts > reclaims a cold dirty execution after throw",
+      "trim.test.ts > reclaims a cold dirty execution after dispose",
+      "trim.test.ts > reclaims a cold dirty execution after dispose-throw",
+      "trim.test.ts > reclaims a deep validation (throw: false)",
+      "trim.test.ts > reclaims a deep validation (throw: true)",
+      "trim.test.ts > reclaims a deep mark without waiting for any later demand",
+      "trim.test.ts > covers direct watcher execution outside pull (throw: false)",
+      "trim.test.ts > covers direct watcher execution outside pull (throw: true)",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: false)",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: true)",
+      "trim.test.ts > an empty stack may be reclaimed inside untracked while a user callback is suspended"
+    ]
+  },
+  {
+    "id": "no-trim-mark",
+    "mechanism": "a completed push releases capacity without waiting for a later demand",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > a stack a deep mark grew is cut before the write returns",
+      "structure.test.ts > a validation no deeper than TRIM leaves the stack as it is",
+      "trim.test.ts > reclaims a deep mark without waiting for any later demand"
+    ]
+  },
+  {
+    "id": "no-trim-validation",
+    "mechanism": "a successful validation releases its temporary capacity",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > the end of a deep outermost validation cuts the stack back to KEEP",
+      "structure.test.ts > a stack a deep mark grew is cut before the write returns",
+      "trim.test.ts > reclaims a deep validation (throw: false)",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: false)",
+      "trim.test.ts > preserves suspended validation entries across untracked (throw: true)"
+    ]
+  },
+  {
+    "id": "no-trim-failed-validation",
+    "mechanism": "a throwing validation releases capacity after unwinding its entries",
+    "killed": true,
+    "failed": [
+      "trim.test.ts > reclaims a deep validation (throw: true)"
+    ]
+  },
+  {
+    "id": "no-trim-unindex",
+    "mechanism": "indexed execution releases capacity on normal, throwing and disposed exits, including direct watchers",
+    "killed": true,
+    "failed": [
+      "trim.test.ts > wide nested runs agree with an independent sum model across change, failure and recovery",
+      "trim.test.ts > keeps the hysteresis boundary: TRIM stays, TRIM + 1 shrinks",
+      "trim.test.ts > reclaims a cold dirty execution after return",
+      "trim.test.ts > reclaims a cold dirty execution after throw",
+      "trim.test.ts > reclaims a cold dirty execution after dispose",
+      "trim.test.ts > reclaims a cold dirty execution after dispose-throw",
+      "trim.test.ts > covers direct watcher execution outside pull (throw: false)",
+      "trim.test.ts > covers direct watcher execution outside pull (throw: true)",
+      "trim.test.ts > an empty stack may be reclaimed inside untracked while a user callback is suspended"
+    ]
+  },
+  {
+    "id": "no-settle",
+    "mechanism": "SETTLE: a commit restamps its edges twice a cycle, so a wrapped generation never reads a committed edge as tentative",
+    "killed": true,
+    "failed": [
+      "generations.test.ts > a watcher whose generation wrapped still validates its committed computed (no failure)",
+      "generations.test.ts > a failed watcher keeps a committed edge its failed run did not read (F3)",
+      "generations.test.ts > a failed computed keeps its committed frontier (F1)",
+      "generations.test.ts > an owed watcher validates every committed source before its cleanup (P4)",
+      "generations.test.ts > a commit at either half of the cycle restamps every edge with the node's generation"
+    ]
+  },
+  {
+    "id": "settle-once-a-cycle",
+    "mechanism": "SETTLE: the restamp comes twice a cycle; once leaves an edge 2^30 - 1 behind just before it",
+    "killed": true,
+    "failed": [
+      "generations.test.ts > a commit at either half of the cycle restamps every edge with the node's generation"
     ]
   },
   {
@@ -333,7 +546,44 @@
     "failed": [
       "semantics.test.ts > a failed first run leaves no live watcher and no relation",
       "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back",
+      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's",
       "torture-semantics.test.ts > failed initial effect construction leaves no unreachable live watcher"
+    ]
+  },
+  {
+    "id": "rollback-error-replaces",
+    "mechanism": "F5: a throwing rollback cleanup does not replace the failed run's error",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's"
+    ]
+  },
+  {
+    "id": "batch-error-replaces",
+    "mechanism": "F5: a deferred watcher's error at the batch end does not replace the body's",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a batch body's error survives a deferred watcher's error",
+      "semantics.test.ts > an inner batch's error passes through the outer batch end unchanged"
+    ]
+  },
+  {
+    "id": "no-queue-compact",
+    "mechanism": "S8: the drain moves the live tail to the front once spent slots dominate",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > a long drain holds O(queued watchers) slots, not O(deliveries)",
+      "structure.test.ts > many watchers invalidating themselves stay within max(TRIM + W, 2W)"
+    ]
+  },
+  {
+    "id": "no-queue-trim",
+    "mechanism": "S8: the queue at rest is cut back to KEEP",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > a long drain holds O(queued watchers) slots, not O(deliveries)",
+      "structure.test.ts > many watchers invalidating themselves stay within max(TRIM + W, 2W)",
+      "structure.test.ts > a burst of queued watchers does not keep its high water after the drain"
     ]
   },
   {
@@ -354,7 +604,9 @@
       "differential.test.ts > phase 0 probes pin their classification",
       "differential.test.ts > bounded exhaustive language",
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
-      "tracking.test.ts > A A (immediate repeat) is recognised without indexing"
+      "disposal-differential.test.ts > releases successful, failed, never-run and throwing-cleanup watchers with unchanged observations",
+      "tracking.test.ts > A A (immediate repeat) is recognised without indexing",
+      "trim.test.ts > an empty stack may be reclaimed inside untracked while a user callback is suspended"
     ]
   },
   {
@@ -364,7 +616,8 @@
     "failed": [
       "semantics.test.ts > effects created inside a batch or another effect run after it",
       "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back",
-      "semantics.test.ts > a first run deferred by a batch is established: its failure is F3"
+      "semantics.test.ts > a first run deferred by a batch is established: its failure is F3",
+      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's"
     ]
   },
   {
@@ -373,7 +626,8 @@
     "killed": true,
     "failed": [
       "semantics.test.ts > effects created inside a batch or another effect run after it",
-      "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back"
+      "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back",
+      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's"
     ]
   },
   {
@@ -385,7 +639,7 @@
       "semantics.test.ts > disposing a sibling sharing the sources during a run leaves the others intact",
       "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
-      "structure.test.ts > a stack a deep mark grew is cut by the next outermost validation",
+      "torture-lifecycle.test.ts > a failed watcher does not stop later watchers from queueing more work",
       "torture-structure.test.ts > random reorder + failure reuses every existing relation",
       "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot",
       "torture-structure.test.ts > nested indexed failure restores the enclosing reader's slot state"

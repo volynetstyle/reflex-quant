@@ -1,0 +1,39 @@
+---
+import Base from "../layouts/Base.astro";
+import Install from "../components/Install.astro";
+import BenchmarkSummary from "../components/BenchmarkSummary.astro";
+import EvidenceLinks from "../components/EvidenceLinks.astro";
+---
+<Base
+  path="/alien-signals-comparison/"
+  title="alien-signals vs Reflex Quant: Benchmark, Performance and Design"
+  headline="alien-signals vs Reflex Quant: Benchmark and Design"
+  description="alien-signals 3.2.1 vs Reflex Quant: CI benchmark on 18 scenarios, dependency reordering counters, API, failure semantics and size. An alternative, measured."
+  faq={[
+    ["Is Reflex Quant an alternative to alien-signals?", "Yes: both provide framework-agnostic signal, computed and effect. Quant is smaller in surface, reuses dependency relations on reorder, and is specified by a written contract."],
+    ["Is Reflex Quant faster than alien-signals?", "On the project's own 18-scenario CI suite its geometric-mean time is 0.42 of alien-signals'. The suite is the project's own; per-scenario numbers are published in research/REPORT.md."],
+  ]}
+>
+  <p class="lede">Both are small, framework-agnostic JavaScript signals runtimes. They make different trade-offs.</p>
+  <p><a href="https://github.com/stackblitz/alien-signals">alien-signals</a> is a fast, widely used signals library whose ideas also shaped Vue 3.5's reactivity rewrite. Reflex Quant was derived from a written contract instead of from existing runtimes, and benchmarks against alien-signals 3.2.1 on every CI run.</p>
+
+  <h2>At a glance</h2>
+  <table>
+    <tr><th></th><th>Reflex Quant</th><th>alien-signals</th></tr>
+    <tr><td>Primitives</td><td><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>get</code>/<code>set</code>, <code>peek</code>, <code>update</code>, <code>batch</code></td><td><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>effectScope</code>, accessor functions</td></tr>
+    <tr><td>Size (ESM, gzip)</td><td>about 2.2 KB</td><td>see <a href="https://bundlephobia.com/package/alien-signals">bundlephobia</a></td></tr>
+    <tr><td>Reordered reads (256 sources)</td><td>0 relations relinked per pass</td><td>255 relinked per pass</td></tr>
+    <tr><td>Effect scopes / nested ownership</td><td>not included (not required by its contract)</td><td>included</td></tr>
+    <tr><td>Specification</td><td>written contract + executable spec, differential tests</td><td>test suite</td></tr>
+  </table>
+
+  <h2>Benchmarks</h2>
+  <BenchmarkSummary />
+
+  <h2>When to choose which</h2>
+  <p>Choose alien-signals if you want effect scopes, a large user base, and the runtime that Vue's design draws on. Choose Reflex Quant if you want a documented contract for failure and edge cases, allocation-free dependency reordering, and a smaller surface.</p>
+
+  <h2>Try Quant</h2>
+  <Install />
+  <EvidenceLinks items={["bench", "report", "churn", "contract"]} />
+</Base>

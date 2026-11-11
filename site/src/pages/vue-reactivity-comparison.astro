@@ -1,0 +1,42 @@
+---
+// Model/API/semantics comparison only: @vue/reactivity has not been benchmarked.
+import Base from "../layouts/Base.astro";
+import Install from "../components/Install.astro";
+import Example from "../components/Example.astro";
+import { BLOB } from "../site";
+---
+<Base
+  path="/vue-reactivity-comparison/"
+  title="Vue Reactivity vs Signals: ref, computed, effect and the Graph"
+  headline="Vue Reactivity vs Signals: ref, computed, effect and the Reactive Graph"
+  description="How Vue's reactivity (ref, reactive, computed, watchEffect) maps onto plain JavaScript signals: the reactive graph, tracking, Proxies and what each model leaves out."
+  faq={[
+    ["Can I use Reflex Quant instead of Vue's reactivity?", "Outside Vue components, for plain state, yes: ref maps to signal, computed to computed, watchEffect to effect. Inside Vue templates, Vue's own refs are what the renderer tracks."],
+  ]}
+>
+  <p class="lede">Vue's <code>@vue/reactivity</code> is a signals system with a Proxy layer on top. This page compares the two models: how Vue concepts map onto a plain signals runtime (Reflex Quant), and what each leaves out.</p>
+
+  <h2>Concept map</h2>
+  <table>
+    <tr><th>Vue</th><th>Reflex Quant</th></tr>
+    <tr><td><code>ref(x)</code>, <code>r.value</code></td><td><code>signal(x)</code>, <code>get(s)</code> / <code>set(s, v)</code></td></tr>
+    <tr><td><code>computed(() =&gt; …)</code></td><td><code>computed((prev) =&gt; …, initial?)</code></td></tr>
+    <tr><td><code>watchEffect(fn)</code></td><td><code>effect(fn)</code></td></tr>
+    <tr><td><code>reactive(obj)</code> (deep Proxy)</td><td>no equivalent: compose signals explicitly</td></tr>
+    <tr><td><code>effectScope()</code></td><td>no equivalent; <code>dispose(node)</code></td></tr>
+    <tr><td><code>toRaw</code>, <code>untracked</code> reads</td><td><code>peek(x)</code></td></tr>
+  </table>
+
+  <h2>Differences that matter</h2>
+  <ul>
+    <li><strong>No Proxies.</strong> Quant tracks only explicit <code>get</code> calls, so there is no deep reactivity and no proxy identity issues.</li>
+    <li><strong>Framework-agnostic.</strong> Quant has no component model or scheduler tied to rendering; it is the graph only.</li>
+    <li><strong>Size.</strong> Quant's whole runtime is about 2.2 KB gzip.</li>
+    <li><strong>Contract.</strong> Failure, cutoff and reorder behaviour are written down in <a href={`${BLOB}/CONTRACT.md`}>CONTRACT.md</a> and tested differentially.</li>
+  </ul>
+  <p class="note">Quant is not a drop-in replacement for Vue and has not been benchmarked against <code>@vue/reactivity</code>; this page compares models, not speed.</p>
+
+  <h2>Try it</h2>
+  <Install />
+  <Example />
+</Base>

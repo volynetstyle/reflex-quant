@@ -1,0 +1,27 @@
+---
+import Base from "../layouts/Base.astro";
+import BenchmarkSummary from "../components/BenchmarkSummary.astro";
+import EvidenceLinks from "../components/EvidenceLinks.astro";
+---
+<Base
+  path="/benchmarks/"
+  title="JavaScript Signals Benchmark: Reflex Quant vs alien-signals vs Reflex"
+  headline="JavaScript Signals Benchmark"
+  description="Reactivity benchmark results for Reflex Quant against alien-signals and Reflex on 18 scenarios, with methodology, structure counters and CI history."
+>
+  <p class="lede">Reflex Quant against alien-signals and Reflex: timing on CI, plus allocation-free structure counters you can reproduce locally.</p>
+
+  <h2>Results</h2>
+  <BenchmarkSummary />
+
+  <h2>Methodology</h2>
+  <ul>
+    <li>Timing runs only on CI, for every build, on the same runner for all libraries; local timing is not reported.</li>
+    <li>Scenarios cover common shapes (chains, fans, diamonds, dynamic branches) and hostile ones (reorders); hostile shapes are reported as measured.</li>
+    <li>Structure counters (relations created and removed) are deterministic: <code>node bench/structure.mjs</code>.</li>
+  </ul>
+
+  <h2>Why benchmark numbers mislead</h2>
+  <p>Signals benchmarks reward laziness, caching and skipped work differently. A library can win a scenario by not doing work the contract requires. Quant's results only count once its differential tests pass, so speed is measured against fixed semantics.</p>
+  <EvidenceLinks items={["bench", "report", "history"]} />
+</Base>
