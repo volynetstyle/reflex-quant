@@ -115,8 +115,8 @@ svg.small{display:block;width:100%;max-width:440px;margin:0 auto}svg.mid{display
 .sv-n.clean circle,.sv-n.clean rect{stroke:var(--s-reflex);stroke-width:2}
 .sv-n text.sm{font-size:10px}
 /* CodeMirror (lazy): identical to the Shiki block it replaces */
-.pg-code .cm-editor{background:#fff;color:#24292e;font-size:14px}.pg-code .cm-editor.cm-focused{outline:none}
-.pg-code .cm-scroller{font-family:monospace;line-height:1.5;padding:14px 16px;max-height:480px}
+.pg-code .cm-editor{background:#fff;color:#24292e;font-size:12.6px}.pg-code .cm-editor.cm-focused{outline:none}
+.pg-code .cm-scroller{font-family:monospace;line-height:21px;padding:14px 16px;max-height:480px}
 .pg-code .cm-content{padding:0;caret-color:#24292e}.pg-code .cm-line{padding:0}.pg-code .cm-cursor{border-left-color:#24292e}
 .pg-code .cm-selectionBackground,.pg-code .cm-focused .cm-selectionBackground{background:#0366d625!important}
 .sh-kw{color:#d73a49}.sh-fn{color:#6f42c1}.sh-const{color:#005cc5}.sh-str{color:#032f62}.sh-param{color:#e36209}.sh-cmt{color:#6a737d}
