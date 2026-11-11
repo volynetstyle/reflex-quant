@@ -1,5 +1,9 @@
 # reflex-quant
 
+**Site:** [volynetstyle.github.io/reflex-quant](https://volynetstyle.github.io/reflex-quant/):
+runnable examples, an [illustrated anatomy](https://volynetstyle.github.io/reflex-quant/reactive-runtime-anatomy/)
+of the runtime and [benchmarks](https://volynetstyle.github.io/reflex-quant/benchmarks/).
+
 An experiment: derive the smallest known reactive runtime implied by a
 frozen contract (semantic invariants and structural bounds, see
 [CONTRACT.md](CONTRACT.md)), and measure what is left. The contract was extracted
@@ -58,13 +62,16 @@ pass, where alien-signals relinks 255 (`node bench/structure.mjs`).
   structural bound or a representation test (the work an optimization saves, counted), 1 only a
   sibling-order test (a convention). The 7 ablations of the development
   diagnostic (C1) fail a test of the development build.
-- On CI (run 42287159440): within 25 % of the better of Reflex and
-  alien-signals on all 18 scenarios, at or ahead of it on 8; geometric mean
-  0.97 of the better one, 0.95 of Reflex, 0.42 of alien-signals. Reorders
-  allocate nothing. Reflex remains faster on every reorder scenario
-  (quant 1.14–1.24 of it). The suite is this project's own; per-scenario
-  numbers are in research/REPORT.md (Q6), the trajectory over every CI run
-  in research/HISTORY.md.
+- On CI (run [42794143933](https://github.com/volynetstyle/reflex-quant/actions/runs/42794143933),
+  1.1.2): within 25 % of the better of Reflex and alien-signals on 17 of 18
+  scenarios, faster than both on 7; geometric mean 1.03 of the better one,
+  0.99 of Reflex, 0.45 of alien-signals. Reorders allocate nothing. Reflex
+  remains faster on every reorder scenario (quant 1.20–1.21 of it) and on
+  `value-sort.256x32` (1.43). Each ratio is measured within one runner. The
+  suite is this project's own; per-scenario numbers are on the
+  [benchmarks page](https://volynetstyle.github.io/reflex-quant/benchmarks/),
+  an earlier snapshot in research/REPORT.md (Q6), the trajectory over CI
+  runs in research/HISTORY.md.
 
 ## Surface
 

@@ -5,7 +5,9 @@ export const RUN = {
   url: "https://github.com/volynetstyle/reflex-quant/actions/runs/42794143933",
   version: "1.1.2",
   date: "2026-11-10",
-  machine: "Node 22.23.4 (V8 12.4), Intel Xeon Platinum 8573C, 9 rounds",
+  // Five scenario jobs on four runner CPUs (Xeon 8573C, Xeon 8370C, EPYC 7763, EPYC 9V74);
+  // every ratio compares the three libraries inside one job, never across runners.
+  machine: "Node 22.23.4, 9 rounds; each ratio measured within one runner",
   rivals: "Reflex bf71877, alien-signals 3.2.1",
 };
 
