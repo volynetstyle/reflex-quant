@@ -1,0 +1,25 @@
+---
+// Headline benchmark figures as three ratios and a scenario-count strip. Source: src/bench.ts.
+import { AGG, RUN } from "../bench";
+const slower = AGG.n - AGG.within25;
+const rows: [string, number, string][] = [
+  ["Faster than both rivals", AGG.faster, "win"],
+  ["Within 25 % of the faster rival", AGG.within25, "win"],
+  ["More than 25 % slower", slower, "lose"],
+];
+---
+<div class="stats">
+  <div class="stat"><b>{AGG.alien}×</b><span>of alien-signals' time (geomean)</span></div>
+  <div class="stat"><b>{AGG.reflex}×</b><span>of Reflex's time</span></div>
+  <div class="stat"><b>{AGG.best}×</b><span>of the faster rival's time, per scenario</span></div>
+</div>
+<figure class="strip" aria-label={`Out of ${AGG.n} scenarios`}>
+  {rows.map(([label, v, cls]) => (
+    <div class="strip-row">
+      <span>{label}</span>
+      <span class="strip-track"><span class={`strip-bar ${cls}`} style={`width:${(v / AGG.n) * 100}%`} /></span>
+      <b>{v} / {AGG.n}</b>
+    </div>
+  ))}
+  <figcaption>{AGG.n} scenarios, lower time is better. CI run <a href={RUN.url}>{RUN.id}</a>; the suite is this project's own.</figcaption>
+</figure>

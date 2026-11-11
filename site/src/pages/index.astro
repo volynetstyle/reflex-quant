@@ -3,7 +3,8 @@
 import Base from "../layouts/Base.astro";
 import Install from "../components/Install.astro";
 import Example from "../components/Example.astro";
-import BenchmarkSummary from "../components/BenchmarkSummary.astro";
+import BenchStrip from "../components/BenchStrip.astro";
+import ReorderCallout from "../components/ReorderCallout.astro";
 import { BLOB, href } from "../site";
 ---
 <Base
@@ -12,20 +13,20 @@ import { BLOB, href } from "../site";
   headline="Reflex Quant"
   description="Reflex Quant is a 2.2 KB fine-grained reactivity library for JavaScript and TypeScript: signal, computed, effect, with a written contract and published benchmarks. MIT."
   faq={[
-    ["What is Reflex Quant?", "A JavaScript and TypeScript signals library (signal, computed, effect) of about 2.2 KB gzip, derived as the smallest runtime a fixed reactive contract implies."],
-    ["Is Reflex Quant production ready?", "It is published on npm under MIT, tested differentially against an executable specification on over 140,000 programs, and its benchmarks run on every CI build. It is also a research artifact; read the contract before relying on edge-case behaviour."],
+    ["What is Reflex Quant?", "A JavaScript and TypeScript signals library (signal, computed, effect) of about 2.2 KB gzip, derived as the smallest known runtime a fixed reactive contract implies."],
+    ["Is Reflex Quant production ready?", "Quant is usable as a library, but it is a research-driven runtime, not a mature dependency with years of production deployment. It is published on npm under MIT, tested differentially against an executable specification on over 140,000 programs, and benchmarked on every CI build. Read the contract before relying on edge-case behaviour."],
     ["Does Reflex Quant work with React, Vue or Solid?", "Quant is framework-agnostic: it has no rendering layer. It can back state in any framework through an adapter that subscribes with effect()."],
   ]}
 >
   <p class="lede">A JavaScript signals runtime of about 2.2 KB gzip: signals, computeds and effects, with exact dynamic dependency tracking, glitch-free propagation, and no recursion on any path.</p>
   <Install />
-  <p>Quant is a research project as much as a library. It asks one question: what is the smallest reactive runtime that a fixed semantic contract implies? Every mechanism in it has a counterexample showing that the contract, or a structural bound, breaks without it. Nothing is in it because another framework has it.</p>
+  <p>Quant is a research project as much as a library. It asks one question: what is the smallest known reactive runtime that a fixed semantic contract implies? Every mechanism in it has a counterexample showing that the contract, or a structural bound, breaks without it. Nothing is in it because another framework has it.</p>
 
   <h2>Fine-grained reactivity in one example</h2>
   <p>A computation depends on exactly what its last run read, so dependencies change from run to run:</p>
   <Example />
 
-  <h2>What you get</h2>
+  <h2>What makes Quant different</h2>
   <ul>
     <li><strong>Exact tracking.</strong> A computed observes exactly the sources it read; branches add and drop dependencies. <a href={href("/dynamic-dependency-tracking/")}>How dynamic dependency tracking works</a>.</li>
     <li><strong>Glitch freedom.</strong> One execution per node per change, diamonds included.</li>
@@ -35,7 +36,9 @@ import { BLOB, href } from "../site";
   </ul>
 
   <h2>Performance</h2>
-  <BenchmarkSummary />
+  <BenchStrip />
+  <p>Reflex remains faster on reorders and sorts (Quant takes 1.20–1.43× its time there). Against alien-signals, the difference on reorders is structural:</p>
+  <ReorderCallout />
   <p>More: <a href={href("/benchmarks/")}>benchmarks and methodology</a>, <a href={href("/alien-signals-comparison/")}>alien-signals vs Reflex Quant</a>, <a href={href("/vue-reactivity-comparison/")}>Vue reactivity vs signals</a>.</p>
 
   <h2>Read next</h2>

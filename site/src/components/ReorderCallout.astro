@@ -1,0 +1,12 @@
+---
+// The structure counter that most distinguishes Quant: reorder.rotate-256 (bench/structure.mjs).
+---
+<figure class="callout">
+  <div class="callout-head">256 dependencies, rotated every pass</div>
+  <table class="num">
+    <tr><th></th><th>edges created</th><th>edges removed</th></tr>
+    <tr><td><strong>Reflex Quant</strong></td><td><strong>0</strong></td><td><strong>0</strong></td></tr>
+    <tr><td>alien-signals 3.2.1</td><td>255</td><td>255</td></tr>
+  </table>
+  <figcaption>Same dependency set. Different structural work. Reproduce: <code>node bench/structure.mjs</code>.</figcaption>
+</figure>

@@ -69,3 +69,9 @@ svg.small{display:block;width:100%;max-width:440px;margin:0 auto}svg.mid{display
 .tok-comment{color:#6e7781;font-style:italic}.tok-variableName.tok-definition,.tok-propertyName.tok-definition{color:#953800}.tok-propertyName{color:#0550ae}.tok-typeName,.tok-className{color:#953800}
 @media (prefers-color-scheme:dark){.tok-keyword,.tok-operatorKeyword,.tok-modifier{color:#ff7b72}.tok-string,.tok-string2{color:#a5d6ff}.tok-number,.tok-bool,.tok-atom,.tok-propertyName{color:#79c0ff}.tok-comment{color:#8b949e}.tok-variableName.tok-definition,.tok-propertyName.tok-definition,.tok-typeName,.tok-className{color:#ffa657}.pg-warn{color:#d29922}}
 @media (prefers-color-scheme:dark){.pg-bar button[data-run]{color:#0d1117}}
+.strip{margin:8px 0 24px}.strip-row{display:grid;grid-template-columns:minmax(150px,240px) 1fr 56px;gap:12px;align-items:center;font-size:15px;padding:4px 0}
+.strip-track{height:12px;background:var(--surface2);border-radius:0 4px 4px 0}.strip-bar{display:block;height:100%;border-radius:0 4px 4px 0;min-width:3px}
+.strip-bar.win{background:var(--win)}.strip-bar.lose{background:var(--lose)}.strip-row b{text-align:right;font-variant-numeric:tabular-nums}
+.callout{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:10px;padding:14px 18px;margin:24px 0}
+.callout-head{font-weight:700;margin-bottom:4px}.callout table{margin:6px 0}.callout td:not(:first-child){font-size:1.15rem}
+@media (max-width:520px){.strip-row{grid-template-columns:1fr 56px}.strip-row .strip-track{grid-column:1/-1;grid-row:2}}
