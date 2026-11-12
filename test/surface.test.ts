@@ -2,7 +2,7 @@
 // (SPEC, change class "surface API"). Each test states which existing fact
 // the operation exposes; none of them relies on new state.
 import { describe, expect, it } from "vitest";
-import { batch, computed, effect, get, peek, set, signal, untracked, update, type Computed } from "../src/index";
+import { batch, computed, effect, get, peek, set, signal, typeOf, untracked, update, type Computed } from "../src/index";
 import { idle } from "../src/kernel";
 import type { Node } from "../src/graph";
 import { checkGraph } from "./support/graph";
@@ -13,6 +13,26 @@ const sources = (handle: unknown): Node[] => {
   for (let e = asNode(handle).firstDep; e !== null; e = e.nextDep) out.push(e.from);
   return out;
 };
+
+describe("typeOf: identify a live handle", () => {
+  it("uses the node's existing kind evidence without executing a computed", () => {
+    const source = signal(() => 1);
+    let runs = 0;
+    const derived = computed(() => (runs++, get(source)()));
+    const watcher = effect(() => () => {});
+
+    expect([typeOf(source), typeOf(derived), typeOf(watcher)]).toEqual([
+      "signal", "computed", "effect",
+    ]);
+    expect(runs).toBe(0);
+    expect(get(derived)).toBe(1);
+    set(source, () => 2);
+    expect([typeOf(source), typeOf(derived), typeOf(watcher)]).toEqual([
+      "signal", "computed", "effect",
+    ]);
+    expect(runs).toBe(1);
+  });
+});
 
 describe("seeded computed: prev is the last committed value", () => {
   it("prev is `initial` before the first commit, then the last committed value", () => {

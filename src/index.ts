@@ -1,5 +1,5 @@
 // Public API: signal, computed, effect, get, peek, set, update, dispose,
-// batch, untracked. A handle is the node itself: nothing is allocated besides
+// batch, untracked, typeOf. A handle is the node itself: nothing is allocated besides
 // the node, and handle <-> node conversions are type assertions only (no
 // runtime wrapper). Every operation here exposes existing kernel and host
 // semantics; none adds state.
@@ -41,6 +41,23 @@ export interface Computed<out T> extends Readable<T> {
 
 export interface Effect {
   readonly [EFFECT]: true;
+}
+
+/**
+ * Identify a live handle without evaluating it. A disposed computed is no
+ * longer distinguishable from a signal; passing one is invalid.
+ */
+export function typeOf<T>(target: Signal<T>): "signal";
+export function typeOf(target: Computed<unknown>): "computed";
+export function typeOf(target: Effect): "effect";
+export function typeOf(
+  target: Readable<unknown> | Effect,
+): "signal" | "computed" | "effect";
+export function typeOf(target: unknown): "signal" | "computed" | "effect" {
+  const node = target as Node;
+
+  if ((node.flags & Flag.Watch) !== 0) return "effect";
+  return node.fn === null ? "signal" : "computed";
 }
 
 export function signal<T>(value: T): Signal<T> {

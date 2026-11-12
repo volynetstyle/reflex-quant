@@ -20,11 +20,12 @@ const fail = (message) => {
 };
 
 function smoke(api, format) {
-  const { signal, computed, effect, get, set, dispose, batch } = api;
+  const { signal, computed, effect, get, set, dispose, batch, typeOf } = api;
   const a = signal(1);
   const b = computed(() => get(a) * 2);
   const seen = [];
   const e = effect(() => void seen.push(get(b)));
+  if ([typeOf(a), typeOf(b), typeOf(e)].join() !== "signal,computed,effect") fail(`${format}: incorrect handle kinds`);
   batch(() => {
     set(a, 2);
     set(a, 3);
@@ -192,9 +193,20 @@ try {
     const consumer = path.join(tmp, `use.${extension}`);
     consumers.push(consumer);
     writeFileSync(consumer, [
-      `import { signal, computed, effect, get, peek, set, update, dispose, type Signal, type Computed, type Readable } from ${JSON.stringify(path.join(root, "dist", entry).replaceAll("\\", "/"))};`,
+      `import { signal, computed, effect, get, peek, set, update, dispose, typeOf, type Signal, type Computed, type Effect, type Readable } from ${JSON.stringify(path.join(root, "dist", entry).replaceAll("\\", "/"))};`,
       "const a: Signal<number> = signal(1);",
       "const b: Computed<string> = computed(() => String(get(a)));",
+      "const e: Effect = effect(() => {});",
+      "const signalKind: 'signal' = typeOf(a);",
+      "const computedKind: 'computed' = typeOf(b);",
+      "const effectKind: 'effect' = typeOf(e);",
+      "const either: Signal<number> | Computed<string> | Effect = Math.random() ? a : Math.random() ? b : e;",
+      "const eitherKind: 'signal' | 'computed' | 'effect' = typeOf(either);",
+      "const mixedSignals: Signal<number> | Signal<string> = Math.random() ? a : signal('x');",
+      "const mixedKind: 'signal' | 'computed' | 'effect' = typeOf(mixedSignals);",
+      "// @ts-expect-error only reactive handles are accepted",
+      "typeOf(42);",
+      "export { signalKind, computedKind, effectKind, eitherKind, mixedKind };",
       "const s: string = get(b);",
       "set(a, 2);",
       "dispose(effect(() => void get(b)));",

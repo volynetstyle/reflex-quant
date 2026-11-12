@@ -101,6 +101,10 @@ dispose(total);                                     // detach; the value stays r
   consumer; if `fn` throws, nothing is written.
 - `effect(fn)`: if the call throws, it returns no handle and leaves nothing
   live; a cleanup its run returned has already run.
+- `typeOf(x)`: returns `"signal"`, `"computed"` or `"effect"` for a live
+  handle without evaluating it. Passing a disposed computed is invalid: after
+  disposal the runtime no longer retains enough information to distinguish it
+  from a signal. TypeScript infers the corresponding literal for each handle.
 
 ### Development build
 
