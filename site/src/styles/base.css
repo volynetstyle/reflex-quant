@@ -58,7 +58,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:14px;margin-top:8px}
 .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
 .card{border:1px solid var(--line);padding:12px 14px;font-size:15px}.card h3{margin:0 0 4px;font-size:1rem}
 .callout{border:1px solid var(--line);border-left:4px solid var(--fg);padding:14px 18px;margin:24px 0}
-.callout-head{font-weight:700;margin-bottom:4px}.callout table{margin:6px 0}.callout td:not(:first-child){font-size:1.15rem}
+.callout-head{font-weight:700;margin-bottom:4px}.callout.warn{border-left-color:#d4a72c}.callout.warn .callout-head{color:#e3b341}.callout.warn .callout-head::before{content:"▲";font-size:.75em;margin-right:8px}.callout p{margin:.5em 0}.callout table{margin:6px 0}.callout td:not(:first-child){font-size:1.15rem}
 ol.ladder{list-style:none;padding:0;counter-reset:s}ol.ladder li{counter-increment:s;display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line)}
 ol.ladder li::before{content:counter(s);font-weight:700;color:var(--accent)}ol.ladder em{font-style:normal;font-size:13px;color:var(--muted);white-space:nowrap}
 .badge{display:inline-block;font:600 11px/1 system-ui;padding:3px 6px;border:1px solid currentColor;vertical-align:middle}

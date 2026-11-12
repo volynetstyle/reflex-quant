@@ -1,0 +1,22 @@
+{
+  "name": "reflex-quant-bench-fireflies",
+  "private": true,
+  "type": "module",
+  "description": "One model (pulse-coupled fireflies with writes inside the transition) on six signal runtimes: same answers, work, time, and what happens as the field grows.",
+  "scripts": {
+    "check": "node check.mjs",
+    "time": "node time.mjs",
+    "big": "node big.mjs",
+    "wakeup": "node lost-wakeup.mjs",
+    "depth": "node depth.mjs"
+  },
+  "dependencies": {
+    "@angular/core": "21.2.26",
+    "@preact/signals-core": "1.14.5",
+    "@vue/reactivity": "3.5.45",
+    "alien-signals": "3.2.1",
+    "reflex-quant": "1.1.2",
+    "rxjs": "7.8.2",
+    "solid-js": "1.9.19"
+  }
+}
