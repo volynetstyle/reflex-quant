@@ -130,7 +130,7 @@ function checkStandalone(file, rejectCounters = false) {
       fail(`${file} still carries research instrumentation`);
     }
     if (ts.isIdentifier(node) && node.text === "__DEV__") fail(`${file} carries an unreplaced __DEV__`);
-    if (rejectCounters && ts.isIdentifier(node) && node.text === "Flag") fail(`${file} still carries the flag enum`);
+    if (ts.isIdentifier(node) && node.text === "Flag") fail(`${file} still carries the flag enum`);
     if ((ts.isPropertyAccessExpression(node) && counterNames.has(node.name.text)) ||
         (ts.isElementAccessExpression(node) && ts.isStringLiteral(node.argumentExpression) && counterNames.has(node.argumentExpression.text)) ||
         (ts.isPropertyAssignment(node) && counterNames.has(node.name.getText(tree)))) {

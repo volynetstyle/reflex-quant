@@ -197,8 +197,7 @@ export function read(n: Node): unknown {
 
 /** `read` without its tracking half: bring `n` up to date, record no relation. */
 export function peek(n: Node): unknown {
-  if ((n.flags & (Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking)) !== 0)
-    pull(n);
+  if ((n.flags & Flag.Pull) !== 0) pull(n);
 
   return n.value;
 }
@@ -215,8 +214,7 @@ export function peek(n: Node): unknown {
 function pull(root: Node): void {
   const f = root.flags;
 
-  if ((f & (Flag.Busy | Flag.Checking)) !== 0)
-    throw new Error("Cycle detected");
+  if ((f & Flag.Active) !== 0) throw new Error("Cycle detected");
 
   if ((f & Flag.Dirty) !== 0) return exec(root);
 
@@ -250,15 +248,8 @@ function verify(root: Node, f: Flags): void {
 
           if (__STATS__) stats.checks++;
 
-          if (
-            (sf &
-              (__DEV__
-                ? Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking
-                : Flag.Stale | Flag.Dirty)) !==
-            0
-          ) {
-            if ((sf & (Flag.Busy | Flag.Checking)) !== 0)
-              throw new Error("Cycle detected");
+          if ((sf & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) {
+            if ((sf & Flag.Active) !== 0) throw new Error("Cycle detected");
 
             if ((sf & Flag.Dirty) === 0) {
               s.flags = __DEV__
@@ -342,11 +333,7 @@ export function check(w: Node): void {
       if (__STATS__) stats.checks++;
 
       if (
-        (s.flags &
-          (__DEV__
-            ? Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking
-            : Flag.Stale | Flag.Dirty)) !==
-          0 &&
+        (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
         e.gen !== tentative
       )
         pull(s);
@@ -365,11 +352,7 @@ export function check(w: Node): void {
     const s = e.from;
 
     if (
-      (s.flags &
-        (__DEV__
-          ? Flag.Stale | Flag.Dirty | Flag.Busy | Flag.Checking
-          : Flag.Stale | Flag.Dirty)) !==
-        0 &&
+      (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
       e.gen !== tentative
     )
       pull(s);
@@ -400,11 +383,7 @@ export function exec(n: Node): void {
   // development build a computed's validation ends here, BUSY taking over
   // from CHECKING; on a watcher the bit is WOKEN, which this run discharges.
   n.flags =
-    (n.flags &
-      ~(__DEV__
-        ? Flag.Stale | Flag.Dirty | Flag.Checking
-        : Flag.Stale | Flag.Dirty)) |
-    Flag.Busy;
+    (n.flags & ~(__DEV__ ? Flag.PendingMarked : Flag.Pending)) | Flag.Busy;
   active = n;
   cursor = null;
   let value: unknown;
@@ -486,7 +465,7 @@ export function dispose(n: Node): void {
 
 function detach(n: Node): void {
   cutDeps(n, null);
-  n.flags &= ~(Flag.Stale | Flag.Dirty | Flag.Woken);
+  n.flags &= ~Flag.PendingMarked;
 }
 
 // ---------------------------------------------------------------- tracking

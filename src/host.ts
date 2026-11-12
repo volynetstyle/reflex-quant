@@ -19,7 +19,7 @@ export let draining = false;
 export function wake(w: Node): void {
   const flags = w.flags;
 
-  if ((flags & (Flag.Auto | Flag.Queued)) !== Flag.Auto) return;
+  if ((flags & Flag.AutoQueued) !== Flag.Auto) return;
 
   w.flags = flags | Flag.Queued;
   queue[size++] = w;
@@ -47,9 +47,9 @@ export function watcher(fn: NodeFn, auto: boolean): Node {
 export function run(w: Node): void {
   const flags = w.flags;
 
-  if (w.fn === null || (flags & (Flag.Stale | Flag.Woken)) === 0) return;
+  if (w.fn === null || (flags & Flag.Wake) === 0) return;
 
-  w.flags = flags & ~(Flag.Stale | Flag.Woken);
+  w.flags = flags & ~Flag.Wake;
 
   if ((flags & Flag.Stale) !== 0) {
     try {

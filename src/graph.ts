@@ -73,6 +73,14 @@ export const enum Flag {
   Auto = 1 << 6,
   /** Host policy: already in its queue. */
   Queued = 1 << 7,
+  // Combined masks used when testing or clearing flags; all remain within a byte.
+  Pending = Stale | Dirty,
+  Active = Busy | Checking,
+  Pull = Pending | Active,
+  // Checking and Woken share a bit on computed nodes and watchers, respectively.
+  PendingMarked = Pending | Checking,
+  Wake = Stale | Woken,
+  AutoQueued = Auto | Queued,
 }
 
 /** Counters wrap inside the SMI range. */
