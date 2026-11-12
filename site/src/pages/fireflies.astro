@@ -1,0 +1,255 @@
+---
+import Base from "../layouts/Base.astro";
+import Snippet from "../components/Snippet.astro";
+import { BLOB, href } from "../site";
+
+const CORE = `
+import { computed, effect, get, signal, update } from "reflex-quant";
+
+const tick = signal(0);
+const pulse = grid.map(() => signal(0));              // one inbox per firefly
+
+const firefly = grid.map((_, i) => computed((prev) => {
+  const t = get(tick);
+  let phase = prev.phase + (t - prev.tick) * 0.01;    // time advances once per tick
+  let lit = prev.lit;
+
+  const incoming = get(pulse[i]);
+  if (incoming) {
+    update(pulse[i], () => 0);                         // consume the inbox
+    if (t - lit > 30) phase += incoming;               // refractory after a flash
+  }
+  if (phase >= 1) {                                    // flash: reset, kick the neighbours
+    phase = 0;
+    lit = t;
+    for (const j of neighbours(i)) update(pulse[j], (x) => x + 0.2);
+  }
+  return { tick: t, phase, lit };
+}, { tick: 0, phase: Math.random(), lit: -Infinity }));
+
+effect(() => { for (const f of firefly) get(f); });   // the solver
+
+const step = () => update(tick, (t) => t + 1);`;
+
+const STATEFUL = `
+// Without prev: the oscillator's state needs its own signals
+const phase = grid.map(() => signal(Math.random()));
+const lit = grid.map(() => signal(-Infinity));
+// ...and the computation reads them and writes them back: a feedback loop in the graph`;
+---
+<Base
+  path="/fireflies/"
+  title="Firefly Synchronization with JavaScript Signals | Reflex Quant"
+  headline="Fireflies: a fixpoint without a loop"
+  description="2,560 pulse-coupled oscillators in Reflex Quant. Each firefly's phase lives in its computed's previous value, flashes are writes, and the avalanche is solved by the reactive runtime with no event queue."
+  kind="Article"
+>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <marker id="dg-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="dg-ah" /></marker>
+      <marker id="dg-w" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" class="dg-wh" /></marker>
+    </defs>
+  </svg>
+
+  <p class="lede">Each firefly is a <code>computed</code> whose phase lives in <code>prev</code>. A flash writes to its neighbours' inboxes from inside that computation. There is no event queue and no stabilization loop: the runtime's invalidations are the loop.</p>
+
+  <figure class="life" data-fireflies>
+    <canvas aria-label="Field of fireflies. Click one to make it flash."></canvas>
+    <div class="life-bar">
+      <button type="button" data-act="play">▶ Play</button>
+      <button type="button" data-act="step">Step</button>
+      <button type="button" data-act="scramble">Scramble</button>
+      <span class="life-tip">click a firefly to poke it</span>
+    </div>
+    <dl class="life-stats ff-stats" aria-live="off">
+      <div><dt>tick</dt><dd data-tick>0</dd></div>
+      <div><dt>flashed</dt><dd data-lit>–</dd></div>
+      <div><dt>computed runs</dt><dd data-runs>–</dd></div>
+      <div><dt>pulses sent</dt><dd data-pulses>–</dd></div>
+      <div><dt>driver runs</dt><dd data-passes>–</dd></div>
+      <div><dt>ms</dt><dd data-ms>–</dd></div>
+    </dl>
+    <div class="ff-front-h">fireflies executed per driver run, last step (each bar runs until the next driver run starts, validation included)</div>
+    <div class="ff-front" data-frontier></div>
+  </figure>
+  <p>They start at random phases and flash on their own. Neighbours nudge each other forward; a firefly pushed over the edge flashes with the one that pushed it and stays in step. Within a few hundred ticks almost the whole field flashes in the same tick. On the way there, one <code>step()</code> can carry an avalanche across hundreds of fireflies. Press <strong>Step</strong> during a wave and read the bars under the counters.</p>
+
+  <h2>The whole simulation</h2>
+  <Snippet code={CORE} />
+  <p>That is all of it. The demo adds one more signal, <code>epoch</code>, so <strong>Scramble</strong> can restart every firefly.</p>
+
+  <h2>The model is cyclic. The dependency graph is not.</h2>
+  <figure class="dg">
+    <svg viewBox="0 0 680 270" role="img" aria-label="Left: fireflies A, B and C excite each other in a loop. Right: Quant's graph has tick and one inbox feeding each firefly, and every firefly feeding the solver; the flashes are dashed writes into inboxes, not edges.">
+      <text x="20" y="22" class="dg-h">what happens</text>
+      <circle cx="90" cy="95" r="24" class="dg-n hot" /><text x="90" y="100" text-anchor="middle">A</text>
+      <circle cx="230" cy="95" r="24" class="dg-n hot" /><text x="230" y="100" text-anchor="middle">B</text>
+      <circle cx="160" cy="205" r="24" class="dg-n hot" /><text x="160" y="210" text-anchor="middle">C</text>
+      <path d="M116,88 Q160,62 204,88" class="dg-wl" marker-end="url(#dg-w)" /><text x="160" y="62" text-anchor="middle" class="dg-s">flash</text>
+      <path d="M232,122 Q222,175 186,197" class="dg-wl" marker-end="url(#dg-w)" /><text x="238" y="172" class="dg-s">flash</text>
+      <path d="M134,200 Q92,178 86,122" class="dg-wl" marker-end="url(#dg-w)" /><text x="40" y="172" class="dg-s">flash</text>
+      <text x="20" y="258" class="dg-s">a real feedback loop: A → B → C → A</text>
+
+      <line x1="320" y1="14" x2="320" y2="262" class="dg-sep" />
+
+      <text x="345" y="22" class="dg-h">what Quant stores</text>
+      <rect x="465" y="34" width="90" height="24" class="dg-b" /><text x="510" y="51" text-anchor="middle">tick</text>
+      <rect x="370" y="88" width="80" height="24" class="dg-b" /><text x="410" y="105" text-anchor="middle">inbox A</text>
+      <rect x="470" y="88" width="80" height="24" class="dg-b" /><text x="510" y="105" text-anchor="middle">inbox B</text>
+      <rect x="570" y="88" width="80" height="24" class="dg-b" /><text x="610" y="105" text-anchor="middle">inbox C</text>
+      <circle cx="410" cy="165" r="20" class="dg-n" /><text x="410" y="170" text-anchor="middle">A</text>
+      <circle cx="510" cy="165" r="20" class="dg-n" /><text x="510" y="170" text-anchor="middle">B</text>
+      <circle cx="610" cy="165" r="20" class="dg-n" /><text x="610" y="170" text-anchor="middle">C</text>
+      <rect x="440" y="220" width="140" height="26" class="dg-b solid" /><text x="510" y="238" text-anchor="middle">solver effect</text>
+      <line x1="480" y1="58" x2="420" y2="144" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="510" y1="58" x2="510" y2="86" class="dg-l" />
+      <line x1="510" y1="112" x2="510" y2="144" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="540" y1="58" x2="600" y2="144" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="410" y1="112" x2="410" y2="144" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="610" y1="112" x2="610" y2="144" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="420" y1="183" x2="470" y2="218" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="510" y1="185" x2="510" y2="218" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="600" y1="183" x2="550" y2="218" class="dg-l" marker-end="url(#dg-a)" />
+      <path d="M428,156 Q455,128 474,114" class="dg-wl" marker-end="url(#dg-w)" />
+      <path d="M528,156 Q555,128 574,114" class="dg-wl" marker-end="url(#dg-w)" />
+      <path d="M628,156 C676,132 672,76 600,74 L470,74 C452,74 444,78 438,86" class="dg-wl" marker-end="url(#dg-w)" />
+      <text x="345" y="262" class="dg-s">— edge (a read)   - - write (a message, not an edge)</text>
+    </svg>
+  </figure>
+  <p>Physically, A excites B, B excites C, and C can excite A again. In the graph there is no path from A to B at all. A writes into B's inbox, and B depends only on its inbox. The causal chain is long; every dependency chain is one step. <strong>The loop of the model runs through time and messages, not through the graph.</strong></p>
+
+  <h2>One firefly: three edges in, zero out</h2>
+  <figure class="dg">
+    <svg viewBox="0 0 680 210" role="img" aria-label="A firefly reads tick, epoch and its inbox: three edges. It writes four neighbour inboxes: zero edges.">
+      <text x="20" y="22" class="dg-h">get(): becomes an edge</text>
+      <text x="660" y="22" class="dg-h" text-anchor="end">update(): only a write</text>
+      <rect x="40" y="48" width="100" height="26" class="dg-b" /><text x="90" y="66" text-anchor="middle">tick</text>
+      <rect x="40" y="92" width="100" height="26" class="dg-b" /><text x="90" y="110" text-anchor="middle">epoch</text>
+      <rect x="40" y="136" width="100" height="26" class="dg-b" /><text x="90" y="154" text-anchor="middle">inbox i</text>
+      <line x1="140" y1="61" x2="306" y2="96" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="140" y1="105" x2="304" y2="105" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="140" y1="149" x2="306" y2="114" class="dg-l" marker-end="url(#dg-a)" />
+      <circle cx="340" cy="105" r="34" class="dg-n hot" /><text x="340" y="101" text-anchor="middle">firefly</text><text x="340" y="117" text-anchor="middle">i</text>
+      <rect x="540" y="36" width="110" height="24" class="dg-b" /><text x="595" y="53" text-anchor="middle">inbox up</text>
+      <rect x="540" y="76" width="110" height="24" class="dg-b" /><text x="595" y="93" text-anchor="middle">inbox left</text>
+      <rect x="540" y="116" width="110" height="24" class="dg-b" /><text x="595" y="133" text-anchor="middle">inbox right</text>
+      <rect x="540" y="156" width="110" height="24" class="dg-b" /><text x="595" y="173" text-anchor="middle">inbox down</text>
+      <line x1="372" y1="94" x2="537" y2="50" class="dg-wl" marker-end="url(#dg-w)" />
+      <line x1="374" y1="101" x2="537" y2="88" class="dg-wl" marker-end="url(#dg-w)" />
+      <line x1="374" y1="109" x2="537" y2="128" class="dg-wl" marker-end="url(#dg-w)" />
+      <line x1="372" y1="116" x2="537" y2="166" class="dg-wl" marker-end="url(#dg-w)" />
+      <text x="20" y="200" class="dg-s">dependencies: 3, always, in the same order</text>
+      <text x="660" y="200" class="dg-s" text-anchor="end">dependencies added: 0</text>
+    </svg>
+  </figure>
+  <ul class="fingers">
+    <li><strong>Reads are how causes get in.</strong> <code>get()</code> records an edge. A firefly reads the same three sources in the same order on every run, so after its first run each read is a <a href={href("/reactive-runtime-anatomy/")}>cursor hit</a>: no lookup, no relinking.</li>
+    <li><strong>Writes are how effects get out.</strong> <code>update()</code> is not a read: it runs untracked, so a firefly that can start an avalanche across the whole field still has three dependencies.</li>
+  </ul>
+
+  <h2>Where the state lives</h2>
+  <figure class="dg">
+    <svg viewBox="0 0 680 210" role="img" aria-label="Left: with writable state, a firefly reads phase, lit, tick and inbox and writes phase and lit back, a loop in the graph. Right: with prev, it reads only tick and inbox and keeps phase and lit inside its own value.">
+      <text x="20" y="22" class="dg-h">state in signals</text>
+      <rect x="20" y="44" width="76" height="24" class="dg-b" /><text x="58" y="61" text-anchor="middle">phase i</text>
+      <rect x="20" y="80" width="76" height="24" class="dg-b" /><text x="58" y="97" text-anchor="middle">lit i</text>
+      <rect x="20" y="116" width="76" height="24" class="dg-b" /><text x="58" y="133" text-anchor="middle">tick</text>
+      <rect x="20" y="152" width="76" height="24" class="dg-b" /><text x="58" y="169" text-anchor="middle">inbox i</text>
+      <circle cx="220" cy="110" r="28" class="dg-n" /><text x="220" y="115" text-anchor="middle">firefly</text>
+      <line x1="96" y1="56" x2="194" y2="100" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="96" y1="92" x2="192" y2="106" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="96" y1="128" x2="192" y2="114" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="96" y1="164" x2="194" y2="120" class="dg-l" marker-end="url(#dg-a)" />
+      <path d="M210,83 Q170,30 98,52" class="dg-wl" marker-end="url(#dg-w)" />
+      <path d="M232,84 Q200,64 98,88" class="dg-wl" marker-end="url(#dg-w)" />
+      <text x="150" y="58" class="dg-s">writes back</text>
+
+      <line x1="320" y1="14" x2="320" y2="190" class="dg-sep" />
+
+      <text x="345" y="22" class="dg-h">state in prev</text>
+      <rect x="360" y="80" width="76" height="24" class="dg-b" /><text x="398" y="97" text-anchor="middle">tick</text>
+      <rect x="360" y="124" width="76" height="24" class="dg-b" /><text x="398" y="141" text-anchor="middle">inbox i</text>
+      <line x1="436" y1="92" x2="514" y2="106" class="dg-l" marker-end="url(#dg-a)" />
+      <line x1="436" y1="136" x2="514" y2="124" class="dg-l" marker-end="url(#dg-a)" />
+      <circle cx="580" cy="115" r="64" class="dg-n" /><text x="580" y="86" text-anchor="middle">firefly</text>
+      <rect x="522" y="100" width="116" height="44" class="dg-pocket" />
+      <text x="580" y="118" text-anchor="middle" class="dg-s">prev</text>
+      <text x="580" y="134" text-anchor="middle" class="dg-s">phase · lit · tick</text>
+    </svg>
+  </figure>
+  <Snippet code={STATEFUL} />
+  <p>For 2,560 fireflies that is 5,120 extra signals, two more edges per firefly, and a computation that writes its own sources every tick. With <code>prev</code>, the phase, the last flash and the last tick cost zero graph objects: they are the computed's committed value.</p>
+
+  <h2>Push and pull, on the shortest possible track</h2>
+  <figure class="dg">
+    <svg viewBox="0 0 680 120" role="img" aria-label="tick changes, each firefly is marked dirty directly, the solver reads it, and a dirty node simply executes.">
+      <rect x="10" y="40" width="120" height="34" class="dg-b solid" /><text x="70" y="62" text-anchor="middle">tick++</text>
+      <line x1="130" y1="57" x2="178" y2="57" class="dg-l" marker-end="url(#dg-a)" />
+      <rect x="180" y="40" width="150" height="34" class="dg-b" /><text x="255" y="62" text-anchor="middle">firefly: DIRTY</text>
+      <line x1="330" y1="57" x2="378" y2="57" class="dg-l" marker-end="url(#dg-a)" />
+      <rect x="380" y="40" width="130" height="34" class="dg-b" /><text x="445" y="62" text-anchor="middle">solver reads it</text>
+      <line x1="510" y1="57" x2="558" y2="57" class="dg-l" marker-end="url(#dg-a)" />
+      <rect x="560" y="40" width="110" height="34" class="dg-b solid" /><text x="615" y="62" text-anchor="middle">execute</text>
+      <text x="255" y="100" text-anchor="middle" class="dg-s">push: one level</text>
+      <text x="530" y="100" text-anchor="middle" class="dg-s">pull: DIRTY means run, nothing to check</text>
+    </svg>
+  </figure>
+  <p>A write marks its direct subscribers DIRTY, and a DIRTY computed is executed without checking its sources. Every firefly subscribes to <code>tick</code> directly, so a tick never builds a chain of "maybe stale" nodes to walk back through. Quant's general machinery is all still there; here every case it meets is the cheapest one.</p>
+
+  <h2>A dense first pass, then a sparse frontier</h2>
+  <figure class="dg">
+    <svg viewBox="0 0 680 150" role="img" aria-label="Pass 1 executes every firefly because all read tick. Later passes execute only the fireflies whose inbox received a pulse, until a pass changes nothing.">
+      <text x="10" y="30" class="dg-s">run 1</text><rect x="70" y="18" width="590" height="16" class="dg-bar" /><text x="70" y="50" class="dg-s">every firefly: all of them read tick</text>
+      <text x="10" y="80" class="dg-s">run 2</text><rect x="70" y="68" width="90" height="16" class="dg-bar" /><text x="170" y="81" class="dg-s">only the ones a flash wrote to</text>
+      <text x="10" y="108" class="dg-s">run 3</text><rect x="70" y="96" width="26" height="16" class="dg-bar" /><text x="106" y="109" class="dg-s">their neighbours, if those flashed</text>
+      <text x="10" y="136" class="dg-s">…</text><text x="70" y="136" class="dg-s">until a pass changes nothing: the fixpoint</text>
+    </svg>
+  </figure>
+  <p>The driver reads the fireflies in order. Firefly 900 flashes and writes into the inbox of firefly 899, which the driver has already read. Two rules of the <a href={`${BLOB}/CONTRACT.md`}>contract</a> decide what happens:</p>
+  <ul class="fingers">
+    <li><strong>P5:</strong> once a computation has observed a source, a later change to it leaves an execution owed.</li>
+    <li><strong>W2:</strong> a watcher invalidated during its own run is delivered again.</li>
+  </ul>
+  <p>So the driver comes round again. On that pass only the fireflies with a new pulse are DIRTY; the others are clean and cost a version check each, not a run. The bars under the demo are measured, not drawn. One step in the middle of a wave executed 3,067, then 342, 174, 183, 214, 204, 182, 122, 108, 84 fireflies, and five more runs: the first pass is the whole field, and after it the frontier stays about the size of the wavefront until the wave dies out. The driver still walks all 2,560 of its edges on every pass; what shrinks is the work done at them. Delivery also validates before it runs: a firefly that took a pulse during its refractory time returns <code>prev</code>, a cutoff, and the driver's body is not run at all. That is why a tick where the field is already in step shows thousands of pulses and a single driver run.</p>
+
+  <h2>Two clocks</h2>
+  <figure class="dg">
+    <svg viewBox="0 0 680 140" role="img" aria-label="Tick 42 contains three executions of one firefly: woken by the tick it adds 0.01, woken by a pulse it adds nothing, woken by its cleared inbox it returns prev.">
+      <line x1="20" y1="60" x2="660" y2="60" class="dg-l" />
+      <line x1="60" y1="46" x2="60" y2="74" class="dg-l" /><text x="60" y="96" text-anchor="middle" class="dg-s">tick 41</text>
+      <line x1="200" y1="40" x2="200" y2="80" class="dg-l" /><text x="200" y="100" text-anchor="middle">tick 42</text>
+      <line x1="620" y1="46" x2="620" y2="74" class="dg-l" /><text x="620" y="96" text-anchor="middle" class="dg-s">tick 43</text>
+      <circle cx="270" cy="60" r="7" class="dg-dot" /><text x="270" y="34" text-anchor="middle" class="dg-s">run 1: tick moved</text><text x="270" y="122" text-anchor="middle" class="dg-s">+0.01</text>
+      <circle cx="400" cy="60" r="7" class="dg-dot" /><text x="400" y="34" text-anchor="middle" class="dg-s">run 2: a pulse</text><text x="400" y="122" text-anchor="middle" class="dg-s">+0 time, +0.2 pulse</text>
+      <circle cx="530" cy="60" r="7" class="dg-dot" /><text x="530" y="34" text-anchor="middle" class="dg-s">run 3: inbox cleared</text><text x="530" y="122" text-anchor="middle" class="dg-s">returns prev</text>
+    </svg>
+  </figure>
+  <p>One firefly can run several times in one tick. <code>prev.phase + (t - prev.tick) * 0.01</code> charges time only for ticks it has not seen yet, so domain time is <em>t → t + 1</em> however many executions happen.</p>
+
+  <h2>Why it terminates</h2>
+  <p>A flash removes 1 from the flashing firefly and hands out 4 × 0.2 = 0.8. Every flash loses 0.2 of total phase, so every avalanche ends. At 0.25 it would not: nothing is lost, and the driver can cycle forever. The runtime finds the fixpoint; the model has to have one. The refractory period is what makes the field synchronize instead of forming drifting patches.</p>
+
+  <h2>The same program elsewhere</h2>
+  <ul class="fingers">
+    <li><strong>Preact Signals</strong> has ordinary writable effects and <code>peek()</code>, so a plain sandpile or cellular automaton can be built much the same way. But <code>computed(fn)</code> gets no previous value, so the oscillator's private state has to move out into a writable signal or a closure. <a href="https://github.com/preactjs/signals/blob/main/packages/core/README.md">README</a></li>
+    <li><strong>Solid</strong> passes the previous value to memos and effects. But a memo "should be pure (it should not modify other reactive values)", so the flash has to move into an effect; effects run after memos, and "the order of runs among multiple effects is not guaranteed". <a href="https://docs.solidjs.com/reference/basic-reactivity/create-memo">createMemo</a>, <a href="https://docs.solidjs.com/reference/basic-reactivity/create-effect">createEffect</a></li>
+    <li><strong>Vue</strong> passes the previous value to a computed getter since 3.4, so half the construction is there. But the official model requires getters to be free of side effects and not to mutate other state. <code>update(pulse[j], …)</code> breaks exactly that, so pulse propagation moves into watchers and the single transition node falls apart. <a href="https://vuejs.org/guide/essentials/computed">Computed properties</a></li>
+    <li><strong>Angular</strong> is more direct still: a signal write during a <code>computed</code> throws <code>NG0600</code> (unless it is wrapped in <code>untracked</code>, which the docs reserve for writes that cannot be moved). Effects may write, but then state transition and propagation again split into different primitives. <a href="https://angular.dev/errors/NG0600">NG0600</a></li>
+  </ul>
+  <p>An important caveat: none of this means the program is mathematically impossible in Solid, Vue or Preact. Of course it is possible. JavaScript, after all, is expressive enough to implement another JavaScript inside it, because we have not deserved peace.</p>
+  <p>The strong claim is a different one: <strong>there, this program stops matching the natural structure of the model.</strong> It needs at least one of:</p>
+  <pre class="ff-list">external mutable state
+actions
+watchers
+queues
+two-phase updates
+manual stabilization
+scheduler</pre>
+  <p>In Quant the model stays the model.</p>
+
+  <p>Simpler first: <a href={href("/game-of-life/")}>Game of Life</a>, where the whole world is one computed and <code>prev</code> is the previous generation.</p>
+</Base>
+
+<script>
+  import "../scripts/fireflies";
+</script>

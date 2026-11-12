@@ -16,6 +16,7 @@
     "@codemirror/lang-javascript": "^6.2.5",
     "@lezer/highlight": "^1.2.5",
     "astro": "^7.4.10",
-    "codemirror": "^6.0.2"
+    "codemirror": "^6.0.2",
+    "reflex-quant": "^1.1.2"
   }
 }

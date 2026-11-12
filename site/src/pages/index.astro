@@ -1,6 +1,7 @@
 ---
 // Brand + product intent. The "how signals work" intent belongs to /javascript-signals-runtime/.
 import Base from "../layouts/Base.astro";
+import Hero from "../components/Hero.astro";
 import Install from "../components/Install.astro";
 import Example from "../components/Example.astro";
 import BenchStrip from "../components/BenchStrip.astro";
@@ -18,8 +19,9 @@ import { BLOB, href } from "../site";
     ["Does Reflex Quant work with React, Vue or Solid?", "Quant is framework-agnostic: it has no rendering layer. It can back state in any framework through an adapter that subscribes with effect()."],
   ]}
 >
+  <Hero slot="hero" />
   <p class="lede">A JavaScript signals runtime of about 2.2 KB gzip: signals, computeds and effects, with exact dynamic dependency tracking, glitch-free propagation, and no recursion on any path.</p>
-  <Install />
+  <div id="install"><Install /></div>
   <p>Quant is a research project as much as a library. It asks one question: what is the smallest known reactive runtime that a fixed semantic contract implies? Every mechanism in it has a counterexample showing that the contract, or a structural bound, breaks without it. Nothing is in it because another framework has it.</p>
 
   <h2>Fine-grained reactivity in one example</h2>

@@ -18,6 +18,8 @@ export const NAV: [string, string][] = [
   ["/dynamic-dependency-tracking/", "Dependency tracking"],
   ["/reactive-runtime-anatomy/", "Anatomy"],
   ["/benchmarks/", "Benchmarks"],
+  ["/game-of-life/", "Game of Life"],
+  ["/fireflies/", "Fireflies"],
   ["/alien-signals-comparison/", "vs alien-signals"],
   ["/vue-reactivity-comparison/", "vs Vue reactivity"],
 ];

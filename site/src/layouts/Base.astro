@@ -15,6 +15,7 @@ interface Props {
   faq?: Faq;
 }
 const { path, title, description, headline = title, kind = "TechArticle", faq } = Astro.props;
+const hero = Astro.slots.has("hero");
 ---
 <!doctype html>
 <html lang="en">
@@ -25,10 +26,11 @@ const { path, title, description, headline = title, kind = "TechArticle", faq } 
   </head>
   <body>
     <Header {path} />
+    <slot name="hero" />
     <main>
-      <Breadcrumbs {path} {headline} />
+      {!hero && <Breadcrumbs {path} {headline} />}
       <article>
-        <h1>{headline}</h1>
+        {!hero && <h1>{headline}</h1>}
         <slot />
         {faq && (
           <>

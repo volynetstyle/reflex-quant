@@ -1,0 +1,89 @@
+---
+import Base from "../layouts/Base.astro";
+import Snippet from "../components/Snippet.astro";
+import { href } from "../site";
+
+const CORE = `
+import { computed, effect, get, signal, update } from "reflex-quant";
+
+const generation = signal(0);
+
+const world = computed((prev) => {
+  const target = get(generation);
+  let { generation: current, cells } = prev;
+  while (current < target) {            // coalesced requests still mean every generation
+    cells = evolve(cells);
+    current++;
+  }
+  return current === prev.generation ? prev : { generation: current, cells };
+}, { generation: 0, cells: seed });
+
+const step = () => update(generation, (n) => n + 1);`;
+
+const VIEW = `
+const cell = grid.map((_, i) => computed(() => get(world).cells[i]));  // 0 → 0 is a cutoff
+cell.forEach((c, i) => effect(() => paint(i, get(c))));               // runs on a flip only`;
+
+const FRONTIER = `
+const cell = grid.map((v) => signal(v));
+
+const next = cell.map((_, i) => computed((self) => {   // prev = this cell's state
+  let alive = 0;
+  for (const j of neighbours(i)) alive += get(cell[j]);  // 8 edges, no self edge
+  return alive === 3 || (alive === 2 && self) ? 1 : 0;
+}, grid[i]));
+
+function step() {
+  const flips = cell.filter((c, i) => get(next[i]) !== get(c));
+  batch(() => flips.forEach((c) => update(c, (x) => x ^ 1)));
+}`;
+---
+<Base
+  path="/game-of-life/"
+  title="Conway's Game of Life with JavaScript Signals | Reflex Quant"
+  headline="Game of Life on signals"
+  description="Conway's Game of Life in Reflex Quant where the world is a computed: prev is the last committed generation, so state is a recurrence, not a writable store."
+  kind="Article"
+>
+  <p class="lede">A computed does not have to describe a value derived from state. Its committed value can be the state. Here the whole world is one <code>computed</code>, and <code>prev</code> is the previous generation.</p>
+
+  <figure class="life" data-life>
+    <canvas aria-label="Game of Life board. Click or drag to draw cells."></canvas>
+    <div class="life-bar">
+      <button type="button" data-act="play">▶ Play</button>
+      <button type="button" data-act="step">Step</button>
+      <button type="button" data-act="jump">+10 in one batch</button>
+      <button type="button" data-act="gun">Glider gun</button>
+      <button type="button" data-act="random">Random</button>
+      <button type="button" data-act="clear">Clear</button>
+      <span class="life-tip">draw with the pointer</span>
+    </div>
+    <dl class="life-stats" aria-live="off">
+      <div><dt>generation</dt><dd data-gen>0</dd></div>
+      <div><dt>world runs · gens</dt><dd data-world>–</dd></div>
+      <div><dt>projections run</dt><dd data-proj>–</dd></div>
+      <div><dt>cells repainted</dt><dd data-paint>–</dd></div>
+      <div><dt>ms</dt><dd data-ms>–</dd></div>
+    </dl>
+  </figure>
+
+  <h2>The whole game</h2>
+  <Snippet code={CORE} />
+  <p>There is no writable store for the board. <code>step()</code> only says that one more generation must exist; how to get there from the last committed world is the computed's job. That is <em>S(t+1) = F(S(t))</em> written directly.</p>
+  <p>The <code>while</code> loop matters. <code>prev</code> advances per execution, not per write: ten <code>update</code>s in one <code>batch</code> (or while nobody reads <code>world</code>) produce one execution. Press <strong>+10 in one batch</strong>: the counter shows one world run and ten generations. Laziness does not change the model.</p>
+
+  <h2>Coarse state, fine observation</h2>
+  <Snippet code={VIEW} />
+  <p>Every projection re-runs when the world changes, but one that returns the same 0 or 1 is a cutoff: its effect does not run. So storage is one value and painting is per cell. The counters show the cost honestly: all 5,376 projections run each generation, only the flipped cells repaint.</p>
+  <p>Why not write cells from inside a computed? Then the first updated cell would be visible to the second in the same generation, and Conway's synchronous automaton would become a sequential sweep. Quant permits such writes; Life does not want them.</p>
+
+  <h2>When the frontier is small</h2>
+  <p>The world model recomputes all cells every generation. If only a few cells change per step, per-cell signals keep work local, and <code>prev</code> still removes the self-dependency:</p>
+  <Snippet code={FRONTIER} />
+  <p>This works because the rule is idempotent for unchanged neighbours, so a <code>next</code> that did not re-run is still right. It holds only while <code>step()</code> is the sole writer: a cell set from outside (drawing, a reset) does not invalidate its own <code>next</code>, and the next step would undo the write. The demo above uses the world model for that reason.</p>
+  <p>Next: <a href={href("/fireflies/")}>Fireflies</a>, where a computed also writes, and one effect becomes a fixpoint solver.</p>
+</Base>
+
+<script>
+  import "../scripts/life";
+</script>

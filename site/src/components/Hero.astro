@@ -1,0 +1,25 @@
+---
+// Full-bleed homepage hero: a live 1-bit dithered canvas (src/scripts/hero.ts) behind split type.
+// The canvas is decorative; the h1 and lede are real text.
+import { href } from "../site";
+---
+<section class="hero" aria-labelledby="hero-h">
+  <canvas class="hero-cv" aria-hidden="true"></canvas>
+  <div class="hero-in">
+    <h1 id="hero-h">
+      <span class="hero-k">Reflex Quant</span>
+      <span class="hero-a">Signals with no</span>
+      <span class="hero-b">recursion</span>
+    </h1>
+    <p class="hero-p">A 2.2 KB JavaScript reactive runtime. Exact dependency tracking, glitch-free, one explicit stack on every path.</p>
+    <p class="hero-cta">
+      <a class="hero-btn" href="#install">npm i reflex-quant</a>
+      <a class="hero-link" href={href("/reactive-runtime-anatomy/")}>See how it works →</a>
+    </p>
+  </div>
+  <span class="hero-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+  <span class="hero-hint" aria-hidden="true">click to write a signal</span>
+</section>
+<script>
+  import "../scripts/hero";
+</script>
