@@ -67,7 +67,10 @@ quant   A received 0.2; left unread in A's inbox: 0
 ```
 
 In alien-signals 3.2.1 the effect is not run again for a dependency written during its own run.
-In Quant this case is contract W2 (a watcher invalidated during its own run is delivered again).
+Quant does not reach that position: effects run one at a time from the host's queue, so B runs
+after A has returned and B's write wakes A normally (logged order: A, A ends, B, A again). A write
+that does land on a running effect is contract W2 (a watcher invalidated during its own run is
+delivered again).
 Whether alien-signals intends this is a question for its maintainers; this file only shows what
 it does.
 

@@ -5,6 +5,7 @@ import BenchmarkSummary from "../components/BenchmarkSummary.astro";
 import ReorderCallout from "../components/ReorderCallout.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
 import { BLOB, href, REPO } from "../site";
+import "../styles/incident.css";
 ---
 <Base
   path="/alien-signals-comparison/"
@@ -46,14 +47,35 @@ import { BLOB, href, REPO } from "../site";
     <p>Reproduce in a few lines: <a href={`${REPO}/blob/main/bench/fireflies/lost-wakeup.mjs`}>lost-wakeup.mjs</a>. Observed on 3.2.1 only; other versions were not tested, and this may be intended behaviour.</p>
   </aside>
   <p><strong>A wake-up is lost.</strong> Quant, Preact Signals, Vue, Solid and Angular's signal primitives end every one of 1,500 ticks in the same state as the worklist. The direct alien-signals port differs on the first tick: fireflies are left with unread pulses. The case reduces to two effects. A writes into B's inbox; B's effect runs inside that write and writes back into A's inbox while A is still running.</p>
-  <table class="num">
-    <tr><th></th><th>A received</th><th>left unread in A's inbox</th></tr>
-    <tr><td>alien-signals 3.2.1</td><td>0</td><td>0.2</td></tr>
-    <tr><td>Preact Signals 1.14.5</td><td>0.2</td><td>0</td></tr>
-    <tr><td><strong>Reflex Quant 1.1.2</strong></td><td><strong>0.2</strong></td><td><strong>0</strong></td></tr>
-  </table>
-  <p>In alien-signals the effect is not run again for a dependency that was written during its own run. In Quant this exact case is an invariant of the contract (W2: a watcher invalidated during its own run is delivered again). Whether alien-signals intends the behaviour is a question for its maintainers; the test only shows what it does. To get the right answer the port needs a repair written by hand: after every tick, re-trigger each firefly that still has mail, until none does.</p>
-  <p><strong>An avalanche lives on the call stack.</strong> In alien-signals a write inside an effect runs the dependent effect inside that write, so a cascade nests effects in one another. On this model the nesting reaches 2,560, the whole field. On Node's default stack the repaired port overflowed at tick 262 with 2,457 effects nested in one run and completed in another: at this size it sits on the limit. Quant runs propagation on its own work stack, and its depth here is bounded by memory.</p>
+  <figure class="incident" aria-labelledby="case01">
+    <div class="inc-h" id="case01"><span>Case 01</span> Lost wake-up <em>trace logged from <a href={`${REPO}/blob/main/bench/fireflies/lost-wakeup.mjs`}>lost-wakeup.mjs</a>, the same two effects on both runtimes</em></div>
+    <div class="inc-cols">
+      <ol class="inc-trace" aria-label="alien-signals 3.2.1">
+        <li class="inc-who">alien-signals 3.2.1</li>
+        <li><b>A</b> runs</li>
+        <li class="d1">A writes B's inbox</li>
+        <li class="d2"><b>B</b> runs inside A's write <i>depth 2</i></li>
+        <li class="d2">B writes A's inbox</li>
+        <li class="d2 bad">A is still running: not run again</li>
+        <li class="d1">A's write returns</li>
+        <li>A ends</li>
+        <li class="end bad">0.2 left unread in A's inbox</li>
+      </ol>
+      <ol class="inc-trace" aria-label="Reflex Quant 1.1.2">
+        <li class="inc-who">Reflex Quant 1.1.2</li>
+        <li><b>A</b> runs</li>
+        <li class="d1">A writes B's inbox: B is queued</li>
+        <li class="d1">A's write returns</li>
+        <li>A ends</li>
+        <li><b>B</b> runs <i>depth 1</i></li>
+        <li class="d1">B writes A's inbox: A is queued</li>
+        <li><b>A</b> runs again, reads 0.2</li>
+        <li class="end ok">inbox empty</li>
+      </ol>
+    </div>
+  </figure>
+  <p>In alien-signals the effect is not run again for a dependency that was written during its own run. Preact Signals delivers the pulse too. Quant never reaches that position: an effect does not run inside another effect's write. Effects run one at a time from the host's queue, so B runs after A has returned, and B's write wakes A like any other write. If a write does land on an effect while it runs, the contract covers that case as well (W2: a watcher invalidated during its own run is delivered again). Whether alien-signals intends its behaviour is a question for its maintainers; the test only shows what it does. To get the right answer the port needs a repair written by hand: after every tick, re-trigger each firefly that still has mail, until none does.</p>
+  <p><strong>An avalanche lives on the call stack.</strong> In alien-signals a write inside an effect runs the dependent effect inside that write, so a cascade nests effects in one another. On this model the nesting reaches 2,560, the whole field. On Node's default stack the repaired port overflowed at tick 262 with 2,457 effects nested in one run and completed in another: at this size it sits on the limit. In Quant the trace above stays at depth 1 however long the cascade: effects run from a queue, and propagation runs on the runtime's own work stack, bounded by memory.</p>
   <p>The same ports on a 200 × 200 field, 40,000 fireflies, 900 ticks, default stack size:</p>
   <table>
     <tr><th></th><th>result</th></tr>

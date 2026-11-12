@@ -2,6 +2,7 @@
 import Base from "../layouts/Base.astro";
 import Example from "../components/Example.astro";
 import ReorderCallout from "../components/ReorderCallout.astro";
+import ReorderStand from "../components/ReorderStand.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
 import { BLOB, href } from "../site";
 ---
@@ -28,6 +29,10 @@ import { BLOB, href } from "../site";
     <tr><td>Reuse relations whatever the order</td><td>No allocation for any permutation of a known read set, if the old relation can be found cheaply and exactly.</td></tr>
   </table>
   <p>Quant takes the third. The whole design is in that last condition: finding the old relation without a hash table, without a second pass, and without ever guessing.</p>
+
+  <h2>Try it: reorder the reads</h2>
+  <p>Both lists below start with the eight relations of a previous pass, A to H. Change the order in which the next pass reads them and watch what each runtime does with its list. Rotate it, reverse it, shuffle it: Quant keeps all eight relations and only changes their order. alien-signals keeps a link only when it is exactly the next one, so every other read allocates a new link and the old one is freed at the end of the pass. <strong>Replace one</strong> brings in a source the list has never seen: then Quant creates one relation and removes one, which is the least any runtime can do.</p>
+  <ReorderStand />
 
   <h2>The stable path: one comparison</h2>
   <p>The dependency list is kept in read order, and a cursor points at the next relation the run is expected to touch. If the source being read is the one under the cursor, the read is a hit: one comparison, two stores, the cursor moves on. On <code>stable.wide-256</code> that is 256 hits for 256 reads, with no lookup and no allocation.</p>

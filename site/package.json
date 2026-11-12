@@ -9,7 +9,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check:viz": "node scripts/validate-sim.mjs"
+    "check:viz": "node scripts/validate-sim.mjs",
+    "check:reorder": "node scripts/validate-reorder.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

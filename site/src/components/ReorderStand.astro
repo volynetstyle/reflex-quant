@@ -1,0 +1,44 @@
+---
+// Reorder stand: drag the read order, watch both dependency lists. Models in scripts/reorder.ts,
+// checked against the instrumented libraries by scripts/validate-reorder.mjs.
+import "../styles/reorder.css";
+---
+<figure class="rs" data-reorder>
+  <div class="rs-h">read order of the next pass <span>drag a source, or focus it and use ← →</span></div>
+  <div class="rs-reads" role="listbox" aria-label="Read order. Use left and right arrow keys to move the focused source." data-rs-reads></div>
+  <div class="rs-bar">
+    <button type="button" data-rs="rotate">Rotate</button>
+    <button type="button" data-rs="reverse">Reverse</button>
+    <button type="button" data-rs="swap">Swap two</button>
+    <button type="button" data-rs="shuffle">Shuffle</button>
+    <button type="button" data-rs="replace">Replace one</button>
+    <button type="button" data-rs="reset">Reset</button>
+  </div>
+  <div class="rs-lanes">
+    <section class="rs-lane" data-lane="quant" aria-label="Reflex Quant dependency list">
+      <div class="rs-lh"><b>Reflex Quant</b><span>keeps relations, reorders them</span></div>
+      <div class="rs-list" data-rs-list></div>
+      <dl class="rs-count">
+        <div><dt>created</dt><dd data-c="created">0</dd></div>
+        <div><dt>removed</dt><dd data-c="removed">0</dd></div>
+        <div><dt>cursor hits</dt><dd data-c="hits">0</dd></div>
+        <div><dt>reused out of place</dt><dd data-c="moved">0</dd></div>
+      </dl>
+    </section>
+    <section class="rs-lane" data-lane="alien" aria-label="alien-signals dependency list">
+      <div class="rs-lh"><b>alien-signals 3.2.1</b><span>reuses only the next link</span></div>
+      <div class="rs-list" data-rs-list></div>
+      <dl class="rs-count">
+        <div><dt>created</dt><dd data-c="created">0</dd></div>
+        <div><dt>removed</dt><dd data-c="removed">0</dd></div>
+        <div><dt>next link reused</dt><dd data-c="hits">0</dd></div>
+        <div><dt>&nbsp;</dt><dd></dd></div>
+      </dl>
+    </section>
+  </div>
+  <p class="rs-total" aria-live="polite" data-rs-total></p>
+  <figcaption>Each lane is one computed's dependency list during the pass: the cursor (▸) moves along it as sources are read, and what is left after it at the end is removed. Counts are relations, checked against both libraries with their research counters on 2,400 random passes (<code>site/scripts/validate-reorder.mjs</code>). The model does not say how Quant finds an out-of-place relation (scan, lookup or index), only that it reuses it.</figcaption>
+</figure>
+<script>
+  import "../scripts/reorder-stand";
+</script>

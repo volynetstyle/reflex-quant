@@ -1,0 +1,17 @@
+/* Incident trace (alien-signals comparison): two runtimes, one logged sequence each */
+.incident{border:1px solid var(--line);background:#000;margin:20px 0}
+.inc-h{padding:10px 12px;border-bottom:1px solid var(--line);font:600 13px var(--mono);letter-spacing:.04em}
+.inc-h span{display:inline-block;background:#e3b341;color:#000;padding:2px 6px;margin-right:8px;text-transform:uppercase;font-size:11px;letter-spacing:.1em}
+.inc-h em{display:block;font:400 12px var(--sans);font-style:normal;color:var(--muted);margin-top:4px;letter-spacing:0}
+.inc-cols{display:grid;grid-template-columns:1fr 1fr}.inc-cols>ol+ol{border-left:1px solid var(--line)}
+@media (max-width:640px){.inc-cols{grid-template-columns:1fr}.inc-cols>ol+ol{border-left:0;border-top:1px solid var(--line)}}
+.inc-trace{list-style:none;margin:0;padding:10px 12px 12px;font:12.5px/1.9 var(--mono);counter-reset:s}
+.inc-trace li:not(.inc-who){counter-increment:s;position:relative;padding-left:26px}
+.inc-trace li:not(.inc-who)::before{content:counter(s);position:absolute;left:0;color:var(--muted);font-size:11px}
+.inc-trace .d1{padding-left:44px}.inc-trace .d2{padding-left:62px;border-left:1px dashed #e3b34155;margin-left:22px}
+.inc-trace .d2::before{left:-22px}
+.inc-trace i{font-style:normal;color:var(--muted);margin-left:6px;font-size:11px}
+.inc-who{font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+.inc-trace .bad{color:#e3b341}.inc-trace .bad::after{content:"  ✕"}
+.inc-trace .ok{color:var(--ok)}.inc-trace .ok::after{content:"  ✓"}
+.inc-trace .end{margin-top:6px;border-top:1px solid var(--line);padding-top:6px}
