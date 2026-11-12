@@ -1,0 +1,95 @@
+---
+import Base from "../layouts/Base.astro";
+import Snippet from "../components/Snippet.astro";
+import { BLOB, href } from "../site";
+
+const CORE = `
+import { computed, effect, get, signal, update } from "reflex-quant";
+
+const ALL = 0b11111;                          // water, sand, grass, forest, rock
+const support = (D) => /* tiles allowed next to any tile in D */;
+
+const choice = grid.map(() => signal(ALL));   // what a collapse allows here
+const inbox = grid.map(() => signal(ALL));    // what the neighbours still support
+
+const cell = grid.map((_, i) => computed((prev) => {
+  const D = prev & get(choice[i]) & get(inbox[i]);     // the domain lives in prev
+  if (D === prev) return prev;                         // nothing new: cutoff
+  for (const j of neighbours(i))
+    update(inbox[j], (m) => m & support(D));           // tell them what is still possible
+  return D;
+}, ALL));
+
+effect(() => { for (const c of cell) get(c); });      // the solver
+
+const collapse = (i, tile) => set(choice[i], tile);`;
+---
+<Base
+  path="/constraints/"
+  title="Constraint Propagation with JavaScript Signals | Reflex Quant"
+  headline="Constraints: knowledge converges"
+  description="A small Wave Function Collapse in Reflex Quant: each cell keeps the tiles it could still be, and fixing one narrows the rest to a fixpoint. Equal to an AC-3 solver after every step."
+  kind="Article"
+>
+  <p class="lede">Every cell knows which tiles it could still be. Fix one, and its neighbours lose what no longer fits, then theirs, until nothing more can be inferred. The solver is the same machine as before: <code>prev</code>, reads, writes, one effect.</p>
+
+  <figure class="life cp" data-constraints>
+    <canvas aria-label="Map of tiles. Click a cell to collapse it to one of its remaining tiles."></canvas>
+    <div class="life-bar">
+      <button type="button" data-cp="play">▶ Auto</button>
+      <button type="button" data-cp="step">Collapse one</button>
+      <button type="button" data-cp="contra">Introduce contradiction</button>
+      <button type="button" data-cp="reset">Reset</button>
+      <span class="life-tip">click a cell to collapse it</span>
+    </div>
+    <dl class="life-stats cp-stats" aria-live="off">
+      <div><dt>cells executed</dt><dd data-cp-runs>–</dd></div>
+      <div><dt>narrowed</dt><dd data-cp-changed>–</dd></div>
+      <div><dt>messages</dt><dd data-cp-msgs>–</dd></div>
+      <div><dt>driver runs</dt><dd data-cp-passes>–</dd></div>
+      <div><dt>left</dt><dd data-cp-open>–</dd></div>
+    </dl>
+    <div class="cp-panel">
+      <div>
+        <div class="ff-front-h">last action: <span data-cp-what></span></div>
+        <div class="cp-log" data-cp-log></div>
+      </div>
+      <div>
+        <div class="ff-front-h">cells narrowed per driver run</div>
+        <div class="ff-front" data-cp-front></div>
+      </div>
+    </div>
+  </figure>
+  <p>An open cell shows one dot per tile it could still be. Tiles may touch the same tile or the next one in the row water, sand, grass, forest, rock, so a beach separates sea from meadow and forest separates meadow from rock. <strong>Auto</strong> repeats the Wave Function Collapse step: pick the most constrained open cell, fix it to one of its remaining tiles, let the rest follow.</p>
+
+  <h2>Three kinds of computation, one machine</h2>
+  <ul class="fingers">
+    <li><a href={href("/game-of-life/")}>Game of Life</a>: <strong>state evolves</strong>. <em>S(t+1) = F(S(t))</em>, the world is one computed's value.</li>
+    <li><a href={href("/fireflies/")}>Fireflies</a>: <strong>events propagate</strong>. A flash is a message; a cascade settles at a fixpoint.</li>
+    <li>Constraints: <strong>knowledge converges</strong>. <em>D<sub>i</sub> ← D<sub>i</sub> ∩ support(D<sub>j</sub>)</em> until no domain can shrink.</li>
+  </ul>
+
+  <h2>The whole solver</h2>
+  <Snippet code={CORE} />
+  <p>The demo adds an <code>epoch</code> signal so <strong>Reset</strong> can start over; everything else is above.</p>
+
+  <h2>Why messages, not reads</h2>
+  <p>The tempting version reads the neighbours: <code>domain[i] = computed(() =&gt; … get(domain[j]) …)</code>. But <em>j</em> also reads <em>i</em>, so that is a cycle in the graph, which the contract forbids (<a href={`${BLOB}/CONTRACT.md`}>C1</a>). Here the cycle runs through messages instead: a cell reads only its own inbox and writes into its neighbours'. The graph stays three edges per cell; the constraint network can be as cyclic as it likes.</p>
+
+  <h2>Monotone, so it ends</h2>
+  <p>Domains only shrink. A cell with five possible tiles can narrow at most five times before it is empty, so a whole wave does at most 5 × 640 narrowings, whatever the order. That is the termination argument, and it belongs to the model, as in Fireflies. The inbox is an intersection, and intersecting twice changes nothing, so it never needs clearing: no write into a cell's own source, and no owed re-run for it (<a href={`${BLOB}/CONTRACT.md`}>P5</a>). A write that would not narrow an inbox stores the same value, which is not a change (P1), so it wakes nobody.</p>
+
+  <h2>Read order</h2>
+  <p>The driver reads the cells left to right, top to bottom. A cell that narrows writes into its right and lower neighbours before the driver reaches them, so those changes land in the same run. Changes going left or up land on cells already read; they are owed, and the driver comes round again (P5, W2). In our runs an ordinary collapse took one or two driver runs. The bars under the map count the cells that narrowed in each.</p>
+
+  <h2>Contradiction</h2>
+  <p>Forbid the last tile a cell has, and its domain is empty. An empty domain supports nothing, so every neighbour's domain becomes empty too, and theirs. The empty set reaches all 640 cells. Watch the bars: going right and down it travels inside one driver run, but every step left lands on a cell already read and waits for the next run. Started in the middle of the map, it took twenty runs: about forty cells each, then a tail down to zero. The runtime is not computing a value here: it is carrying a proof that this map cannot be completed.</p>
+  <p>This is not a full Wave Function Collapse. Real WFC backtracks or restarts on a contradiction; here you press <strong>Reset</strong>. With this tile set, eight full automatic runs in Node reached a complete map without a contradiction, but nothing here proves that always happens.</p>
+
+  <h2>How it was checked</h2>
+  <p>In Node, on the published package, the same model ran beside a plain AC-3 worklist solver over full maps from eight seeds, about 600 collapses each. After every collapse, every one of the 640 domains was equal in both.</p>
+</Base>
+
+<script>
+  import "../scripts/constraints";
+</script>

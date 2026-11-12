@@ -12,14 +12,18 @@ export const href = (path: string) => BASE + path;
 /** Site path -> absolute URL, for canonical, Open Graph and JSON-LD. */
 export const abs = (path: string) => ORIGIN + path;
 
+// Reading order: learn the machine, see it behave, then the evidence. An empty entry is a group break.
 export const NAV: [string, string][] = [
   ["/", "Reflex Quant"],
   ["/javascript-signals-runtime/", "Signals runtime"],
   ["/dynamic-dependency-tracking/", "Dependency tracking"],
   ["/reactive-runtime-anatomy/", "Anatomy"],
-  ["/benchmarks/", "Benchmarks"],
+  ["", ""],
   ["/game-of-life/", "Game of Life"],
   ["/fireflies/", "Fireflies"],
+  ["/constraints/", "Constraints"],
+  ["", ""],
+  ["/benchmarks/", "Benchmarks"],
   ["/alien-signals-comparison/", "vs alien-signals"],
   ["/vue-reactivity-comparison/", "vs Vue reactivity"],
 ];

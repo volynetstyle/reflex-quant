@@ -2,6 +2,7 @@
 // Brand + product intent. The "how signals work" intent belongs to /javascript-signals-runtime/.
 import Base from "../layouts/Base.astro";
 import Hero from "../components/Hero.astro";
+import StateNodes from "../components/StateNodes.astro";
 import Install from "../components/Install.astro";
 import Example from "../components/Example.astro";
 import BenchStrip from "../components/BenchStrip.astro";
@@ -14,7 +15,7 @@ import { BLOB, href } from "../site";
   headline="Reflex Quant"
   description="Reflex Quant is a 2.2 KB fine-grained reactivity library for JavaScript and TypeScript: signal, computed, effect, with a written contract and published benchmarks. MIT."
   faq={[
-    ["What is Reflex Quant?", "A JavaScript and TypeScript signals library (signal, computed, effect) of about 2.2 KB gzip, derived as the smallest known runtime a fixed reactive contract implies."],
+    ["What is Reflex Quant?", "A JavaScript and TypeScript signals library (signal, computed, effect) of about 2.2 KB gzip, derived from a fixed reactive contract, with every retained mechanism justified by a counterexample."],
     ["Is Reflex Quant production ready?", "Quant is usable as a library, but it is a research-driven runtime, not a mature dependency with years of production deployment. It is published on npm under MIT, tested differentially against an executable specification on over 140,000 programs, and benchmarked on every CI build. Read the contract before relying on edge-case behaviour."],
     ["Does Reflex Quant work with React, Vue or Solid?", "Quant is framework-agnostic: it has no rendering layer. It can back state in any framework through an adapter that subscribes with effect()."],
   ]}
@@ -22,7 +23,7 @@ import { BLOB, href } from "../site";
   <Hero slot="hero" />
   <p class="lede">A JavaScript signals runtime of about 2.2 KB gzip: signals, computeds and effects, with exact dynamic dependency tracking, glitch-free propagation, and no recursion on any path.</p>
   <div id="install"><Install /></div>
-  <p>Quant is a research project as much as a library. It asks one question: what is the smallest known reactive runtime that a fixed semantic contract implies? Every mechanism in it has a counterexample showing that the contract, or a structural bound, breaks without it. Nothing is in it because another framework has it.</p>
+  <p>Quant is a research project as much as a library. It asks one question: what is the smallest reactive machine we can derive from a fixed semantic contract, with every retained mechanism justified by a counterexample? Each mechanism has one showing that this implementation breaks the contract, or a structural bound, without it. That makes it the smallest known set, not a proven lower bound. Nothing is in it because another framework has it.</p>
 
   <h2>Fine-grained reactivity in one example</h2>
   <p>A computation depends on exactly what its last run read, so dependencies change from run to run:</p>
@@ -31,11 +32,15 @@ import { BLOB, href } from "../site";
   <h2>What makes Quant different</h2>
   <ul>
     <li><strong>Exact tracking.</strong> A computed observes exactly the sources it read; branches add and drop dependencies. <a href={href("/dynamic-dependency-tracking/")}>How dynamic dependency tracking works</a>.</li>
-    <li><strong>Glitch freedom.</strong> One execution per node per change, diamonds included.</li>
+    <li><strong>Glitch freedom.</strong> No computation sees a mix of old and new values, and a node runs at most once per wave, diamonds included. A write made during a run starts a new obligation (<a href={`${BLOB}/CONTRACT.md`}>P5</a>), which may run it again.</li>
     <li><strong>Stack safety.</strong> Propagation and validation use one explicit work stack, so chain depth is bounded by memory, not by the JavaScript call stack.</li>
     <li><strong>Defined failure semantics.</strong> A computed that throws commits nothing and runs again on its next demand.</li>
     <li><strong>Executable specification.</strong> Equal to the reference spec on 27,061 bounded programs, 18,660 recovery programs and 100,000 generated ones, with graph integrity checked after every operation.</li>
   </ul>
+
+  <h2>A computed can own state, not just cache a derivation</h2>
+  <p><code>computed(fn, initial)</code> passes <code>fn</code> its last committed value. That turns a computed into a state transition: it keeps its own state in <code>prev</code>, takes causes in through reads, and sends consequences out through writes.</p>
+  <StateNodes />
 
   <h2>Performance</h2>
   <BenchStrip />

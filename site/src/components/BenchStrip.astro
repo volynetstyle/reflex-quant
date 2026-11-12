@@ -11,7 +11,7 @@ const rows: [string, number, string][] = [
 <div class="stats">
   <div class="stat"><b>{AGG.alien}×</b><span>of alien-signals' time (geomean)</span></div>
   <div class="stat"><b>{AGG.reflex}×</b><span>of Reflex's time</span></div>
-  <div class="stat"><b>{AGG.best}×</b><span>of the faster rival's time, per scenario</span></div>
+  <div class="stat"><b>{AGG.best}×</b><span>{AGG.best >= 1 ? `only ${Math.round((AGG.best - 1) * 100)} % behind` : `${Math.round((1 - AGG.best) * 100)} % ahead of`} an oracle that picks the faster rival in every scenario (geomean)</span></div>
 </div>
 <figure class="strip" aria-label={`Out of ${AGG.n} scenarios`}>
   {rows.map(([label, v, cls]) => (

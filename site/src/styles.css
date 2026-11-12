@@ -222,3 +222,13 @@ body.night .dg-wl{stroke:#b9cf63}body.night .dg-wh{fill:#b9cf63}
 body.night .dg-pocket{stroke:#b9cf63}
 body.night pre,body.night .astro-code{background:#0d1428!important;border-color:#1e2846}
 body.night ::selection{background:#d9ef7a;color:#0a0f1f}
+header .nav-sep{color:var(--line)}.sn{margin-top:14px}.sn figcaption{margin-top:8px;font-size:15px;color:var(--fg)}
+/* Constraints demo */
+.cp canvas{image-rendering:pixelated}
+.cp-stats{grid-template-columns:repeat(5,1fr)}@media (max-width:640px){.cp-stats{grid-template-columns:1fr 1fr}}
+.cp-stats dd.bad{color:#e66767}
+.cp-panel{display:grid;grid-template-columns:1.4fr 1fr;border-top:1px solid var(--line)}.cp-panel>div+div{border-left:1px solid var(--line)}
+@media (max-width:640px){.cp-panel{grid-template-columns:1fr}.cp-panel>div+div{border-left:0}}
+.cp-log{padding:0 12px 12px;font:12px/1.6 ui-monospace,Menlo,monospace;min-height:7.5em}
+.cp-log b{font-weight:600}.cp-log span{color:var(--muted)}.cp-log .more{color:var(--muted)}
+[data-cp-what]{text-transform:none;color:var(--fg)}

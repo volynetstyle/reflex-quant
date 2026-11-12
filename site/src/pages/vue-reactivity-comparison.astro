@@ -14,7 +14,7 @@ import { BLOB } from "../site";
     ["Can I use Reflex Quant instead of Vue's reactivity?", "Outside Vue components, for plain state, yes: ref maps to signal, computed to computed, watchEffect to effect. Inside Vue templates, Vue's own refs are what the renderer tracks."],
   ]}
 >
-  <p class="lede">Vue's <code>@vue/reactivity</code> is a signals system with a Proxy layer on top. This page compares the two models: how Vue concepts map onto a plain signals runtime (Reflex Quant), and what each leaves out.</p>
+  <p class="lede">Vue reactivity and signal runtimes share a dependency-graph core; Vue additionally tracks object properties through proxies. This page compares the two models: how Vue concepts map onto a plain signals runtime (Reflex Quant), and what each leaves out.</p>
 
   <h2>Concept map</h2>
   <table>

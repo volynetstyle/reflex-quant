@@ -14,7 +14,7 @@ import { BLOB, href, REPO } from "../site";
   description="How a JavaScript signals runtime works inside: the reactive dependency graph, push-pull propagation, glitch freedom, cutoff, stack safety and failure semantics."
   faq={[
     ["What are signals in JavaScript?", "Signals are reactive values: reading one inside a computed or effect records a dependency, and writing one re-runs exactly the computations that depend on it."],
-    ["What is glitch freedom?", "A guarantee that no computation observes a mix of old and new values during one update, and that each node executes at most once per change."],
+    ["What is glitch freedom?", "A guarantee that no computation observes a mix of old and new values during one update, and that each node executes at most once per wave. A write made during a run is a new obligation and may run a node again."],
     ["Why do signal libraries use push-pull?", "Pushing invalidation is cheap and lets reads stay lazy; pulling values on read avoids recomputing unread branches and enables cutoff."],
   ]}
 >
