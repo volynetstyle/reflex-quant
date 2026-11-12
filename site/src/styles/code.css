@@ -1,0 +1,18 @@
+/* Code: Shiki blocks (dark theme variables), runnable playgrounds, lazy CodeMirror with the same look */
+.astro-code{background:var(--code)!important;color:var(--shiki-dark);border:1px solid var(--line)}.astro-code span{color:var(--shiki-dark)}
+.pg{margin:20px 0;border:1px solid var(--line);overflow:hidden}
+.pg-title{font-size:13px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--line)}
+.pg .astro-code{margin:0;border:0}
+.pg-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--line);background:var(--surface2)}
+.pg-hint{font-size:12px;color:var(--muted);margin-left:auto}
+.pg-out{font:13px/1.5 var(--mono);padding:10px 14px;border-top:1px solid var(--line);white-space:pre-wrap;max-height:260px;overflow:auto}
+.pg-line{padding:1px 0}.pg-line::before{content:"› ";color:var(--muted)}
+.pg-error{color:var(--lose)}.pg-error::before{content:"\2717 ";color:var(--lose)}.pg-warn{color:#d4a72c}.pg-info{color:var(--muted)}
+.pg-out[data-state=running]{opacity:.55;transition:opacity .15s}
+.pg-bar button[aria-busy=true]{cursor:progress}
+.pg .astro-code,.pg .cm-editor{border:0}
+.pg-code .cm-editor{background:var(--code);color:#e1e4e8;font-size:12.6px}.pg-code .cm-editor.cm-focused{outline:none}
+.pg-code .cm-scroller{font-family:monospace;line-height:21px;padding:14px 16px;max-height:480px}
+.pg-code .cm-content{padding:0;caret-color:#e1e4e8}.pg-code .cm-line{padding:0}.pg-code .cm-cursor{border-left-color:#e1e4e8}
+.pg-code .cm-selectionBackground,.pg-code .cm-focused .cm-selectionBackground{background:#3392ff44!important}
+.sh-kw{color:#f97583}.sh-fn{color:#b392f0}.sh-const{color:#79b8ff}.sh-str{color:#9ecbff}.sh-param{color:#ffab70}.sh-cmt{color:#8b949e}

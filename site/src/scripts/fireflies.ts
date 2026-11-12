@@ -10,6 +10,7 @@
 import { computed, effect, get, signal, update } from "reflex-quant";
 import { SW, SH, loadScene, FIELD_TOP } from "./nightfield";
 import { fly, makeFlies, neighbours } from "./flight";
+import { bars, onScreen, perRun, player, pointAt, still, within } from "./util";
 
 const N = 600, K = 8, REACH = 0.16;
 const DT = 0.01, EPS = 0.11, REFRACTORY = 30, TICK_MS = 33;
@@ -18,7 +19,7 @@ type State = { epoch: number; tick: number; phase: number; lit: number };
 function start(root: HTMLElement) {
   const cv = root.querySelector<HTMLCanvasElement>("canvas")!;
   const ctx = cv.getContext("2d")!;
-  const $ = (q: string) => root.querySelector<HTMLElement>(q)!;
+  const $ = within(root);
   cv.width = SW; cv.height = SH;
   let bg: CanvasImageSource | null = null;
   loadScene(`${import.meta.env.BASE_URL}field.jpg`.replace("//", "/")).then((s) => { bg = s; draw(); });
@@ -53,15 +54,7 @@ function start(root: HTMLElement) {
   const marks: number[] = [];
   effect(() => { passes++; marks.push(runs); for (const f of firefly) get(f); });
 
-  const frontier = () => {
-    const b = marks.map((m, k) => (marks[k + 1] ?? runs) - m);
-    if (marks[0]) b[0] += marks[0];
-    const shown = b.slice(0, 10), max = Math.max(1, ...b);
-    $("[data-frontier]").innerHTML = shown.map((n, k) =>
-      `<div><span>run ${k + 1}</span><i style="width:${Math.max(0.4, (n / max) * 100)}%"></i><b>${n}</b></div>`).join("")
-      + (b.length > 10 ? `<div class="more">+ ${b.length - 10} more runs, ${b.slice(10).reduce((a, x) => a + x, 0)} executions</div>` : "")
-      + (b.length === 0 ? `<div class="more">no driver run: ${runs} fireflies validated and cut off</div>` : "");
-  };
+  const frontier = () => bars($("[data-frontier]"), perRun(marks, runs), `no driver run: ${runs} fireflies validated and cut off`);
 
   // Projection: ground (x, z) onto the field in the picture, height lifts off the grass.
   const top = SH * FIELD_TOP + 4;
@@ -78,9 +71,9 @@ function start(root: HTMLElement) {
 
   let lastTick = performance.now(), lastFrame = performance.now();
   const draw = (now = performance.now()) => {
-    const t = get(tick), frac = timer ? Math.min(1, (now - lastTick) / TICK_MS) : 0;
+    const t = get(tick), frac = run.running ? Math.min(1, (now - lastTick) / TICK_MS) : 0;
     const dt = Math.min(64, now - lastFrame); lastFrame = now;
-    if (timer || !still) fly(flies, dt, (i) => (t - get(firefly[i]).lit + frac < 8 ? 1 : 0));
+    if (run.running || !still) fly(flies, dt, (i) => (t - get(firefly[i]).lit + frac < 8 ? 1 : 0));
     ctx.globalCompositeOperation = "source-over";
     if (bg) ctx.drawImage(bg, 0, 0, SW, SH); else { ctx.fillStyle = "#0a0e1c"; ctx.fillRect(0, 0, SW, SH); }
     ctx.globalCompositeOperation = "lighter";
@@ -126,34 +119,28 @@ function start(root: HTMLElement) {
   // A tick: first see who is near whom (they have moved), then advance the model.
   const step = () => { near = neighbours(flies, REACH, K); measure(() => update(tick, (t) => t + 1)); };
 
-  let timer = 0;
-  const playBtn = $("[data-act=play]");
-  const stop = () => { clearInterval(timer); timer = 0; playBtn.textContent = "▶ Play"; };
-  const play = () => { stop(); timer = window.setInterval(step, TICK_MS); playBtn.textContent = "⏸ Pause"; };
+  const run = player($("[data-act=play]"), step, TICK_MS);
+  const stop = run.stop;
   root.addEventListener("click", (e) => {
     const a = (e.target as Element).closest<HTMLElement>("[data-act]")?.dataset.act;
-    if (a === "play") timer ? stop() : play();
+    if (a === "play") run.toggle();
     else if (a === "step") { stop(); step(); }
     else if (a === "scramble") measure(() => update(epoch, (n) => n + 1));
   });
   // A poke is one write into one inbox: whatever avalanche follows is the runtime's doing.
   cv.addEventListener("pointerdown", (e) => {
-    const r = cv.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width) * SW, y = ((e.clientY - r.top) / r.height) * SH;
+    const { x, y } = pointAt(cv, e);
     let best = 0, d = Infinity;
     for (let i = 0; i < N; i++) { const p = screen(i), q = (p.x - x) ** 2 + (p.y - y) ** 2; if (q < d) { d = q; best = i; } }
     if (d < 100) measure(() => update(pulse[best], (v) => v + 1));
   });
 
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   measure(() => update(epoch, (n) => n + 1));
-  let auto = !still;
-  new IntersectionObserver((es) => {
-    visible = es[0].isIntersecting && !still;
+  onScreen(cv, (v) => {
+    visible = v && !still;
     if (visible && !raf) { lastFrame = performance.now(); raf = requestAnimationFrame(frame); }
-    if (!es[0].isIntersecting) stop();
-    else if (auto) { auto = false; play(); }
-  }, { threshold: 0.3 }).observe(cv);
+    if (!v) stop();
+  }, run.play);
 }
 
 document.querySelectorAll<HTMLElement>("[data-fireflies]").forEach(start);

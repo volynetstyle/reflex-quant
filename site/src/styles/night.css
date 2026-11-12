@@ -1,0 +1,18 @@
+/* Night theme (fireflies page): the palette of the pixel field. Navy sky, moonlit grey-blue,
+   firefly yellow-green as the only warm accent. */
+body.night{--fg:#dfe4f2;--muted:#8b96b8;--bg:#0a0f1f;--code:#0d1428;--line:#1e2846;--edge:#2a3558;--surface2:#111a33;--grid:#18213c;--accent:#d9ef7a}
+body.night .bg{background:radial-gradient(#c9d4ff8c 1px,transparent 1px) 13px 7px/97px 89px,radial-gradient(#7d8bb88c 1px,transparent 1px) 31px 23px/53px 61px,linear-gradient(#070b18,#0e1630 60%,#0a0f1f)}
+body.night .bg::before{opacity:.5}
+body.night h1{color:#eef1fb;text-shadow:0 0 18px rgba(217,239,122,.18)}
+body.night h2::before{background:#d9ef7a;box-shadow:0 0 8px rgba(217,239,122,.8)}
+body.night header a:first-child::before{background:#d9ef7a;box-shadow:0 0 6px rgba(217,239,122,.9)}
+body.night a{text-decoration-color:#4a5680}body.night a:hover{text-decoration-color:#d9ef7a}
+body.night .life{background:#070b18;border-color:#1e2846}
+body.night .life-bar button{background:#0a0f1f;border-color:#2a3558}
+body.night .life-bar button:first-child{background:#d9ef7a;color:#0a0f1f;border-color:#d9ef7a;box-shadow:3px 3px 0 #3b4a2a}
+body.night .ff-front i,body.night .dg-bar,body.night .dg-dot{background:#d9ef7a;fill:#d9ef7a}
+body.night .dg-n.hot{fill:#d9ef7a;stroke:#d9ef7a}
+body.night .dg-b{fill:#0d1428;stroke:#33406a}body.night .dg-b.solid{fill:#d9ef7a;stroke:#d9ef7a}
+body.night .dg-wl{stroke:#b9cf63}body.night .dg-wh{fill:#b9cf63}
+body.night .dg-pocket{stroke:#b9cf63}
+body.night ::selection{background:#d9ef7a;color:#0a0f1f}

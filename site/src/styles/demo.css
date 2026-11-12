@@ -1,0 +1,24 @@
+/* Canvas demos: Game of Life, Fireflies, Constraints */
+.life{margin:24px 0;border:1px solid var(--line);background:#000}
+.life canvas{display:block;width:100%;height:auto;cursor:crosshair;touch-action:none;image-rendering:pixelated}
+.life-bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px;border-top:1px solid var(--line)}
+.life-tip{margin-left:auto;font:12px var(--mono);color:var(--muted)}
+.life-stats{display:grid;grid-template-columns:repeat(5,1fr);margin:0;border-top:1px solid var(--line)}
+.life-stats div{padding:10px 12px;border-right:1px solid var(--line)}.life-stats div:last-child{border:0}
+.life-stats dt{font:11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.life-stats dd{margin:2px 0 0;font:600 18px var(--mono);font-variant-numeric:tabular-nums}
+@media (max-width:640px){.life-stats{grid-template-columns:1fr 1fr}.life-tip{display:none}}
+.ff-stats{grid-template-columns:repeat(6,1fr)}@media (max-width:640px){.ff-stats{grid-template-columns:1fr 1fr 1fr}}
+.ff-list{font-size:14px;line-height:1.6}
+.ff-front-h{font:11px var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:10px 12px 4px;border-top:1px solid var(--line)}
+.ff-front{padding:0 12px 12px;font:12px var(--mono);min-height:20px}
+.ff-front div{display:grid;grid-template-columns:52px 1fr 56px;gap:8px;align-items:center;height:16px}
+.ff-front span{color:var(--muted)}.ff-front i{display:block;height:8px;background:#eee}.ff-front b{text-align:right;font-weight:600}
+.ff-front .more{display:block;color:var(--muted);height:auto}
+.cp-stats{grid-template-columns:repeat(5,1fr)}@media (max-width:640px){.cp-stats{grid-template-columns:1fr 1fr}}
+.cp-stats dd.bad{color:#e66767}
+.cp-panel{display:grid;grid-template-columns:1.4fr 1fr;border-top:1px solid var(--line)}.cp-panel>div+div{border-left:1px solid var(--line)}
+@media (max-width:640px){.cp-panel{grid-template-columns:1fr}.cp-panel>div+div{border-left:0}}
+.cp-log{padding:0 12px 12px;font:12px/1.6 var(--mono);min-height:7.5em}
+.cp-log b{font-weight:600}.cp-log span{color:var(--muted)}.cp-log .more{color:var(--muted)}
+[data-cp-what]{text-transform:none;color:var(--fg)}

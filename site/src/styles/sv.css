@@ -1,0 +1,38 @@
+/* Stack visualization */
+.sv{border:1px solid var(--line);padding:14px;margin:24px 0}
+.sv-tabs,.sv-ctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.sv-graph svg{display:block;width:100%;max-width:600px;margin:10px auto 0}
+.sv-n circle,.sv-n rect{fill:var(--surface2);stroke:var(--line);stroke-width:1.5;transition:fill .3s,stroke .3s}
+.sv-n text{font:600 13px system-ui;fill:var(--fg)}.sv-n .sv-tag{font:600 10px system-ui;fill:var(--muted)}
+.sv-n.stale circle,.sv-n.stale rect{stroke:var(--s-alien);stroke-dasharray:4 3;stroke-width:2}
+.sv-n.dirty circle,.sv-n.dirty rect{stroke:var(--s-alien);stroke-width:2.5}
+.sv-n.ran circle,.sv-n.ran rect,.sv-n.changed circle,.sv-n.changed rect{fill:var(--s-quant);stroke:var(--s-quant)}
+.sv-n.ran text:not(.sv-tag),.sv-n.changed text:not(.sv-tag){fill:#fff}
+.sv-e{stroke:var(--line);stroke-width:1.5;transition:stroke .3s}.sv-e.on{stroke:var(--accent);stroke-width:3}.sv-e.saved{stroke:var(--s-reflex);stroke-width:2.5;stroke-dasharray:5 3}
+.sv-arrowhead{fill:var(--muted)}
+.sv-note{min-height:3em;margin:8px 0;font-size:15px}
+.sv-cols{display:grid;grid-template-columns:1fr 1.25fr;gap:14px}@media (max-width:640px){.sv-cols{grid-template-columns:1fr}}
+.sv-h{font:600 13px system-ui;color:var(--muted);margin-bottom:6px}
+.sv-frames{min-height:120px;margin:0;font-size:13px;line-height:1.5}.sv-frames div{transition:background .3s}.sv-frames .top{color:var(--accent);font-weight:700}.sv-frames .close{color:var(--muted)}
+.sv-meter{font-size:12px;color:var(--muted);margin:6px 0 10px}
+.sv-stack{display:flex;gap:4px;flex-wrap:wrap;min-height:34px;padding:6px;border:1px dashed var(--line);align-items:center}
+.sv-slot{font:600 12px var(--mono);padding:4px 8px;background:var(--surface2);border:2px solid var(--s-reflex);animation:sv-in .3s}
+.sv-slot.top{box-shadow:0 0 0 2px color-mix(in srgb,var(--s-reflex) 35%,transparent)}.sv-empty{font-size:12px;color:var(--muted)}
+@keyframes sv-in{from{transform:translateY(-6px);opacity:0}}
+.sv-code{font-size:12px;line-height:1.45;margin:0;padding:10px}.sv-code span{display:block;padding:0 4px;white-space:pre}
+.sv-code span.hl{background:color-mix(in srgb,var(--accent) 22%,transparent);box-shadow:inset 3px 0 0 var(--accent)}
+.sv-ctl{margin-top:10px}.sv-count{font-size:12px;color:var(--muted);margin-left:6px}
+@media (prefers-reduced-motion:reduce){.sv *{transition:none!important;animation:none!important}}
+.sv-n.walk circle,.sv-n.walk rect{stroke:var(--accent);stroke-width:2.5}
+.sv-frames .get{color:var(--muted)}.sv-frames .idle{color:var(--muted);font-style:italic}
+.sv-app{margin-bottom:8px}.sv-log{font:12px/1.5 var(--mono);border:1px solid var(--line);padding:6px 10px;margin-top:8px;min-height:2.6em}
+.sv-stack[hidden]{display:none}
+.sv-modes{margin-top:8px}.sv-blurb{font-size:13px;color:var(--muted);margin-right:auto}
+.sv-tower{display:flex;flex-direction:column;gap:4px;min-height:150px;justify-content:flex-end;padding:8px;border:1px dashed var(--line);border-top:0}
+.sv-tower .sv-slot{display:flex;justify-content:space-between;gap:8px}.sv-tower .sv-slot span{font-weight:400;color:var(--muted)}
+.sv-tower .sv-empty{text-align:center;margin:auto 0}
+.sv-running{font:12px var(--mono);margin-top:8px}.sv-running em{font-style:normal;color:var(--muted)}.sv-running i{color:var(--muted);font-style:normal;margin:0 4px}
+.sv-running .now{color:var(--accent);font-weight:700}
+.sv-n.running circle,.sv-n.running rect{fill:var(--accent);stroke:var(--accent)}.sv-n.running text:not(.sv-tag){fill:#fff}
+.sv-n.clean circle,.sv-n.clean rect{stroke:var(--s-reflex);stroke-width:2}
+.sv-n text.sm{font-size:10px}

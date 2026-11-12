@@ -1,4 +1,5 @@
 ---
+import "../styles/demo.css";
 import Base from "../layouts/Base.astro";
 import Snippet from "../components/Snippet.astro";
 import { href } from "../site";
@@ -48,7 +49,7 @@ function step() {
   <p class="lede">A computed does not have to describe a value derived from state. Its committed value can be the state. Here the whole world is one <code>computed</code>, and <code>prev</code> is the previous generation.</p>
 
   <figure class="life" data-life>
-    <canvas aria-label="Game of Life board. Click or drag to draw cells."></canvas>
+    <canvas role="img" aria-label="Game of Life board. Click or drag to draw cells."></canvas>
     <div class="life-bar">
       <button type="button" data-act="play">▶ Play</button>
       <button type="button" data-act="step">Step</button>

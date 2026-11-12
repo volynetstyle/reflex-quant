@@ -5,6 +5,7 @@
 //   paint[i]   = effect(cell[i])                 runs only when that cell flipped
 // Drawing replaces `board`; world restarts from it when it sees a new board.
 import { batch, computed, effect, get, set, signal, update } from "reflex-quant";
+import { cellAt, onScreen, player, within } from "./util";
 
 const COLS = 96, ROWS = 56, N = COLS * ROWS;
 type Board = { generation: number; cells: Uint8Array };
@@ -30,7 +31,7 @@ function evolve(cells: Uint8Array): Uint8Array {
 function start(root: HTMLElement) {
   const cv = root.querySelector<HTMLCanvasElement>("canvas")!;
   const ctx = cv.getContext("2d")!;
-  const $ = (q: string) => root.querySelector<HTMLElement>(q)!;
+  const $ = within(root);
   const S = 8;
   cv.width = COLS * S; cv.height = ROWS * S;
 
@@ -78,13 +79,11 @@ function start(root: HTMLElement) {
   const GUN = ["........................O", "......................O.O", "............OO......OO............OO", "...........O...O....OO............OO",
     "OO........O.....O...OO", "OO........O...O.OO....O.O", "..........O.....O.......O", "...........O...O", "............OO"];
 
-  let timer = 0;
-  const playBtn = $("[data-act=play]");
-  const stop = () => { clearInterval(timer); timer = 0; playBtn.textContent = "▶ Play"; };
-  const play = () => { stop(); timer = window.setInterval(step, 70); playBtn.textContent = "⏸ Pause"; };
+  const run = player($("[data-act=play]"), step, 70);
+  const stop = run.stop;
   root.addEventListener("click", (e) => {
     const a = (e.target as Element).closest<HTMLElement>("[data-act]")?.dataset.act;
-    if (a === "play") timer ? stop() : play();
+    if (a === "play") run.toggle();
     else if (a === "step") { stop(); step(); }
     else if (a === "jump") { stop(); jump(); }
     else if (a === "gun") load((x, y) => (GUN[y - 4]?.[x - 4] === "O" ? 1 : 0));
@@ -94,11 +93,6 @@ function start(root: HTMLElement) {
 
   // Drawing: a new board = the current world with one cell changed.
   let pen = -1;
-  const cellAt = (e: PointerEvent) => {
-    const r = cv.getBoundingClientRect();
-    const x = Math.floor(((e.clientX - r.left) / r.width) * COLS), y = Math.floor(((e.clientY - r.top) / r.height) * ROWS);
-    return x >= 0 && y >= 0 && x < COLS && y < ROWS ? y * COLS + x : -1;
-  };
   const draw = (i: number) => {
     const w = get(world);
     if (w.cells[i] === pen) return;
@@ -106,19 +100,14 @@ function start(root: HTMLElement) {
     measure(() => set(board, { generation: w.generation, cells: c }));
   };
   cv.addEventListener("pointerdown", (e) => {
-    const i = cellAt(e); if (i < 0) return;
+    const i = cellAt(cv, e, COLS, ROWS); if (i < 0) return;
     pen = 1 - get(cells[i]); cv.setPointerCapture(e.pointerId); draw(i);
   });
-  cv.addEventListener("pointermove", (e) => { const i = cellAt(e); if (pen >= 0 && i >= 0) draw(i); });
+  cv.addEventListener("pointermove", (e) => { const i = cellAt(cv, e, COLS, ROWS); if (pen >= 0 && i >= 0) draw(i); });
   cv.addEventListener("pointerup", () => (pen = -1));
 
   load((x, y) => (GUN[y - 4]?.[x - 4] === "O" ? 1 : 0));
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let auto = !still;
-  new IntersectionObserver((es) => {
-    if (!es[0].isIntersecting) stop();
-    else if (auto) { auto = false; play(); }
-  }, { threshold: 0.3 }).observe(cv);
+  onScreen(cv, (v) => { if (!v) stop(); }, run.play);
 }
 
 document.querySelectorAll<HTMLElement>("[data-life]").forEach(start);

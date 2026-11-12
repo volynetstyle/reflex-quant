@@ -7,6 +7,7 @@
 // Domains only shrink, so it ends: each cell can narrow at most T times.
 // Checked in Node against a plain AC-3 worklist: identical domains after every collapse.
 import { batch, computed, effect, get, signal, update, set } from "reflex-quant";
+import { bars, cellAt, onScreen, player, pop, within } from "./util";
 
 const W = 32, H = 20, N = W * H, T = 5, FULL = (1 << T) - 1, PX = 12;
 const NAMES = ["water", "sand", "grass", "forest", "rock"];
@@ -18,7 +19,6 @@ const NB = Array.from({ length: N }, (_, i) => {
   if (x) r.push(i - 1); if (x < W - 1) r.push(i + 1); if (y) r.push(i - W); if (y < H - 1) r.push(i + W);
   return r;
 });
-const pop = (m: number) => { let c = 0; for (; m; m >>= 1) c += m & 1; return c; };
 const set2s = (m: number) => (m ? `{${SHORT.filter((_, t) => (m >> t) & 1).join(",")}}` : "{}");
 
 type Ev = { i: number; from: number; to: number; wrote: number[]; run: number };
@@ -26,7 +26,7 @@ type Ev = { i: number; from: number; to: number; wrote: number[]; run: number };
 function start(root: HTMLElement) {
   const cv = root.querySelector<HTMLCanvasElement>("canvas")!;
   const ctx = cv.getContext("2d")!;
-  const $ = (q: string) => root.querySelector<HTMLElement>(q)!;
+  const $ = within(root);
   cv.width = W * PX; cv.height = H * PX;
 
   let runs = 0, passes = 0, msgs = 0;
@@ -106,8 +106,6 @@ function start(root: HTMLElement) {
   };
 
   const report = (what: string) => {
-    const b = marks.map((m, k) => (marks[k + 1] ?? runs) - m);
-    if (marks[0]) b[0] += marks[0];
     const changedBy = marks.map((_, k) => events.filter((ev) => ev.run === k + 1).length);
     $("[data-cp-what]").textContent = what;
     $("[data-cp-runs]").textContent = String(runs);
@@ -117,10 +115,7 @@ function start(root: HTMLElement) {
     let open = 0, empty = 0; for (const x of cell) { const p = pop(get(x).D); if (p > 1) open++; if (p === 0) empty++; }
     $("[data-cp-open]").textContent = empty ? `${empty} empty` : `${open} open`;
     $("[data-cp-open]").classList.toggle("bad", empty > 0);
-    const max = Math.max(1, ...changedBy);
-    $("[data-cp-front]").innerHTML = changedBy.map((n, k) =>
-      `<div><span>run ${k + 1}</span><i style="width:${Math.max(0.4, (n / max) * 100)}%"></i><b>${n}</b></div>`).join("")
-      || `<div class="more">no driver run</div>`;
+    bars($("[data-cp-front]"), changedBy, "no driver run", 24);
     $("[data-cp-log]").innerHTML = events.slice(0, 7).map((ev) =>
       `<div><b>cell ${ev.i}</b>(prev) <span>${set2s(ev.from)} → ${set2s(ev.to)}</span>${ev.wrote.length ? ` writes → ${ev.wrote.join(", ")}` : ""}</div>`).join("")
       + (events.length > 7 ? `<div class="more">… ${events.length - 7} more cells narrowed</div>` : "");
@@ -163,28 +158,23 @@ function start(root: HTMLElement) {
     }
   };
 
-  let timer = 0;
-  const playBtn = $("[data-cp=play]");
-  const stop = () => { clearInterval(timer); timer = 0; playBtn.textContent = "▶ Auto"; };
-  const play = () => { stop(); playBtn.textContent = "⏸ Pause"; timer = window.setInterval(() => { if (!stepWFC()) stop(); }, 120); };
+  const run = player($("[data-cp=play]"), () => stepWFC(), 120, "Auto");
+  const stop = run.stop;
   root.addEventListener("click", (e) => {
     const a = (e.target as Element).closest<HTMLElement>("[data-cp]")?.dataset.cp;
-    if (a === "play") timer ? stop() : play();
+    if (a === "play") run.toggle();
     else if (a === "step") { stop(); stepWFC(); }
     else if (a === "contra") { stop(); contradiction(); }
     else if (a === "reset") reset();
   });
   cv.addEventListener("pointerdown", (e) => {
-    const r = cv.getBoundingClientRect();
-    const x = Math.floor(((e.clientX - r.left) / r.width) * W), y = Math.floor(((e.clientY - r.top) / r.height) * H);
-    if (x >= 0 && y >= 0 && x < W && y < H) { stop(); collapse(y * W + x); }
+    const i = cellAt(cv, e, W, H);
+    if (i >= 0) { stop(); collapse(i); }
   });
 
   paint();
   report("start: every cell can still be anything");
-  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let auto = !still;
-  new IntersectionObserver((es) => { if (!es[0].isIntersecting) stop(); else if (auto) { auto = false; play(); } }, { threshold: 0.3 }).observe(cv);
+  onScreen(cv, (v) => { if (!v) stop(); }, run.play);
 }
 
 document.querySelectorAll<HTMLElement>("[data-constraints]").forEach(start);

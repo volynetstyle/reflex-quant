@@ -1,5 +1,5 @@
 ---
-import "../styles.css";
+import "../styles/base.css";
 import Seo from "../components/Seo.astro";
 import Header from "../components/Header.astro";
 import Breadcrumbs from "../components/Breadcrumbs.astro";
@@ -24,12 +24,16 @@ const hero = Astro.slots.has("hero");
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content={theme === "night" ? "#0a0f1f" : "#000000"} />
     <Seo {path} {title} {description} {headline} {kind} {faq} />
   </head>
   <body class={theme}>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="bg" aria-hidden="true"></div>
+    <div class="rail" aria-hidden="true"></div>
     <Header {path} />
     <slot name="hero" />
-    <main>
+    <main id="main" tabindex="-1">
       {!hero && <Breadcrumbs {path} {headline} />}
       <article>
         {!hero && <h1>{headline}</h1>}
@@ -44,7 +48,10 @@ const hero = Astro.slots.has("hero");
     </main>
     <footer>
       Reflex Quant, MIT license, by Andrii Volynets. <a href={REPO}>Source</a> · <a href={NPM}>npm</a> ·
-      <a href={`${BLOB}/CONTRACT.md`}>Contract</a> · <a href={`${BLOB}/research/REPORT.md`}>Research report</a>. Last updated {UPDATED}.
+      <a href={`${BLOB}/CONTRACT.md`}>Contract</a> · <a href={`${BLOB}/research/REPORT.md`}>Research report</a>. Last updated <time datetime={UPDATED}>{UPDATED}</time>.
     </footer>
+    <script>
+      import "../scripts/fx";
+    </script>
   </body>
 </html>

@@ -1,4 +1,5 @@
 ---
+import "../styles/demo.css";
 import Base from "../layouts/Base.astro";
 import Snippet from "../components/Snippet.astro";
 import { BLOB, href } from "../site";
@@ -28,13 +29,13 @@ const collapse = (i, tile) => set(choice[i], tile);`;
   path="/constraints/"
   title="Constraint Propagation with JavaScript Signals | Reflex Quant"
   headline="Constraints: knowledge converges"
-  description="A small Wave Function Collapse in Reflex Quant: each cell keeps the tiles it could still be, and fixing one narrows the rest to a fixpoint. Equal to an AC-3 solver after every step."
+  description="Wave Function Collapse in Reflex Quant: fixing one cell narrows the rest to a fixpoint, with no solver loop. Equal to AC-3 after every step."
   kind="Article"
 >
   <p class="lede">Every cell knows which tiles it could still be. Fix one, and its neighbours lose what no longer fits, then theirs, until nothing more can be inferred. The solver is the same machine as before: <code>prev</code>, reads, writes, one effect.</p>
 
   <figure class="life cp" data-constraints>
-    <canvas aria-label="Map of tiles. Click a cell to collapse it to one of its remaining tiles."></canvas>
+    <canvas role="img" aria-label="Map of tiles. Click a cell to collapse it to one of its remaining tiles."></canvas>
     <div class="life-bar">
       <button type="button" data-cp="play">▶ Auto</button>
       <button type="button" data-cp="step">Collapse one</button>

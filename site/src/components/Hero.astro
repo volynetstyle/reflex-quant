@@ -1,4 +1,5 @@
 ---
+import "../styles/hero.css";
 // Full-bleed homepage hero: a live 1-bit dithered canvas (src/scripts/hero.ts) behind split type.
 // The canvas is decorative; the h1 and lede are real text.
 import { href } from "../site";
@@ -18,6 +19,7 @@ import { href } from "../site";
     </p>
   </div>
   <span class="hero-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+  <pre class="hero-hud" aria-hidden="true"></pre>
   <span class="hero-hint" aria-hidden="true">click to write a signal</span>
 </section>
 <script>

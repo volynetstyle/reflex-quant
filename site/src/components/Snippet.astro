@@ -1,6 +1,7 @@
 ---
+import "../styles/code.css";
 // Build-time syntax highlighting (Shiki). Ships no JS. Light/dark follow prefers-color-scheme
-// through the --shiki-light / --shiki-dark variables (styles.css).
+// the site is dark only, so styles/code.css reads the --shiki-dark variables.
 import { Code } from "astro:components";
 interface Props { code: string; lang?: "ts" | "js" | "sh" }
 const { code, lang = "ts" } = Astro.props;

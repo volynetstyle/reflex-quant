@@ -1,4 +1,7 @@
 ---
+import "../styles/night.css";
+import "../styles/diagram.css";
+import "../styles/demo.css";
 import Base from "../layouts/Base.astro";
 import Snippet from "../components/Snippet.astro";
 import { BLOB, href } from "../site";
@@ -41,7 +44,7 @@ const lit = grid.map(() => signal(-Infinity));
   path="/fireflies/"
   title="Firefly Synchronization with JavaScript Signals | Reflex Quant"
   headline="Fireflies: a fixpoint without a loop"
-  description="600 flying fireflies synchronized by Reflex Quant. Each firefly's phase lives in its computed's previous value, flashes are writes, and the avalanche is solved by the reactive runtime with no event queue."
+  description="600 flying fireflies synchronized in Reflex Quant: phase lives in a computed's previous value, flashes are writes, and the runtime finds the fixpoint."
   kind="Article"
   theme="night"
 >
@@ -55,7 +58,7 @@ const lit = grid.map(() => signal(-Infinity));
   <p class="lede">Each firefly is a <code>computed</code> whose phase lives in <code>prev</code>. A flash writes to its neighbours' inboxes from inside that computation. There is no event queue and no stabilization loop: the runtime's invalidations are the loop.</p>
 
   <figure class="life" data-fireflies>
-    <canvas aria-label="Field of fireflies. Click one to make it flash."></canvas>
+    <canvas role="img" aria-label="Field of fireflies. Click one to make it flash."></canvas>
     <div class="life-bar">
       <button type="button" data-act="play">▶ Play</button>
       <button type="button" data-act="step">Step</button>
@@ -258,7 +261,7 @@ manual stabilization
 scheduler</pre>
   <p>In Quant the model stays the model.</p>
 
-  <p>Simpler first: <a href={href("/game-of-life/")}>Game of Life</a>, where the whole world is one computed and <code>prev</code> is the previous generation.</p>
+  <p>Simpler first: <a href={href("/game-of-life/")}>Game of Life</a>, where the whole world is one computed and <code>prev</code> is the previous generation. Next: <a href={href("/constraints/")}>Constraints</a>, where knowledge converges instead of events.</p>
 </Base>
 
 <script>
