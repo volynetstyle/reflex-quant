@@ -200,3 +200,25 @@ footer{font:12px/1.8 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.04em}
 .ff-front div{display:grid;grid-template-columns:52px 1fr 56px;gap:8px;align-items:center;height:16px}
 .ff-front span{color:var(--muted)}.ff-front i{display:block;height:8px;background:#eee}.ff-front b{text-align:right;font-weight:600}
 .ff-front .more{display:block;color:var(--muted);height:auto}
+/* Night theme (fireflies page): the palette of the pixel field. Navy sky, moonlit grey-blue,
+   firefly yellow-green as the only warm accent. */
+body.night{--fg:#dfe4f2;--muted:#8b96b8;--bg:#0a0f1f;--code:#0d1428;--line:#1e2846;--surface2:#111a33;--grid:#18213c;--accent:#d9ef7a;
+  background:#0a0f1f linear-gradient(#070b18,#0e1630 60%,#0a0f1f) fixed}
+body.night::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.55;
+  background-image:radial-gradient(#c9d4ff 1px,transparent 1px),radial-gradient(#7d8bb8 1px,transparent 1px);
+  background-size:97px 89px,53px 61px;background-position:13px 7px,31px 23px;image-rendering:pixelated}
+body.night h1{color:#eef1fb;text-shadow:0 0 18px rgba(217,239,122,.18)}
+body.night h2::before{background:#d9ef7a;box-shadow:0 0 8px rgba(217,239,122,.8)}
+body.night header a:first-child::before{background:#d9ef7a;box-shadow:0 0 6px rgba(217,239,122,.9)}
+body.night a{text-decoration-color:#4a5680}body.night a:hover{text-decoration-color:#d9ef7a}
+body.night .life{background:#070b18;border-color:#1e2846}
+body.night .life canvas{image-rendering:pixelated}
+body.night .life-bar button{background:#0a0f1f;border-color:#2a3558}
+body.night .life-bar button:first-child{background:#d9ef7a;color:#0a0f1f;border-color:#d9ef7a;box-shadow:3px 3px 0 #3b4a2a}
+body.night .ff-front i,body.night .dg-bar,body.night .dg-dot{background:#d9ef7a;fill:#d9ef7a}
+body.night .dg-n.hot{fill:#d9ef7a;stroke:#d9ef7a}
+body.night .dg-b{fill:#0d1428;stroke:#33406a}body.night .dg-b.solid{fill:#d9ef7a;stroke:#d9ef7a}
+body.night .dg-wl{stroke:#b9cf63}body.night .dg-wh{fill:#b9cf63}
+body.night .dg-pocket{stroke:#b9cf63}
+body.night pre,body.night .astro-code{background:#0d1428!important;border-color:#1e2846}
+body.night ::selection{background:#d9ef7a;color:#0a0f1f}

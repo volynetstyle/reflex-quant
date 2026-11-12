@@ -22,7 +22,7 @@ const firefly = grid.map((_, i) => computed((prev) => {
   if (phase >= 1) {                                    // flash: reset, kick the neighbours
     phase = 0;
     lit = t;
-    for (const j of neighbours(i)) update(pulse[j], (x) => x + 0.2);
+    for (const j of near[i]) update(pulse[j], (x) => x + 0.11);   // whoever sees it now
   }
   return { tick: t, phase, lit };
 }, { tick: 0, phase: Math.random(), lit: -Infinity }));
@@ -41,8 +41,9 @@ const lit = grid.map(() => signal(-Infinity));
   path="/fireflies/"
   title="Firefly Synchronization with JavaScript Signals | Reflex Quant"
   headline="Fireflies: a fixpoint without a loop"
-  description="2,560 pulse-coupled oscillators in Reflex Quant. Each firefly's phase lives in its computed's previous value, flashes are writes, and the avalanche is solved by the reactive runtime with no event queue."
+  description="600 flying fireflies synchronized by Reflex Quant. Each firefly's phase lives in its computed's previous value, flashes are writes, and the avalanche is solved by the reactive runtime with no event queue."
   kind="Article"
+  theme="night"
 >
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <defs>
@@ -72,7 +73,17 @@ const lit = grid.map(() => signal(-Infinity));
     <div class="ff-front-h">fireflies executed per driver run, last step (each bar runs until the next driver run starts, validation included)</div>
     <div class="ff-front" data-frontier></div>
   </figure>
-  <p>They start at random phases and flash on their own. Neighbours nudge each other forward; a firefly pushed over the edge flashes with the one that pushed it and stays in step. Within a few hundred ticks almost the whole field flashes in the same tick. On the way there, one <code>step()</code> can carry an avalanche across hundreds of fireflies. Press <strong>Step</strong> during a wave and read the bars under the counters.</p>
+  <p>They start at random phases and flash on their own. A firefly that sees a flash is nudged forward; one pushed over the edge flashes with the one that pushed it and stays in step. Swarms fall into step first, then the whole field: within a few hundred ticks all 600 flash together. On the way there, one <code>step()</code> can carry an avalanche across hundreds of fireflies. Press <strong>Step</strong> during a wave and read the bars under the counters.</p>
+
+  <h2>How they fly</h2>
+  <p>The flight follows what is known about <em>Photinus</em> fireflies, simplified:</p>
+  <ul class="fingers">
+    <li><strong>Males fly</strong> slowly and low over the grass on wandering paths, and stay near where they emerged, so they gather in swarms.</li>
+    <li><strong>A flash comes with a swoop up</strong>, the "J" stroke of <em>P. pyralis</em>: the light traces a short climb.</li>
+    <li><strong>Females mostly perch</strong> in the grass and flash from there. About one in five here does not fly.</li>
+    <li><strong>Synchronous species</strong> such as <em>P. carolinus</em> flash in short bursts and then go dark together. Each burst here is three quick flashes.</li>
+  </ul>
+  <p>The flight is ordinary code, not reactive state. It decides one thing: who is close enough to see whose flash, up to the 8 nearest within reach. When a firefly flashes it writes to whoever is near <em>at that moment</em>. Those are writes, not reads, so the reactive graph stays the same while everything flies: three edges per firefly, whoever its neighbours are.</p>
 
   <h2>The whole simulation</h2>
   <Snippet code={CORE} />
@@ -130,10 +141,10 @@ const lit = grid.map(() => signal(-Infinity));
       <line x1="140" y1="105" x2="304" y2="105" class="dg-l" marker-end="url(#dg-a)" />
       <line x1="140" y1="149" x2="306" y2="114" class="dg-l" marker-end="url(#dg-a)" />
       <circle cx="340" cy="105" r="34" class="dg-n hot" /><text x="340" y="101" text-anchor="middle">firefly</text><text x="340" y="117" text-anchor="middle">i</text>
-      <rect x="540" y="36" width="110" height="24" class="dg-b" /><text x="595" y="53" text-anchor="middle">inbox up</text>
-      <rect x="540" y="76" width="110" height="24" class="dg-b" /><text x="595" y="93" text-anchor="middle">inbox left</text>
-      <rect x="540" y="116" width="110" height="24" class="dg-b" /><text x="595" y="133" text-anchor="middle">inbox right</text>
-      <rect x="540" y="156" width="110" height="24" class="dg-b" /><text x="595" y="173" text-anchor="middle">inbox down</text>
+      <rect x="540" y="36" width="110" height="24" class="dg-b" /><text x="595" y="53" text-anchor="middle">near inbox</text>
+      <rect x="540" y="76" width="110" height="24" class="dg-b" /><text x="595" y="93" text-anchor="middle">near inbox</text>
+      <rect x="540" y="116" width="110" height="24" class="dg-b" /><text x="595" y="133" text-anchor="middle">near inbox</text>
+      <rect x="540" y="156" width="110" height="24" class="dg-b" /><text x="595" y="173" text-anchor="middle">… up to 8</text>
       <line x1="372" y1="94" x2="537" y2="50" class="dg-wl" marker-end="url(#dg-w)" />
       <line x1="374" y1="101" x2="537" y2="88" class="dg-wl" marker-end="url(#dg-w)" />
       <line x1="374" y1="109" x2="537" y2="128" class="dg-wl" marker-end="url(#dg-w)" />
@@ -178,7 +189,7 @@ const lit = grid.map(() => signal(-Infinity));
     </svg>
   </figure>
   <Snippet code={STATEFUL} />
-  <p>For 2,560 fireflies that is 5,120 extra signals, two more edges per firefly, and a computation that writes its own sources every tick. With <code>prev</code>, the phase, the last flash and the last tick cost zero graph objects: they are the computed's committed value.</p>
+  <p>For 600 fireflies that is 1,200 extra signals, two more edges per firefly, and a computation that writes its own sources every tick. With <code>prev</code>, the phase, the last flash and the last tick cost zero graph objects: they are the computed's committed value.</p>
 
   <h2>Push and pull, on the shortest possible track</h2>
   <figure class="dg">
@@ -205,12 +216,12 @@ const lit = grid.map(() => signal(-Infinity));
       <text x="10" y="136" class="dg-s">…</text><text x="70" y="136" class="dg-s">until a pass changes nothing: the fixpoint</text>
     </svg>
   </figure>
-  <p>The driver reads the fireflies in order. Firefly 900 flashes and writes into the inbox of firefly 899, which the driver has already read. Two rules of the <a href={`${BLOB}/CONTRACT.md`}>contract</a> decide what happens:</p>
+  <p>The driver reads the fireflies in order. Firefly 400 flashes and writes into the inbox of firefly 120, which the driver has already read. Two rules of the <a href={`${BLOB}/CONTRACT.md`}>contract</a> decide what happens:</p>
   <ul class="fingers">
     <li><strong>P5:</strong> once a computation has observed a source, a later change to it leaves an execution owed.</li>
     <li><strong>W2:</strong> a watcher invalidated during its own run is delivered again.</li>
   </ul>
-  <p>So the driver comes round again. On that pass only the fireflies with a new pulse are DIRTY; the others are clean and cost a version check each, not a run. The bars under the demo are measured, not drawn. One step in the middle of a wave executed 3,067, then 342, 174, 183, 214, 204, 182, 122, 108, 84 fireflies, and five more runs: the first pass is the whole field, and after it the frontier stays about the size of the wavefront until the wave dies out. The driver still walks all 2,560 of its edges on every pass; what shrinks is the work done at them. Delivery also validates before it runs: a firefly that took a pulse during its refractory time returns <code>prev</code>, a cutoff, and the driver's body is not run at all. That is why a tick where the field is already in step shows thousands of pulses and a single driver run.</p>
+  <p>So the driver comes round again. On that pass only the fireflies with a new pulse are DIRTY; the others are clean and cost a version check each, not a run. The bars under the demo are measured, not drawn. The first bar is the whole field; the next ones are only the fireflies that took a pulse. The driver still walks all 600 of its edges on every pass; what shrinks is the work done at them. Delivery also validates before it runs: a firefly that took a pulse during its refractory time returns <code>prev</code>, a cutoff, and the driver's body is not run at all. That is why a tick where the field is already in step shows thousands of pulses and a single driver run.</p>
 
   <h2>Two clocks</h2>
   <figure class="dg">
@@ -227,7 +238,7 @@ const lit = grid.map(() => signal(-Infinity));
   <p>One firefly can run several times in one tick. <code>prev.phase + (t - prev.tick) * 0.01</code> charges time only for ticks it has not seen yet, so domain time is <em>t → t + 1</em> however many executions happen.</p>
 
   <h2>Why it terminates</h2>
-  <p>A flash removes 1 from the flashing firefly and hands out 4 × 0.2 = 0.8. Every flash loses 0.2 of total phase, so every avalanche ends. At 0.25 it would not: nothing is lost, and the driver can cycle forever. The runtime finds the fixpoint; the model has to have one. The refractory period is what makes the field synchronize instead of forming drifting patches.</p>
+  <p>A flash removes 1 from the flashing firefly and hands out at most 8 × 0.11 = 0.88. Every flash loses at least 0.12 of total phase, so every avalanche ends. If a flash gave out 1 or more, nothing would be lost, and the driver could cycle forever. The runtime finds the fixpoint; the model has to have one. The refractory period is what makes the field synchronize instead of forming drifting patches.</p>
 
   <h2>The same program elsewhere</h2>
   <ul class="fingers">

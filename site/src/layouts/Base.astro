@@ -13,8 +13,10 @@ interface Props {
   headline?: string;
   kind?: "TechArticle" | "Article";
   faq?: Faq;
+  /** Optional page palette, a class on <body> (e.g. "night"). */
+  theme?: string;
 }
-const { path, title, description, headline = title, kind = "TechArticle", faq } = Astro.props;
+const { path, title, description, headline = title, kind = "TechArticle", faq, theme } = Astro.props;
 const hero = Astro.slots.has("hero");
 ---
 <!doctype html>
@@ -24,7 +26,7 @@ const hero = Astro.slots.has("hero");
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <Seo {path} {title} {description} {headline} {kind} {faq} />
   </head>
-  <body>
+  <body class={theme}>
     <Header {path} />
     <slot name="hero" />
     <main>

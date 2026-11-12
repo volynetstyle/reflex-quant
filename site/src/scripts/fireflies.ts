@@ -1,35 +1,36 @@
-// Pulse-coupled oscillators (fireflies) on a torus, solved by the reactive runtime itself.
+// Flying fireflies, synchronized by the reactive runtime itself.
 //   firefly[i] = computed(prev => ...)  phase lives in prev; reads tick and its inbox pulse[i]
-//   pulse[i]   = signal                 inbox; the firefly consumes it and writes to neighbours
+//   pulse[i]   = signal                 inbox; the firefly consumes it and writes to whoever it can see
 //   driver     = one effect reading every firefly
-// A flash writes into fireflies the driver already read this pass. That is an owed
-// execution (contract P5), and a watcher invalidated during its own run is delivered
-// again (W2), so the driver re-runs until nothing changes: the avalanche is a fixpoint.
-// Termination: a flash loses 1 and hands out 4 * EPS < 1, so every avalanche ends.
+// Flight (flight.ts) is plain kinematics; it only decides who is close enough to see a flash.
+// Those writes are untracked, so the reactive graph does not change when the fireflies move.
+// A flash writing into a firefly the driver already read is an owed execution (contract P5),
+// and a watcher invalidated during its own run is delivered again (W2): the avalanche is a fixpoint.
+// Termination: a flash loses 1 and hands out at most K * EPS = 0.88 < 1.
 import { computed, effect, get, signal, update } from "reflex-quant";
+import { SW, SH, loadScene, FIELD_TOP } from "./nightfield";
+import { fly, makeFlies, neighbours } from "./flight";
 
-const COLS = 64, ROWS = 40, N = COLS * ROWS;
-const DT = 0.01, EPS = 0.2, REFRACTORY = 30;
-type Fly = { epoch: number; tick: number; phase: number; lit: number };
-
-const NB = Array.from({ length: N }, (_, i) => {
-  const x = i % COLS, y = (i / COLS) | 0;
-  return [((y + ROWS - 1) % ROWS) * COLS + x, ((y + 1) % ROWS) * COLS + x, y * COLS + (x + COLS - 1) % COLS, y * COLS + (x + 1) % COLS];
-});
-const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+const N = 600, K = 8, REACH = 0.16;
+const DT = 0.01, EPS = 0.11, REFRACTORY = 30, TICK_MS = 33;
+type State = { epoch: number; tick: number; phase: number; lit: number };
 
 function start(root: HTMLElement) {
   const cv = root.querySelector<HTMLCanvasElement>("canvas")!;
   const ctx = cv.getContext("2d")!;
   const $ = (q: string) => root.querySelector<HTMLElement>(q)!;
-  const S = 10;
-  cv.width = COLS * S; cv.height = ROWS * S;
+  cv.width = SW; cv.height = SH;
+  let bg: CanvasImageSource | null = null;
+  loadScene(`${import.meta.env.BASE_URL}field.jpg`.replace("//", "/")).then((s) => { bg = s; draw(); });
+
+  const flies = makeFlies(N);
+  let near = neighbours(flies, REACH, K);
 
   let runs = 0, pulses = 0, passes = 0;
   const tick = signal(0), epoch = signal(0);
-  const pulse = Array.from({ length: N }, () => signal(0));
+  const pulse = flies.map(() => signal(0));
 
-  const firefly = pulse.map((inbox, i) => computed<Fly>((prev) => {
+  const firefly = pulse.map((inbox, i) => computed<State>((prev) => {
     runs++;
     const t = get(tick), e = get(epoch);
     // Domain time advances once per tick, however many times this runs within it.
@@ -42,20 +43,16 @@ function start(root: HTMLElement) {
     }
     if (phase >= 1) {
       phase = 0; lit = t;
-      for (const j of NB[i]) { update(pulse[j], (x) => x + EPS); pulses++; }
+      for (const j of near[i]) { update(pulse[j], (x) => x + EPS); pulses++; }   // whoever sees it now
     }
     if (e === prev.epoch && t === prev.tick && phase === prev.phase && lit === prev.lit) return prev;
     return { epoch: e, tick: t, phase, lit };
   }, { epoch: -1, tick: 0, phase: 0, lit: -1e9 }));
 
-  // The solver.
-  // `marks` records how many fireflies had run when each driver run began: the frontier.
+  // The solver. `marks` records how many fireflies had run when each driver run began.
   const marks: number[] = [];
   effect(() => { passes++; marks.push(runs); for (const f of firefly) get(f); });
 
-  // Frontier strip: fireflies executed per driver run in the last measured operation.
-  // A run's bar counts executions until the next run begins; the first absorbs the one
-  // execution validation makes before the body starts, the last any validation-only tail.
   const frontier = () => {
     const b = marks.map((m, k) => (marks[k + 1] ?? runs) - m);
     if (marks[0]) b[0] += marks[0];
@@ -66,34 +63,59 @@ function start(root: HTMLElement) {
       + (b.length === 0 ? `<div class="more">no driver run: ${runs} fireflies validated and cut off</div>` : "");
   };
 
-  const draw = () => {
-    const t = get(tick);
-    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, cv.width, cv.height);
-    let lit = 0;
+  // Projection: ground (x, z) onto the field in the picture, height lifts off the grass.
+  const top = SH * FIELD_TOP + 4;
+  const screen = (i: number) => {
+    const f = flies[i], k = 0.5 + f.z;
+    return { x: f.x * SW, y: top + Math.pow(f.z, 1.25) * (SH - top - 6) - f.h * (10 + 34 * f.z), k };
+  };
+  // Flash pattern: the model decides when a burst starts; the burst itself (three quick
+  // flashes, like synchronous Photinus carolinus) is drawn from the age of that start.
+  const glow = (age: number) => {
+    const n = Math.floor(age / 9), a = age - n * 9;
+    return n < 3 && a < 5 ? (1 - a / 5) ** 1.5 : 0;
+  };
+
+  let lastTick = performance.now(), lastFrame = performance.now();
+  const draw = (now = performance.now()) => {
+    const t = get(tick), frac = timer ? Math.min(1, (now - lastTick) / TICK_MS) : 0;
+    const dt = Math.min(64, now - lastFrame); lastFrame = now;
+    if (timer || !still) fly(flies, dt, (i) => (t - get(firefly[i]).lit + frac < 8 ? 1 : 0));
+    ctx.globalCompositeOperation = "source-over";
+    if (bg) ctx.drawImage(bg, 0, 0, SW, SH); else { ctx.fillStyle = "#0a0e1c"; ctx.fillRect(0, 0, SW, SH); }
+    ctx.globalCompositeOperation = "lighter";
     for (let i = 0; i < N; i++) {
-      const f = get(firefly[i]), age = t - f.lit;
-      if (age === 0) lit++;
-      const x = (i % COLS) * S, y = ((i / COLS) | 0) * S;
-      if (age < 10) {
-        // flash: a 3x3 dot block that dithers away over ten ticks
-        const v = 1 - age / 10;
-        ctx.fillStyle = "#eee";
-        for (let j = 0; j < 3; j++) for (let k = 0; k < 3; k++) if (v > BAYER[j * 4 + k]) ctx.fillRect(x + 1 + k * 3, y + 1 + j * 3, 2, 2);
+      const f = get(firefly[i]), p = screen(i), b = flies[i].b;
+      const x = Math.round(p.x), y = Math.round(p.y), v = glow(t - f.lit + frac) * b;
+      if (v > 0.02) {
+        const g = Math.round(1 + p.k * 2);
+        ctx.fillStyle = `rgba(190,230,80,${(0.04 * v).toFixed(3)})`;     // firefly light: yellow-green
+        ctx.fillRect(x - g * 2, y - g * 2, g * 4 + 1, g * 4 + 1);
+        ctx.fillStyle = `rgba(220,240,110,${(0.14 * v).toFixed(3)})`;
+        ctx.fillRect(x - g, y - g, g * 2 + 1, g * 2 + 1);
+        ctx.fillStyle = `rgba(250,255,190,${v.toFixed(3)})`;
+        ctx.fillRect(x, y, p.k > 1.1 ? 2 : 1, p.k > 1.1 ? 2 : 1);
       } else {
-        // charging: one dim dot, brighter as the phase approaches 1
-        const g = 28 + ((f.phase * f.phase * 90) | 0);
-        ctx.fillStyle = `rgb(${g},${g},${g})`;
-        ctx.fillRect(x + 4, y + 4, 2, 2);
+        // dark between bursts: just a dim body you can barely see
+        ctx.fillStyle = `rgba(70,80,60,${(0.35 * b).toFixed(2)})`;
+        ctx.fillRect(x, y, 1, 1);
       }
     }
-    return lit;
+    ctx.globalCompositeOperation = "source-over";
   };
+  let raf = 0, visible = false;
+  const frame = (now: number) => { draw(now); raf = visible ? requestAnimationFrame(frame) : 0; };
+
   const measure = (fn: () => void) => {
     runs = pulses = passes = 0; marks.length = 0;
     const t0 = performance.now(); fn();
     const ms = performance.now() - t0;
-    const lit = draw();
-    $("[data-tick]").textContent = String(get(tick));
+    const t = get(tick);
+    let lit = 0;
+    for (const f of firefly) if (get(f).lit === t) lit++;
+    lastTick = performance.now();
+    if (!raf) draw();
+    $("[data-tick]").textContent = String(t);
     $("[data-runs]").textContent = String(runs);
     $("[data-pulses]").textContent = String(pulses);
     $("[data-passes]").textContent = String(passes);
@@ -101,12 +123,13 @@ function start(root: HTMLElement) {
     $("[data-ms]").textContent = ms.toFixed(1);
     frontier();
   };
-  const step = () => measure(() => update(tick, (t) => t + 1));
+  // A tick: first see who is near whom (they have moved), then advance the model.
+  const step = () => { near = neighbours(flies, REACH, K); measure(() => update(tick, (t) => t + 1)); };
 
   let timer = 0;
   const playBtn = $("[data-act=play]");
   const stop = () => { clearInterval(timer); timer = 0; playBtn.textContent = "▶ Play"; };
-  const play = () => { stop(); timer = window.setInterval(step, 33); playBtn.textContent = "⏸ Pause"; };
+  const play = () => { stop(); timer = window.setInterval(step, TICK_MS); playBtn.textContent = "⏸ Pause"; };
   root.addEventListener("click", (e) => {
     const a = (e.target as Element).closest<HTMLElement>("[data-act]")?.dataset.act;
     if (a === "play") timer ? stop() : play();
@@ -116,13 +139,18 @@ function start(root: HTMLElement) {
   // A poke is one write into one inbox: whatever avalanche follows is the runtime's doing.
   cv.addEventListener("pointerdown", (e) => {
     const r = cv.getBoundingClientRect();
-    const x = Math.floor(((e.clientX - r.left) / r.width) * COLS), y = Math.floor(((e.clientY - r.top) / r.height) * ROWS);
-    if (x >= 0 && y >= 0 && x < COLS && y < ROWS) measure(() => update(pulse[y * COLS + x], (v) => v + 1));
+    const x = ((e.clientX - r.left) / r.width) * SW, y = ((e.clientY - r.top) / r.height) * SH;
+    let best = 0, d = Infinity;
+    for (let i = 0; i < N; i++) { const p = screen(i), q = (p.x - x) ** 2 + (p.y - y) ** 2; if (q < d) { d = q; best = i; } }
+    if (d < 100) measure(() => update(pulse[best], (v) => v + 1));
   });
 
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
   measure(() => update(epoch, (n) => n + 1));
-  let auto = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let auto = !still;
   new IntersectionObserver((es) => {
+    visible = es[0].isIntersecting && !still;
+    if (visible && !raf) { lastFrame = performance.now(); raf = requestAnimationFrame(frame); }
     if (!es[0].isIntersecting) stop();
     else if (auto) { auto = false; play(); }
   }, { threshold: 0.3 }).observe(cv);
