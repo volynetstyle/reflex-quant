@@ -11,15 +11,15 @@ export function check(condition: boolean, message: string): void {
 
 export function deps(n: Node): Node[] {
   const out: Node[] = [];
-  for (let e = n.deps; e !== null; e = e.next) out.push(e.from);
+  for (let e = n.firstDep; e !== null; e = e.nextDep) out.push(e.from);
   return out;
 }
 
 /** Force indexing after an accepted read without exposing execution registers. */
 export function indexAfter(c: Node, s: Node): Edge {
-  for (let e = c.deps; e !== null; e = e.next) {
+  for (let e = c.firstDep; e !== null; e = e.nextDep) {
     if (e.from !== s) continue;
-    if (s.slot !== e) index(c, e.next);
+    if (s.slot !== e) index(c, e.nextDep);
     return e;
   }
   throw new Error("indexAfter requires an accepted source read");
@@ -27,7 +27,7 @@ export function indexAfter(c: Node, s: Node): Edge {
 
 export function subs(n: Node): Node[] {
   const out: Node[] = [];
-  for (let e = n.subs; e !== null; e = e.nextSub) out.push(e.to);
+  for (let e = n.firstSub; e !== null; e = e.nextSub) out.push(e.to);
   return out;
 }
 
@@ -38,7 +38,7 @@ export function indices(nodes: readonly Node[], pool: readonly Node[]): number[]
 
 export function edgeCount(nodes: readonly Node[]): number {
   let count = 0;
-  for (const n of nodes) for (let e = n.deps; e !== null; e = e.next) count++;
+  for (const n of nodes) for (let e = n.firstDep; e !== null; e = e.nextDep) count++;
   return count;
 }
 
@@ -58,8 +58,8 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
   const visit = (n: Node) => {
     if (all.has(n)) return;
     all.add(n);
-    for (let e = n.deps; e !== null; e = e.next) visit(e.from);
-    for (let e = n.subs; e !== null; e = e.nextSub) visit(e.to);
+    for (let e = n.firstDep; e !== null; e = e.nextDep) visit(e.from);
+    for (let e = n.firstSub; e !== null; e = e.nextSub) visit(e.to);
   };
   nodes.forEach(visit);
   const list = [...all];
@@ -71,9 +71,9 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
     check(n.slot === null, `${label}: node ${id(n)} has a slot cell at rest`);
     const seen = new Set<Node>();
     let prev: Edge | null = null;
-    for (let e = n.deps; e !== null; e = e.next) {
+    for (let e = n.firstDep; e !== null; e = e.nextDep) {
       check(e.to === n, `${label}: deps edge of ${id(n)} points to ${id(e.to)}`);
-      check(e.prev === prev, `${label}: broken prevDep in ${id(n)}`);
+      check(e.prevDep === prev, `${label}: broken prevDep in ${id(n)}`);
       check(!seen.has(e.from), `${label}: duplicate relation ${id(e.from)} -> ${id(n)}`);
       check(!inDeps.has(e), `${label}: edge in two deps lists`);
       seen.add(e.from);
@@ -81,7 +81,7 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
       prev = e;
     }
     prev = null;
-    for (let e = n.subs; e !== null; e = e.nextSub) {
+    for (let e = n.firstSub; e !== null; e = e.nextSub) {
       check(e.from === n, `${label}: subs edge of ${id(n)} comes from ${id(e.from)}`);
       check(e.prevSub === prev, `${label}: broken prevSub in ${id(n)}`);
       check(!inSubs.has(e), `${label}: edge in two subs lists`);
@@ -90,7 +90,7 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
     }
     check(n.lastSub === prev, `${label}: lastSub of ${id(n)} is not its last edge`);
     if (n.fn !== null && (n.flags & (Flag.Stale | Flag.Dirty)) === 0) {
-      for (let e = n.deps; e !== null; e = e.next) {
+      for (let e = n.firstDep; e !== null; e = e.nextDep) {
         const f = e.from.flags;
         check((f & (Flag.Stale | Flag.Dirty)) === 0, `${label}: clean node ${id(n)} has an invalidated source ${id(e.from)}`);
         check(e.ver === e.from.ver, `${label}: clean node ${id(n)} holds a stale version of source ${id(e.from)}`);

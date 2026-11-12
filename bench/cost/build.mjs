@@ -28,12 +28,12 @@ const H = "host.ts";
 const I = "index.ts";
 
 const prefixScan =
-  "    let p = last !== null ? last.prev : null;\n    budget = SCAN;\n    while (p !== null && p.from !== s && --budget !== 0) p = p.prev;\n    if (p !== null && p.from === s) {\n      if (__STATS__) stats.dups++;\n      return;\n    }\n";
+  "    let p = last !== null ? last.prevDep : null;\n    budget = SCAN;\n    while (p !== null && p.from !== s && --budget !== 0) p = p.prevDep;\n    if (p !== null && p.from === s) {\n      if (__STATS__) stats.dups++;\n      return;\n    }\n";
 const displaced = [
   [K, "  const cell = s.slot;\n  if (cell !== null) stack[top++] = cell;\n  s.slot = e;", "  s.slot = e;"],
 ];
 const firstMiss = [
-  [T, "  const first = s.subs;", "  index(c, next);\n  return slot(c, s, last, next);\n  const first = s.subs;"],
+  [T, "  const first = s.firstSub;", "  index(c, next);\n  return slot(c, s, last, next);\n  const first = s.firstSub;"],
 ];
 
 /** variant -> [what it removes, ...edits] */

@@ -30,12 +30,12 @@ function graphReachable(root: Node): number {
       pending.push(
         item.from,
         item.to,
-        item.prev,
-        item.next,
+        item.prevDep,
+        item.nextDep,
         item.prevSub,
         item.nextSub,
       );
-    else pending.push(item.deps, item.slot, item.subs, item.lastSub);
+    else pending.push(item.firstDep, item.slot, item.firstSub, item.lastSub);
   }
   return seen.size;
 }
@@ -43,7 +43,7 @@ function graphReachable(root: Node): number {
 function released(handle: object): void {
   const c = n(handle);
   expect(c.fn === null).toBe(true);
-  expect(c.deps === null).toBe(true);
+  expect(c.firstDep === null).toBe(true);
   expect(c.slot === null).toBe(true);
 }
 
@@ -61,8 +61,8 @@ describe("disposed dependency retention", () => {
       expect(get(c)).toBe(value);
       dispose(c);
       // Subscriptions and all graph paths disappear while the handle is retained.
-      expect(n(c).deps === null).toBe(true);
-      expect(sources.every((s) => n(s).subs === null)).toBe(true);
+      expect(n(c).firstDep === null).toBe(true);
+      expect(sources.every((s) => n(s).firstSub === null)).toBe(true);
       expect(graphReachable(n(c))).toBe(1);
       released(c);
       dispose(c);
@@ -119,7 +119,7 @@ describe("disposed dependency retention", () => {
           const cn = n(c);
           const edge = indexAfter(cn, n(sources[0]!));
           dispose(c);
-          expect(edge.from.slot === edge && cn.deps !== null).toBe(true);
+          expect(edge.from.slot === edge && cn.firstDep !== null).toBe(true);
           get(fresh);
           get(sources[0]!);
           expect(edge.from.slot === edge).toBe(true);
@@ -152,7 +152,7 @@ describe("disposed dependency retention", () => {
         runs++;
         if (get(source) === 1) {
           dispose(e);
-          expect(n(e).deps !== null).toBe(true);
+          expect(n(e).firstDep !== null).toBe(true);
           get(fresh);
           get(source);
           if (throws) throw new Error("watcher self-dispose");
@@ -199,7 +199,7 @@ describe("disposed dependency retention", () => {
       released(e);
       expect(graphReachable(n(e))).toBe(1);
       expect([runs, cleanups]).toEqual([2, 1]);
-      expect(n(untracked).subs === null).toBe(true);
+      expect(n(untracked).firstSub === null).toBe(true);
       dispose(e);
       dispose(survivor);
       checkGraph([n(e), n(survivor), n(source), n(untracked)]);
@@ -261,7 +261,7 @@ describe("disposed dependency retention", () => {
     expect(get(d)).toBe(5);
     dispose(c);
     released(c);
-    expect(n(c).subs !== null).toBe(true);
+    expect(n(c).firstSub !== null).toBe(true);
     set(source, 9);
     expect(get(d)).toBe(5);
     checkGraph([source, c, d].map(n));

@@ -61,7 +61,7 @@ describe("torture: cleanup between validation and callback", () => {
     // but wakes nothing, and its error reaches the disposer.
     expect(() => dispose(e)).toThrow("cleanup");
     expect([seen, get(source)]).toEqual([[0, 1, 2], 3]);
-    expect(n(source).subs).toBe(null);
+    expect(n(source).firstSub).toBe(null);
     expect(idle()).toBe(true);
   });
 });
@@ -81,7 +81,7 @@ describe("torture: host queue", () => {
     expect(runs).toBe(1);
     set(source, 2);
     expect(runs).toBe(1);
-    expect(n(source).subs).toBe(null);
+    expect(n(source).firstSub).toBe(null);
   });
 
   it("a failed watcher does not stop later watchers from queueing more work", () => {
@@ -159,7 +159,7 @@ describe("torture: nested failure", () => {
     });
     const nodes = [n(c), n(phase), ...s.map(n)];
     const edgeOf = (k: number) => {
-      for (let e: Edge | null = n(c).deps; e !== null; e = e.next) if (e.from === n(s[k]!)) return e;
+      for (let e: Edge | null = n(c).firstDep; e !== null; e = e.nextDep) if (e.from === n(s[k]!)) return e;
       return null;
     };
     const ids = (list: number[]) => list.map((i) => n(s[i]!));
@@ -191,7 +191,7 @@ describe("torture: nested failure", () => {
     expect(stats.links).toBe(0);
     checkGraph(nodes);
     // Only the committed frontier wakes it now.
-    for (const k of [4, 5, 6, 7]) expect(n(s[k]!).subs).toBe(null);
+    for (const k of [4, 5, 6, 7]) expect(n(s[k]!).firstSub).toBe(null);
     expect(idle()).toBe(true);
   });
 });

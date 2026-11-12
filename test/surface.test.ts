@@ -10,7 +10,7 @@ import { checkGraph } from "./support/graph";
 const asNode = (handle: unknown): Node => handle as Node;
 const sources = (handle: unknown): Node[] => {
   const out: Node[] = [];
-  for (let e = asNode(handle).deps; e !== null; e = e.next) out.push(e.from);
+  for (let e = asNode(handle).firstDep; e !== null; e = e.nextDep) out.push(e.from);
   return out;
 };
 

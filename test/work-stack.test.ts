@@ -7,7 +7,7 @@ import {
   dispose,
   idle,
   index,
-  node,
+  createNode,
   onWake,
   read,
   stackLength,
@@ -15,8 +15,8 @@ import {
 } from "../src/kernel";
 import { checkGraph, deps, indexAfter } from "./support/graph";
 
-const signal = (value: number) => node(null, value, 0);
-const computed = (fn: () => unknown) => node(fn, undefined, Flag.Dirty);
+const signal = (value: number) => createNode(null, value, 0);
+const computed = (fn: () => unknown) => createNode(fn, undefined, Flag.Dirty);
 
 describe("displaced slot cells", () => {
   it("uses one stack slot per displaced edge at three increasing widths", () => {
@@ -163,7 +163,7 @@ describe("displaced slot cells", () => {
     const trunk = computed(() => read(trigger));
     const branch = computed(() => read(trunk));
     const sibling = computed(() => read(trunk));
-    const watcher = node(
+    const watcher = createNode(
       () => read(branch),
       undefined,
       Flag.Dirty | Flag.Watch,

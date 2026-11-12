@@ -7,7 +7,7 @@ import type { Node } from "../src/graph";
 import {
   dispose,
   idle,
-  node,
+  createNode,
   read,
   stackHighWater,
   stackLength,
@@ -17,8 +17,8 @@ import {
 import { run, stop, watcher } from "../src/host";
 import { checkGraph, indexAfter } from "./support/graph";
 
-const signal = (value: number) => node(null, value, 0);
-const computed = (fn: () => unknown) => node(fn, undefined, Flag.Dirty);
+const signal = (value: number) => createNode(null, value, 0);
+const computed = (fn: () => unknown) => createNode(fn, undefined, Flag.Dirty);
 
 function indexed(
   width: number,

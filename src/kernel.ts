@@ -10,15 +10,15 @@ import {
   SETTLE,
   TRIM,
   UNREAD,
-  cut,
-  move,
-  settle,
-  unsub,
+  cutDeps,
+  moveDep,
+  settleDeps,
+  unlinkSub,
 } from "./graph";
 import type { Edge, Flags, Node, WorkStack } from "./graph";
 import { stats } from "./instrumentation";
 
-export { node } from "./graph";
+export { createNode } from "./graph";
 export { stats } from "./instrumentation";
 
 const compare = Object.is;
@@ -96,7 +96,7 @@ export function write(s: Node, value: unknown): void {
   s.value = value;
   s.ver = (s.ver + 1) & CounterLimit.Mask;
 
-  for (let e = s.subs; e !== null; e = e.nextSub) {
+  for (let e = s.firstSub; e !== null; e = e.nextSub) {
     const n = e.to;
     const f = n.flags;
 
@@ -109,7 +109,7 @@ export function write(s: Node, value: unknown): void {
 
         if ((f & Flag.Watch) !== 0) wake(n);
         else {
-          const subs = n.subs;
+          const subs = n.firstSub;
 
           if (subs !== null) mark(subs);
         }
@@ -123,7 +123,7 @@ export function write(s: Node, value: unknown): void {
     } else {
       n.flags = f | Flag.Dirty | Flag.Stale;
 
-      const subs = n.subs;
+      const subs = n.firstSub;
 
       if (subs !== null) mark(subs);
     }
@@ -148,7 +148,7 @@ function mark(first: Edge): void {
       } else if ((f & Flag.Stale) === 0) {
         n.flags = f | Flag.Stale;
 
-        const subs = n.subs;
+        const subs = n.firstSub;
 
         if (subs !== null) {
           const next = e.nextSub;
@@ -183,7 +183,7 @@ export function read(n: Node): unknown {
     if (__STATS__) stats.reads++;
 
     const last = cursor;
-    const next = last === null ? c.deps : last.next;
+    const next = last === null ? c.firstDep : last.nextDep;
 
     if (next !== null && next.from === n) {
       if (__STATS__) stats.hits++;
@@ -239,7 +239,7 @@ function verify(root: Node, f: Flags): void {
   root.flags = __DEV__ ? (f & ~Flag.Stale) | Flag.Checking : f & ~Flag.Stale;
   const base = top;
   let n = root;
-  let e = root.deps;
+  let e = root.firstDep;
 
   try {
     for (;;) {
@@ -266,7 +266,7 @@ function verify(root: Node, f: Flags): void {
                 : sf & ~Flag.Stale;
               stack[top++] = e;
               n = s;
-              e = s.deps;
+              e = s.firstDep;
               continue;
             }
             exec(s);
@@ -276,7 +276,7 @@ function verify(root: Node, f: Flags): void {
             if (n.fn !== null) exec(n);
             break settled;
           }
-          e = e.next;
+          e = e.nextDep;
         }
         // Every source unchanged: clean, and no longer on the walk.
         if (__DEV__) n.flags &= ~Flag.Checking;
@@ -295,7 +295,7 @@ function verify(root: Node, f: Flags): void {
         n = up.to;
 
         if (up.from.ver === up.ver) {
-          e = up.next;
+          e = up.nextDep;
           break;
         }
 
@@ -330,13 +330,13 @@ function verify(root: Node, f: Flags): void {
  */
 export function check(w: Node): void {
   const tentative = (w.gen + 1) & CounterLimit.Mask;
-  let e = w.deps;
+  let e = w.firstDep;
 
   // Until a run is owed, versions decide; then only the pulls remain. A
   // development build pulls a source on the stack too, so the C1 diagnosis
   // fails here, before the cleanup (P4).
   if ((w.flags & Flag.Dirty) === 0) {
-    for (; e !== null; e = e.next) {
+    for (; e !== null; e = e.nextDep) {
       const s = e.from;
 
       if (__STATS__) stats.checks++;
@@ -353,13 +353,13 @@ export function check(w: Node): void {
 
       if (s.ver !== e.ver) {
         w.flags |= Flag.Dirty;
-        e = e.next;
+        e = e.nextDep;
         break;
       }
     }
   }
 
-  for (; e !== null; e = e.next) {
+  for (; e !== null; e = e.nextDep) {
     if (__STATS__) stats.checks++;
 
     const s = e.from;
@@ -430,12 +430,12 @@ export function exec(n: Node): void {
   if (n.fn === null) return detach(n);
   // Commit only after a successful run. Dropping the unread suffix removes
   // sources that this pass no longer depends on.
-  if ((last === null ? n.deps : last.next) !== null) cut(n, last);
+  if ((last === null ? n.firstDep : last.nextDep) !== null) cutDeps(n, last);
 
   n.gen = (n.gen + 1) & CounterLimit.Mask;
 
   // Every edge is committed now; see SETTLE.
-  if ((n.gen & SETTLE) === 0) settle(n);
+  if ((n.gen & SETTLE) === 0) settleDeps(n);
 
   if (compare(value, n.value) === false) {
     n.value = value;
@@ -456,20 +456,20 @@ function fail(n: Node, base: number, last: Edge | null): void {
 
   n.flags |= Flag.Dirty;
   const tentative = (n.gen + 1) & CounterLimit.Mask;
-  for (let e = last === null ? n.deps : last.next; e !== null;) {
-    const after: Edge | null = e.next;
+  for (let e = last === null ? n.firstDep : last.nextDep; e !== null;) {
+    const after: Edge | null = e.nextDep;
 
     if (e.gen === tentative) {
-      const before = e.prev;
+      const before = e.prevDep;
 
-      if (before !== null) before.next = after;
-      else n.deps = after;
+      if (before !== null) before.nextDep = after;
+      else n.firstDep = after;
 
-      if (after !== null) after.prev = before;
+      if (after !== null) after.prevDep = before;
 
-      unsub(e);
-      e.prev = null;
-      e.next = null;
+      unlinkSub(e);
+      e.prevDep = null;
+      e.nextDep = null;
     }
     e = after;
   }
@@ -485,7 +485,7 @@ export function dispose(n: Node): void {
 }
 
 function detach(n: Node): void {
-  cut(n, null);
+  cutDeps(n, null);
   n.flags &= ~(Flag.Stale | Flag.Dirty | Flag.Woken);
 }
 
@@ -497,7 +497,7 @@ export function index(c: Node, next: Edge | null): void {
 
   let unread = false;
 
-  for (let e = c.deps; e !== null; e = e.next) {
+  for (let e = c.firstDep; e !== null; e = e.nextDep) {
     if (__STATS__) stats.indexed++;
 
     if (e === next) unread = true;
@@ -521,7 +521,7 @@ export function claim(s: Node, e: Edge): void {
 
 /** Clear the run's slots, give back the cells it displaced. */
 function unindex(n: Node, base: number): void {
-  for (let e = n.deps; e !== null; e = e.next) e.from.slot = null;
+  for (let e = n.firstDep; e !== null; e = e.nextDep) e.from.slot = null;
 
   while (top > base) {
     const cell = stack[--top] as Edge;
@@ -546,19 +546,19 @@ export function link(
     to: c,
     ver: s.ver,
     gen: (c.gen + 1) & CounterLimit.Mask,
-    prev: last,
-    next,
+    prevDep: last,
+    nextDep: next,
     prevSub: tail,
     nextSub: null,
   };
 
-  if (last !== null) last.next = e;
-  else c.deps = e;
+  if (last !== null) last.nextDep = e;
+  else c.firstDep = e;
 
-  if (next !== null) next.prev = e;
+  if (next !== null) next.prevDep = e;
 
   if (tail !== null) tail.nextSub = e;
-  else s.subs = e;
+  else s.firstSub = e;
   s.lastSub = e;
   cursor = e;
 }
@@ -589,7 +589,7 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   }
   /** The pair's edge through the source's subscribers; undefined: unknown. */
   let found: Edge | null | undefined;
-  const first = s.subs;
+  const first = s.firstSub;
 
   // A source without subscribers is absent, whatever the unread suffix mode.
   if (first === null) return link(c, s, last, next);
@@ -598,22 +598,22 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   if (next === null || next.ver !== UNREAD) {
     // An edge found by a scan is the pair's only one; absence needs one side
     // scanned completely (this reader's list, or the source's subscribers).
-    let e = next !== null ? next.next : null;
+    let e = next !== null ? next.nextDep : null;
     let budget = SCAN;
 
-    while (e !== null && e.from !== s && --budget !== 0) e = e.next;
+    while (e !== null && e.from !== s && --budget !== 0) e = e.nextDep;
 
     if (e !== null && e.from === s) {
       if (__STATS__) stats.scans++;
 
       e.ver = s.ver;
       cursor = e;
-      return move(c, e, last, next!);
+      return moveDep(c, e, last, next!);
     }
-    let p = last !== null ? last.prev : null;
+    let p = last !== null ? last.prevDep : null;
     budget = SCAN;
 
-    while (p !== null && p.from !== s && --budget !== 0) p = p.prev;
+    while (p !== null && p.from !== s && --budget !== 0) p = p.prevDep;
 
     if (p !== null && p.from === s) {
       if (__STATS__) stats.dups++;
@@ -680,7 +680,7 @@ function begin(c: Node, e: Edge, first: Edge | null, next: Edge | null): void {
 
   if (__STATS__) stats.sweeps++;
 
-  for (let u: Edge | null = next; u !== null; u = u.next) {
+  for (let u: Edge | null = next; u !== null; u = u.nextDep) {
     if (__STATS__) stats.indexed++;
 
     u.ver = UNREAD;
@@ -706,6 +706,6 @@ function take(
   if (__STATS__) stats.moves++;
 
   e.ver = s.ver;
-  move(c, e, last, next!);
+  moveDep(c, e, last, next!);
   cursor = e;
 }

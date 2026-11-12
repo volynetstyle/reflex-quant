@@ -168,8 +168,8 @@ function checkShape(file) {
     }
     if (ts.isObjectLiteralExpression(node)) {
       const keys = new Set(node.properties.map((p) => p.name?.getText(tree)));
-      if (["flags", "value", "ver", "fn", "deps", "subs", "slot", "gen"].every((k) => keys.has(k))) sites.node++;
-      if (["from", "to", "ver", "gen", "prev", "next", "prevSub", "nextSub"].every((k) => keys.has(k))) sites.edge++;
+      if (["flags", "value", "ver", "fn", "firstDep", "firstSub", "slot", "gen"].every((k) => keys.has(k))) sites.node++;
+      if (["from", "to", "ver", "gen", "prevDep", "nextDep", "prevSub", "nextSub"].every((k) => keys.has(k))) sites.edge++;
     }
     ts.forEachChild(node, visit);
   }

@@ -1,6 +1,6 @@
 import { stats } from "./instrumentation";
 
-// Compile-time vocabulary of the runtime graph. Nothing here exists at runtime.
+// Graph types, constants and intrusive list operations.
 
 // The aliases name different facts but do not brand numbers: counters wrap at
 // MASK and edge versions can carry UNREAD.
@@ -9,7 +9,7 @@ export type Version = number;
 export type Generation = number;
 
 /** A computed's or watcher's body; a signal has none. */
-export type Fn = (prev: unknown) => unknown;
+export type NodeFn = (prev: unknown) => unknown;
 /** A watcher's cleanup, run untracked. */
 export type Cleanup = () => unknown;
 
@@ -19,11 +19,11 @@ export interface Node {
   /** Bumps on every Object.is-visible change of value. */
   ver: Version;
   /** null for a signal and for a disposed node. */
-  fn: Fn | null;
-  /** Sources, in read order. */
-  deps: Edge | null;
-  /** Subscribers, in birth order. */
-  subs: Edge | null;
+  fn: NodeFn | null;
+  /** First dependency edge, in read order. */
+  firstDep: Edge | null;
+  /** First and last subscriber edges, in birth order. */
+  firstSub: Edge | null;
   lastSub: Edge | null;
   /** While a reader indexes: this node's edge into that reader. */
   slot: Edge | null;
@@ -38,8 +38,10 @@ export interface Edge {
   ver: Version | typeof UNREAD;
   /** to.gen + 1 at birth: tentative while it still equals to.gen + 1. */
   gen: Generation;
-  prev: Edge | null;
-  next: Edge | null;
+  /** Neighbours in the consumer's dependency list. */
+  prevDep: Edge | null;
+  nextDep: Edge | null;
+  /** Neighbours in the source's subscriber list. */
   prevSub: Edge | null;
   nextSub: Edge | null;
 }
@@ -99,14 +101,14 @@ export const TRIM = 512;
 
 // Intrusive graph operations independent of the execution context.
 
-export function node(fn: Node["fn"], value: unknown, flags: Flags): Node {
+export function createNode(fn: Node["fn"], value: unknown, flags: Flags): Node {
   return {
     flags,
     value,
     ver: 0,
     fn,
-    deps: null,
-    subs: null,
+    firstDep: null,
+    firstSub: null,
     lastSub: null,
     slot: null,
     gen: 0,
@@ -114,45 +116,45 @@ export function node(fn: Node["fn"], value: unknown, flags: Flags): Node {
 }
 
 /** Move an unread edge (strictly after `next`) up to the cursor. */
-export function move(c: Node, e: Edge, last: Edge | null, next: Edge): void {
-  const before = e.prev!;
-  const after = e.next;
-  before.next = after;
+export function moveDep(c: Node, e: Edge, last: Edge | null, next: Edge): void {
+  const before = e.prevDep!;
+  const after = e.nextDep;
+  before.nextDep = after;
 
-  if (after !== null) after.prev = before;
+  if (after !== null) after.prevDep = before;
 
-  e.prev = last;
-  e.next = next;
+  e.prevDep = last;
+  e.nextDep = next;
 
-  if (last !== null) last.next = e;
-  else c.deps = e;
-  next.prev = e;
+  if (last !== null) last.nextDep = e;
+  else c.firstDep = e;
+  next.prevDep = e;
 }
 
 /** Remove every edge of `c` after `last` (all of them when null). */
-export function cut(c: Node, last: Edge | null): void {
-  let e = last === null ? c.deps : last.next;
+export function cutDeps(c: Node, last: Edge | null): void {
+  let e = last === null ? c.firstDep : last.nextDep;
 
   if (e === null) return;
 
-  if (last === null) c.deps = null;
-  else last.next = null;
+  if (last === null) c.firstDep = null;
+  else last.nextDep = null;
   // The cut head's back pointer would tie this garbage to the live list, and
   // so to garbage cut later: old garbage keeps newer garbage alive.
-  e.prev = null;
+  e.prevDep = null;
 
-  for (; e !== null; e = e.next) unsub(e);
+  for (; e !== null; e = e.nextDep) unlinkSub(e);
 }
 
 /** Restamp every edge of `c`, all of them committed, with its generation (SETTLE). */
-export function settle(c: Node): void {
+export function settleDeps(c: Node): void {
   const gen = c.gen;
 
-  for (let e = c.deps; e !== null; e = e.next) e.gen = gen;
+  for (let e = c.firstDep; e !== null; e = e.nextDep) e.gen = gen;
 }
 
 /** Take an edge out of its source's subscriber list. */
-export function unsub(e: Edge): void {
+export function unlinkSub(e: Edge): void {
   if (__STATS__) stats.unlinks++;
 
   const s = e.from;
@@ -160,7 +162,7 @@ export function unsub(e: Edge): void {
   const after = e.nextSub;
 
   if (before !== null) before.nextSub = after;
-  else s.subs = after;
+  else s.firstSub = after;
 
   if (after !== null) after.prevSub = before;
   else s.lastSub = before;

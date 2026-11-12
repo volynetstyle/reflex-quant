@@ -7,13 +7,13 @@ import { Flag } from "./graph";
 import { depth, drainNow, draining, size, start, stop, watcher } from "./host";
 import {
   dispose as detach,
-  node,
+  createNode,
   peek as refresh,
   read,
   untracked,
   write,
 } from "./kernel";
-import type { Fn, Node } from "./graph";
+import type { Node, NodeFn } from "./graph";
 
 export { batch } from "./host";
 export { untracked } from "./kernel";
@@ -44,7 +44,7 @@ export interface Effect {
 }
 
 export function signal<T>(value: T): Signal<T> {
-  return node(null, value, 0) as unknown as Signal<T>;
+  return createNode(null, value, 0) as unknown as Signal<T>;
 }
 
 /**
@@ -59,7 +59,11 @@ export function computed<T>(
   fn: (prev: T | undefined) => T,
   initial?: T,
 ): Computed<T> {
-  return node(fn as Fn, initial, Flag.Dirty) as unknown as Computed<T>;
+  return createNode(
+    fn as NodeFn,
+    initial,
+    Flag.Dirty,
+  ) as unknown as Computed<T>;
 }
 
 /** Runs now (or when the enclosing batch or drain ends), then on every change it read. */

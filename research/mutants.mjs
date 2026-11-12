@@ -47,7 +47,7 @@ export const mutants = [
   ["keep-tentative", "removal of earlier failed runs' unread edges",
     [K, "    if (e.gen === tentative) {\n      const before", "    if (false) {\n      const before"]],
   ["cut-on-failure", "committed edges kept after a failure (wake set)",
-    [K, "  n.flags |= Flag.Dirty;\n  const tentative", "  n.flags |= Flag.Dirty;\n  cut(n, last);\n  return;\n  const tentative"]],
+    [K, "  n.flags |= Flag.Dirty;\n  const tentative", "  n.flags |= Flag.Dirty;\n  cutDeps(n, last);\n  return;\n  const tentative"]],
   ["clear-after", "STALE cleared before the run, so pushes during it survive",
     [K, "        ? Flag.Stale | Flag.Dirty | Flag.Checking\n        : Flag.Stale | Flag.Dirty)) |", "        ? Flag.Dirty | Flag.Checking\n        : Flag.Dirty)) |"],
     [K, "  n.flags = f & ~Flag.Busy;", "  n.flags = f & ~(Flag.Busy | Flag.Stale);"]],
@@ -63,7 +63,7 @@ export const mutants = [
     [K, "  n.flags |= Flag.Dirty;\n  const tentative", "  if ((n.flags & Flag.Watch) === 0) n.flags |= Flag.Dirty;\n  const tentative"]],
   ["existential-watcher", "watcher validation covers every committed source (V3)",
     [K, "  if ((w.flags & Flag.Dirty) === 0) {", "  if ((w.flags & Flag.Dirty) !== 0) return;\n  if ((w.flags & Flag.Dirty) === 0) {"],
-    [K, "        w.flags |= Flag.Dirty;\n        e = e.next;\n        break;", "        w.flags |= Flag.Dirty;\n        return;"]],
+    [K, "        w.flags |= Flag.Dirty;\n        e = e.nextDep;\n        break;", "        w.flags |= Flag.Dirty;\n        return;"]],
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & Flag.Busy) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
   ["no-cursor-restore", "T3: nested execution restores the enclosing pass's cursor on success and failure",
@@ -104,9 +104,9 @@ export const mutants = [
   ["no-trim-unindex", "indexed execution releases capacity on normal, throwing and disposed exits, including direct watchers",
     [K, "    cell.from.slot = cell;\n  }\n  trim();", "    cell.from.slot = cell;\n  }"]],
   ["no-settle", "SETTLE: a commit restamps its edges twice a cycle, so a wrapped generation never reads a committed edge as tentative",
-    [K, "  if ((n.gen & SETTLE) === 0) settle(n);", ""]],
+    [K, "  if ((n.gen & SETTLE) === 0) settleDeps(n);", ""]],
   ["settle-once-a-cycle", "SETTLE: the restamp comes twice a cycle; once leaves an edge 2^30 - 1 behind just before it",
-    [K, "  if ((n.gen & SETTLE) === 0) settle(n);", "  if (n.gen === 0) settle(n);"]],
+    [K, "  if ((n.gen & SETTLE) === 0) settleDeps(n);", "  if (n.gen === 0) settleDeps(n);"]],
   ["construction-commits", "W5: an effect() call that throws detaches its watcher",
     [I, "      stop(effectNode);\n    } catch {", "    } catch {"]],
   ["rollback-error-replaces", "F5: a throwing rollback cleanup does not replace the failed run's error",
@@ -129,9 +129,9 @@ export const mutants = [
   ["start-outside-drain", "an effect's unqueued first run opens the drain",
     [H, "  draining = true;\n  try {\n    exec(w);", "  try {\n    exec(w);"]],
   ["prepend-subs", "subscribers kept in birth order (lastSub append)",
-    [K, "prevSub: tail,\n    nextSub: null,", "prevSub: null,\n    nextSub: s.subs,"],
-    [K, "  if (tail !== null) tail.nextSub = e;\n  else s.subs = e;\n  s.lastSub = e;",
-      "  if (s.subs !== null) s.subs.prevSub = e;\n  else s.lastSub = e;\n  s.subs = e;"]],
+    [K, "prevSub: tail,\n    nextSub: null,", "prevSub: null,\n    nextSub: s.firstSub,"],
+    [K, "  if (tail !== null) tail.nextSub = e;\n  else s.firstSub = e;\n  s.lastSub = e;",
+      "  if (s.firstSub !== null) s.firstSub.prevSub = e;\n  else s.lastSub = e;\n  s.firstSub = e;"]],
 ];
 
 /**
@@ -140,7 +140,7 @@ export const mutants = [
  * evidence also lives in edge versions, so emulating idle means marking every
  * observed change consumed, after a cleanup or a callback failure.
  */
-const consumeEvidence = "for (let e = w.deps; e !== null; e = e.next) e.ver = e.from.ver;";
+const consumeEvidence = "for (let e = w.firstDep; e !== null; e = e.nextDep) e.ver = e.from.ver;";
 const reflexIdle = [
   [H, "    untracked(cleanup as Cleanup);\n    if (w.fn === null) return;",
     `    try {\n      untracked(cleanup as Cleanup);\n    } catch (error) {\n      w.flags &= ~Flag.Dirty;\n      ${consumeEvidence}\n      throw error;\n    }\n    if (w.fn === null) return;`],

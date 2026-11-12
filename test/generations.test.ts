@@ -14,7 +14,7 @@ const n = (x: object) => x as unknown as Node;
 const MASK = CounterLimit.Mask;
 const gens = (x: object) => {
   const out: number[] = [];
-  for (let e = n(x).deps; e !== null; e = e.next) out.push(e.gen);
+  for (let e = n(x).firstDep; e !== null; e = e.nextDep) out.push(e.gen);
   return out;
 };
 

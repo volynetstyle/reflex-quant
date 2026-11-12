@@ -257,7 +257,7 @@ describe("effects", () => {
     expect(idle()).toBe(true);
     const nodes = [...sources, flip, fresh].map((s) => s as unknown as Node);
     checkGraph(nodes);
-    expect(nodes.every((n) => n.subs === null)).toBe(true);
+    expect(nodes.every((n) => n.firstSub === null)).toBe(true);
   });
 
   it("dispose inside the cleanup: the callback does not run again", () => {
@@ -446,7 +446,7 @@ describe("W5 construction atomicity", () => {
         throw new Error("setup");
       }),
     ).toThrow("setup");
-    expect(n(source).subs).toBe(null);
+    expect(n(source).firstSub).toBe(null);
     set(source, 1);
     expect(runs).toBe(1);
     expect(idle()).toBe(true);
@@ -471,7 +471,7 @@ describe("W5 construction atomicity", () => {
     // Its own run succeeded: the write stays, the cleanup is consumed, and
     // the unreachable watcher never runs again.
     expect([get(out), runs, cleanups]).toEqual([1, 1, 1]);
-    expect(n(tick).subs).toBe(null);
+    expect(n(tick).firstSub).toBe(null);
     set(tick, 1);
     expect([runs, cleanups]).toEqual([1, 1]);
     dispose(failing);
@@ -682,7 +682,7 @@ describe("W3 disposal during validation", () => {
       set(s, 2);
       expect(get(b)).toBe(1);
       checkGraph(nodes(a, m, t, b));
-      expect(n(b).deps).toBe(null);
+      expect(n(b).firstDep).toBe(null);
       expect(idle()).toBe(true);
     }
   });

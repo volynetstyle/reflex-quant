@@ -2,12 +2,12 @@ import { Flag } from "../src/graph";
 // Level 1: adversarial dependency tracking on the kernel. Every case checks
 // values, relation uniqueness, list integrity and the work counters.
 import { beforeEach, describe, expect, it } from "vitest";
-import { idle, node, read, stats, write } from "../src/kernel";
+import { idle, createNode, read, stats, write } from "../src/kernel";
 import type { Edge, Node } from "../src/graph";
 import { checkGraph, deps, edgeCount, indices, resetStats, subs } from "./support/graph";
 
-const signal = (v: unknown) => node(null, v, 0);
-const computed = (fn: (prev: unknown) => unknown) => node(fn, undefined, Flag.Dirty);
+const signal = (v: unknown) => createNode(null, v, 0);
+const computed = (fn: (prev: unknown) => unknown) => createNode(fn, undefined, Flag.Dirty);
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 function permutation(n: number, seed: number): number[] {
@@ -33,7 +33,7 @@ function scripted(ps: Node[], order: { get(): number[] }, tick: Node) {
 
 function edges(c: Node): Edge[] {
   const out: Edge[] = [];
-  for (let e = c.deps; e !== null; e = e.next) out.push(e);
+  for (let e = c.firstDep; e !== null; e = e.nextDep) out.push(e);
   return out;
 }
 
@@ -310,7 +310,7 @@ describe("tracking", () => {
     }
     const leaf = tip;
     let seen = -1;
-    const w = node(() => void (seen = read(leaf) as number), undefined, 16 | 1 | Flag.Dirty);
+    const w = createNode(() => void (seen = read(leaf) as number), undefined, 16 | 1 | Flag.Dirty);
     write(s, 5);
     expect(read(leaf)).toBe(depth + 5);
     write(s, 6);

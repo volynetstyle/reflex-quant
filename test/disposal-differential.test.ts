@@ -110,7 +110,7 @@ describe("disposal differential", () => {
           (c) => (c.flags & Flag.Watch) !== 0 && c.fn === null,
         );
         expect(disposed.length).toBe(2);
-        expect(disposed.every((c) => c.deps === null)).toBe(true);
+        expect(disposed.every((c) => c.firstDep === null)).toBe(true);
       }),
       {
         numRuns: Number(process.env.QUANT_DISPOSE_RUNS ?? 300),

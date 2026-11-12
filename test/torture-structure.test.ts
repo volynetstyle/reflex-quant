@@ -196,7 +196,7 @@ it("dispose during an indexed reordered pass restores every slot", () => {
 
   const node = e as unknown as Node;
 
-  expect(node.deps).toBeNull();
+  expect(node.firstDep).toBeNull();
 
   for (const source of sources as unknown as Node[]) {
     expect(source.slot).toBeNull();

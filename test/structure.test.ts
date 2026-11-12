@@ -3,15 +3,15 @@ import { Flag, KEEP, TRIM } from "../src/graph";
 // Each assertion pins an optimization (O1, O2) or an asymptotic property;
 // removing the mechanism keeps every value correct and fails here.
 import { beforeEach, describe, expect, it } from "vitest";
-import { idle, node, read, stackHighWater, stackLength, stats, write } from "../src/kernel";
+import { idle, createNode, read, stackHighWater, stackLength, stats, write } from "../src/kernel";
 import type { Node } from "../src/graph";
 import { checkGraph, edgeCount, resetStats } from "./support/graph";
 import { queueLength, run } from "../src/host";
 import { batch as publicBatch, dispose as publicDispose, effect as publicEffect, get as publicGet, set as publicSet, signal as publicSignal } from "../src/index";
 import { foundRepeat, prefixRepeat } from "./support/p5";
 
-const signal = (v: unknown) => node(null, v, 0);
-const computed = (fn: (prev: unknown) => unknown) => node(fn, undefined, Flag.Dirty);
+const signal = (v: unknown) => createNode(null, v, 0);
+const computed = (fn: (prev: unknown) => unknown) => createNode(fn, undefined, Flag.Dirty);
 const range = (n: number) => Array.from({ length: n }, (_, i) => i);
 
 function reader(ps: Node[], orders: number[][], tick: Node) {
@@ -54,7 +54,7 @@ describe("structural bounds", () => {
   it("WOKEN: a signal write runs its watcher without the universal validation", () => {
     const ps = range(512).map(signal);
     let runs = 0;
-    const w = node(() => {
+    const w = createNode(() => {
       runs++;
       for (const p of ps) read(p);
     }, undefined, 16 | 1 | Flag.Dirty);
@@ -275,7 +275,7 @@ describe("structural bounds", () => {
       expect(read(c)).toBe(width * (width - 1) / 2);
       expect(edgeCount([c])).toBe(width + 1);
       expect(tentative.every((s) => {
-        for (let e = s.subs; e !== null; e = e.nextSub) if (e.to === c) return false;
+        for (let e = s.firstSub; e !== null; e = e.nextSub) if (e.to === c) return false;
         return true;
       })).toBe(true);
       checkGraph([c]);

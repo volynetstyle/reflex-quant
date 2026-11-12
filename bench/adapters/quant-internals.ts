@@ -7,7 +7,7 @@ import type { Node } from "../../src/graph.ts";
 
 export { batch, computed, dispose, effect, get, peek, set, signal, untracked, update } from "../../src/index.ts";
 export { index, read, write } from "../../src/kernel.ts";
-export { move } from "../../src/graph.ts";
+export { moveDep as move } from "../../src/graph.ts";
 
 export const name = "quant-internals";
 
@@ -22,7 +22,7 @@ export const VERSION_MASK: number = CounterLimit.Mask;
  * versions `index` set to UNREAD, which a real pass does through its reads.
  */
 export function clearIndex(c: Node): void {
-  for (let e = c.deps; e !== null; e = e.next) {
+  for (let e = c.firstDep; e !== null; e = e.nextDep) {
     e.from.slot = null;
     e.ver = e.from.ver;
   }

@@ -1,8 +1,8 @@
 // Policy around the kernel: the watcher lifecycle (check, consume the
 // cleanup, run), a FIFO queue for scheduled watchers, and batching.
 import { Flag, KEEP, TRIM } from "./graph";
-import type { Cleanup, Fn, Node } from "./graph";
-import { check, dispose, exec, node, onWake, untracked } from "./kernel";
+import type { Cleanup, Node, NodeFn } from "./graph";
+import { check, createNode, dispose, exec, onWake, untracked } from "./kernel";
 
 const queue: (Node | null)[] = [];
 // The host's registers. Exported so a write's caller can test for work
@@ -28,8 +28,8 @@ export function wake(w: Node): void {
 onWake(wake);
 
 /** A watcher runs `fn` and keeps a returned function as its cleanup. */
-export function watcher(fn: Fn, auto: boolean): Node {
-  return node(
+export function watcher(fn: NodeFn, auto: boolean): Node {
+  return createNode(
     fn,
     undefined,
     Flag.Watch | Flag.Stale | Flag.Dirty | (auto ? Flag.Auto : 0),
