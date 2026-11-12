@@ -130,7 +130,7 @@ reference/  frozen Reflex implementation and provenance fixtures
 
 ## Running
 
-For development, use Node.js 20.19 or later in the 20.x line, 22.13 or later in the 22.x line, or 24+ and npm (the published library supports Node.js 18+). Install this repository's dependencies with `npm ci`; the Reflex sources, spec harness and fixed production baseline used by the tests and benchmarks are included in `reference/reflex` and do not require a Reflex checkout. From this directory:
+For development including the site, use Node.js 22.23.4 (see `.nvmrc`) or 24+ and npm (the published library supports Node.js 18+). Install this repository's dependencies with `npm ci`; the Reflex sources, spec harness and fixed production baseline used by the tests and benchmarks are included in `reference/reflex` and do not require a Reflex checkout. From this directory:
 
 ```sh
 npm run lint                                    # lint production TypeScript
@@ -152,4 +152,23 @@ node bench/cost/build.mjs && node bench/cost/run.mjs regime --rounds 0
                                                 # cost-model probes (research/COST-MODEL.md); timing on CI
 ```
 
-CI is split in two workflows. `.github/workflows/ci.yml` runs lint, typecheck/release build and tests as parallel jobs. `.github/workflows/benchmark.yml` builds and checksum-verifies the bundles once, then runs in parallel one timing job per mechanism (`bench/mechanisms.mjs`), the graph scenarios (`bench/scenarios.mjs`) in shards, the structural counters and the edge-churn probe. Each timing job runs all three runtimes on one runner: compare ratios within a job, never times across jobs. The Reflex benchmark baseline is fixed at commit `bf71877`; see `reference/reflex/README.md` for its provenance.
+CI checks Windows, macOS and Linux with Node 22.23.4 and 24. Each matrix job
+checks declarations, release artifacts, development and production tests, cost
+probe verification, and the site. Dependencies are installed from both lockfiles
+with `npm ci` (root and `site/`). `.nvmrc` selects the shared minimum development
+version; the published library's Node support is unchanged.
+
+`npm run check:bench` builds and executes every cost probe in verification mode,
+including independent leaf/decomposition cells, without collecting timings.
+`npm run check:bench -- --smoke` limits this to leaf and decomposition.
+`npm run check:site` builds the runtime and bench bundles, compares the site's
+visualizations with the runtime, builds Astro and checks generated internal
+page and asset URLs under the deployment base. Install site dependencies first
+with `npm ci --prefix site`. These commands use Node and npm on every platform.
+
+`.github/workflows/benchmark.yml` verifies all cost probes before timing jobs
+can start and shares the verified bundles. Each timing job runs all three
+runtimes on one runner: compare ratios within a job, never times across jobs.
+Pages deployment uploads only a site that passed its checks. The Reflex
+benchmark baseline is fixed at commit `bf71877`; see `reference/reflex/README.md`
+for its provenance.

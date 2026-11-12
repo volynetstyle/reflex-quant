@@ -10,7 +10,8 @@
     "build": "astro build",
     "preview": "astro preview",
     "check:viz": "node scripts/validate-sim.mjs",
-    "check:reorder": "node scripts/validate-reorder.mjs"
+    "check:reorder": "node scripts/validate-reorder.mjs",
+    "check": "npm run check:viz && npm run check:reorder && npm run build && node scripts/check-build.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

@@ -1,82 +1,60 @@
 name: CI
-
-# Correctness only: lint, types, release build and tests, in parallel jobs.
-# Benchmarks live in benchmark.yml.
-
 on:
   push:
     branches: [main]
-    paths-ignore:
-      - "research/**"
-      - "README.md"
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
-
-defaults:
-  run:
-    shell: bash
-
 jobs:
   lint:
-    name: lint and format
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
           cache: npm
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
-
-  build:
-    name: typecheck, release build, release check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  compatibility:
+    name: ${{ matrix.os }} / Node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: ["22.23.4", "24"]
+    env:
+      NODE_OPTIONS: --max-old-space-size=2048
+      ASTRO_TELEMETRY_DISABLED: "1"
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            site/package-lock.json
       - run: npm ci
+      - run: npm ci --prefix site
       - run: npm run typecheck
       - run: npm run build
       - run: npm run check
-
-  test:
-    name: tests (spec, contract, Reflex and quant; invariants)
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - name: npm test
-        env:
-          NODE_OPTIONS: --max-old-space-size=2048
-        run: npm test
-      # The same suite against the production build (development diagnostics
-      # compiled out); tests of a precondition's diagnosis are skipped.
-      - name: npm run test:production
-        env:
-          NODE_OPTIONS: --max-old-space-size=2048
-        run: npm run test:production
+      - run: npm test
+      - run: npm run test:production
+      - name: Verify every cost probe without timings
+        run: npm run check:bench
+      - name: Check site models, build and internal URLs
+        run: npm run check:site

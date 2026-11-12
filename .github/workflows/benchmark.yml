@@ -22,6 +22,7 @@ on:
     paths:
       - "src/**"
       - "bench/**"
+      - "scripts/**"
       - "bin/**"
       - "package.json"
       - "package-lock.json"
@@ -58,10 +59,10 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
           cache: npm
       - run: npm ci
-      - run: node bench/build.mjs
+      - run: npm run check:bench
       - name: Same answers on every runtime
         run: |
           node bench/run.mjs --suite mechanisms --verify-only
@@ -71,6 +72,13 @@ jobs:
         with:
           name: bench-bundles
           path: .cache/bench/
+          include-hidden-files: true
+          retention-days: 1
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: cost-bundles
+          path: .cache/cost/
           include-hidden-files: true
           retention-days: 1
 
@@ -89,7 +97,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
       - uses: actions/download-artifact@v4
         with:
           name: bench-bundles
@@ -129,7 +137,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
       - uses: actions/download-artifact@v4
         with:
           name: bench-bundles
@@ -176,7 +184,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
       - uses: actions/download-artifact@v4
         with:
           name: bench-bundles
@@ -209,7 +217,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
       - uses: actions/download-artifact@v4
         with:
           pattern: scaling-*
@@ -230,6 +238,7 @@ jobs:
 
   cost:
     name: cost ${{ matrix.probe }}
+    needs: bundles
     runs-on: ubuntu-latest
     timeout-minutes: 60
     strategy:
@@ -242,13 +251,17 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
           cache: npm
       - run: npm ci
-      - name: Build bench and probe bundles
-        run: |
-          node bench/build.mjs
-          node bench/cost/build.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          name: bench-bundles
+          path: .cache/bench
+      - uses: actions/download-artifact@v4
+        with:
+          name: cost-bundles
+          path: .cache/cost
       - name: Probe
         env:
           PROBE: ${{ matrix.probe }}
@@ -275,7 +288,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
       - uses: actions/download-artifact@v4
         with:
           name: bench-bundles
@@ -306,7 +319,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
       - name: Probe
         run: |
           mkdir -p artifacts

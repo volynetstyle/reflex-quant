@@ -169,6 +169,7 @@ const median = (xs) => {
 };
 
 let cells = probe.cells().filter((c) => only.test(c.id));
+if (cells.length === 0) throw new Error(`${probeName}: no cells matched ${only}`);
 
 // 1. Same program, same answers: per scenario, every bundle against the first.
 const excluded = [];
@@ -190,7 +191,12 @@ if (!probe.independent) {
   if (excluded.length && probe.strict) throw new Error(`${probeName}: a candidate changes answers: ${excluded.map((x) => `${x.label} ${x.id}`).join(", ")}`);
 }
 if (args.includes("--verify-only")) {
-  console.log(`${probeName}: ${cells.length} cells agree; ${excluded.length} excluded`);
+  // Independent probes have different answers by design, but every cell must
+  // still execute. Otherwise this mode silently skips leaf and decompose.
+  if (probe.independent) {
+    for (const c of cells) runCell(c, ["--verify"]);
+  }
+  console.log(`${probeName}: ${cells.length} cells verified; ${excluded.length} excluded`);
   if (excluded.length && probeName !== "lower-bound") process.exitCode = 1;
   process.exit();
 }

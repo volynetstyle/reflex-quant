@@ -61,7 +61,9 @@
     "test:production": "vitest run --config vitest.config.ts --mode production",
     "typecheck": "tsc -p tsconfig.json",
     "prepublishOnly": "npm run typecheck && npm run build && npm run check",
-    "site": "npm --prefix site run build"
+    "site": "npm --prefix site run build",
+    "check:bench": "node scripts/check-bench.mjs",
+    "check:site": "npm run build && node bench/build.mjs && npm --prefix site run check"
   },
   "devDependencies": {
     "alien-signals": "3.2.1",

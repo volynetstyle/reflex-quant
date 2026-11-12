@@ -24,7 +24,11 @@ if (scenario === undefined) throw new Error(`unknown scenario ${id}`);
 const fold = (acc, value) => (Math.imul(acc, 31) + (Number(value) | 0)) | 0;
 const step = scenario.setup(api);
 let checksum = 7;
-for (let i = 1; i <= 64; i++) checksum = fold(checksum, step(i));
+for (let i = 1; i <= 64; i++) {
+  const value = step(i);
+  if (!Number.isFinite(Number(value))) throw new Error(`${id}: non-finite result at step ${i}: ${value}`);
+  checksum = fold(checksum, value);
+}
 if (verify) {
   console.log(JSON.stringify({ id, runtime: api.name, checksum }));
   process.exit(0);

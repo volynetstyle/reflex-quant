@@ -108,7 +108,7 @@ const decompose = {
     const { c } = rawShuffle(q, n);
     const { index, clearIndex } = q;
     return (i) => {
-      index(c, c.deps);
+      index(c, c.firstDep);
       clearIndex(c);
       return i & 1;
     };
@@ -136,18 +136,18 @@ const decompose = {
     const { ps, orders, c } = rawShuffle(q, n);
     const { move } = q;
     const edgeOf = new Map();
-    for (let e = c.deps; e !== null; e = e.next) edgeOf.set(e.from, e);
+    for (let e = c.firstDep; e !== null; e = e.nextDep) edgeOf.set(e.from, e);
     const seqs = orders.map((order) => order.map((k) => edgeOf.get(ps[k])));
     return (i) => {
       const seq = seqs[i & 3];
       let last = null;
       for (let k = 0; k < seq.length; k++) {
         const e = seq[k];
-        const next = last === null ? c.deps : last.next;
+        const next = last === null ? c.firstDep : last.nextDep;
         if (next !== e) move(c, e, last, next);
         last = e;
       }
-      return c.deps.from.value;
+      return c.firstDep.from.value;
     };
   },
   /** Slot lookup and move together: the indexed branch of a miss, without the call. */
@@ -162,11 +162,11 @@ const decompose = {
         const s = ps[order[k]];
         const cell = s.slot;
         cell.ver = s.ver;
-        const next = last === null ? c.deps : last.next;
+        const next = last === null ? c.firstDep : last.nextDep;
         if (next !== cell) move(c, cell, last, next);
         last = cell;
       }
-      return c.deps.from.value;
+      return c.firstDep.from.value;
     };
   },
   // The marked pass (LOG 28): no slots; a walk over edges marks them, and a
@@ -176,7 +176,7 @@ const decompose = {
     const { c } = rawShuffle(q, n);
     const { UNREAD } = q;
     return (i) => {
-      for (let e = c.deps; e !== null; e = e.next) e.ver = UNREAD;
+      for (let e = c.firstDep; e !== null; e = e.nextDep) e.ver = UNREAD;
       return i & 1;
     };
   },
@@ -188,7 +188,7 @@ const decompose = {
       let t = 0;
       for (let k = 0; k < order.length; k++) {
         const s = ps[order[k]];
-        const e = s.subs;
+        const e = s.firstSub;
         if (e.to === c) {
           e.ver = s.ver;
           t++;
@@ -206,13 +206,13 @@ const decompose = {
       let last = null;
       for (let k = 0; k < order.length; k++) {
         const s = ps[order[k]];
-        const e = s.subs;
+        const e = s.firstSub;
         e.ver = s.ver;
-        const next = last === null ? c.deps : last.next;
+        const next = last === null ? c.firstDep : last.nextDep;
         if (next !== e) move(c, e, last, next);
         last = e;
       }
-      return c.deps.from.value;
+      return c.firstDep.from.value;
     };
   },
 };
@@ -300,7 +300,7 @@ const leaf = {
         if (!Object.is(n.value, v)) {
           n.value = v;
           n.ver = (n.ver + 1) & M;
-          for (let e = n.subs; e !== null; e = e.nextSub) t++;
+          for (let e = n.firstSub; e !== null; e = e.nextSub) t++;
         }
       }
       return n.value + t;
