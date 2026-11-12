@@ -1,7 +1,9 @@
 ---
 import Base from "../layouts/Base.astro";
 import Example from "../components/Example.astro";
+import ReorderCallout from "../components/ReorderCallout.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
+import { BLOB, href } from "../site";
 ---
 <Base
   path="/dynamic-dependency-tracking/"
@@ -12,24 +14,55 @@ import EvidenceLinks from "../components/EvidenceLinks.astro";
     ["What is dynamic dependency tracking?", "Recording, on each execution of a computed or effect, exactly which reactive sources it read, so that dependencies follow the code's branches instead of being declared up front."],
   ]}
 >
-  <p class="lede">How Reflex Quant keeps a computation's dependencies exact across branches, repeats and reorders while allocating nothing when the read set is stable.</p>
+  <p class="lede">A computation's dependencies are whatever its last run read. Keeping that exact is easy if you rebuild the list every time. Keeping it exact while allocating nothing is the actual problem.</p>
 
   <h2>The problem</h2>
-  <p>In <code>computed(() =&gt; get(flag) ? get(a) : get(b))</code> the dependency set depends on data. After each run the runtime must observe exactly what was read: drop <code>a</code> when the branch switches to <code>b</code>, never hold two relations to the same source, and not leak relations when the computation throws.</p>
+  <p>In <code>computed(() =&gt; get(flag) ? get(a) : get(b))</code> the dependency set depends on data. After every run the runtime must hold exactly what was read: drop <code>a</code> when the branch moves to <code>b</code>, never hold two relations to one source, and not leak relations when the computation throws. Three invariants of the <a href={`${BLOB}/CONTRACT.md`}>contract</a> say this (T1 exact tracking, T2 uniqueness, T3 nesting isolation), and three bounds say what it may cost: no allocation and no lookup per stable read, no new relation when one exists, no quadratic tracking.</p>
+  <Example />
 
-  <h2>Three common strategies</h2>
+  <h2>Three strategies</h2>
   <table>
     <tr><th>Strategy</th><th>Cost</th></tr>
     <tr><td>Clear and rebuild every run</td><td>Allocation proportional to the read set on every execution.</td></tr>
-    <tr><td>Compare in order with the previous list</td><td>Cheap when order is stable; a reorder relinks everything after the first mismatch.</td></tr>
-    <tr><td>Reuse relations regardless of order</td><td>No allocation for any permutation of a known read set; needs a way to find the old relation.</td></tr>
+    <tr><td>Compare in order with the previous list</td><td>Free while the order holds; a reorder relinks everything after the first mismatch.</td></tr>
+    <tr><td>Reuse relations whatever the order</td><td>No allocation for any permutation of a known read set, if the old relation can be found cheaply and exactly.</td></tr>
   </table>
+  <p>Quant takes the third. The whole design is in that last condition: finding the old relation without a hash table, without a second pass, and without ever guessing.</p>
 
-  <h2>What Quant does</h2>
-  <p>Quant reuses existing relations and moves them into read order. On the <code>reorder.rotate-256</code> structure benchmark (256 sources, rotated every pass) Quant creates and removes no relations per pass; alien-signals relinks 255. Run it yourself: <code>node bench/structure.mjs</code>.</p>
-  <p>Why this mechanism is in the core, and what breaks without it, is recorded in the design log and the edge churn study below.</p>
+  <h2>The stable path: one comparison</h2>
+  <p>The dependency list is kept in read order, and a cursor points at the next relation the run is expected to touch. If the source being read is the one under the cursor, the read is a hit: one comparison, two stores, the cursor moves on. On <code>stable.wide-256</code> that is 256 hits for 256 reads, with no lookup and no allocation.</p>
 
-  <h2>Example</h2>
-  <Example />
-  <EvidenceLinks items={["log", "churn", "bench"]} />
+  <h2>A miss: cheapest exact proof first</h2>
+  <p>When the next relation is not the expected one, the runtime has to decide between three exact answers: this is a repeat, this relation exists elsewhere and must move, or this relation is new. It tries the proofs in order of cost.</p>
+  <ol class="ladder">
+    <li><span><strong>Repeat.</strong> The same source as the previous read.</span><em>O(1)</em></li>
+    <li><span><strong>Nobody reads it.</strong> A source with no subscribers cannot have a relation to anyone: it is new.</span><em>O(1)</em></li>
+    <li><span><strong>Bounded scans.</strong> Up to 8 relations of the unread suffix, then up to 8 of the accepted prefix.</span><em>≤ 8 each</em></li>
+    <li><span><strong>Subscriber lookup.</strong> The source's first 8 subscribers.</span><em>≤ 8</em></li>
+    <li><span><strong>Mark or index, once per pass.</strong> One walk over the consumer's own list marks its unread relations, or indexes them in a cell on each source.</span><em>O(d), once</em></li>
+    <li><span><strong>Every later miss</strong> in the pass is an exact answer from the mark or the cell.</span><em>O(1)</em></li>
+  </ol>
+  <p>The scan limit is a price limit, not a precision limit. "Not found within 8" never means "absent": it means "stop scanning and build the index". That is why tracking stays linear when hundreds of reads are shuffled, and why nothing here is a heuristic.</p>
+  <p>The index is not a persistent structure. The cell on a source holds the consumer's own relation only during an indexed pass and is cleared at its end. A nested computation that needs the same cells saves the displaced ones on the work stack and puts them back, which is what T3 requires.</p>
+
+  <h2>What the counters show</h2>
+  <ReorderCallout />
+  <p>Structural work per step, counted, not timed. From the <a href={`${BLOB}/research/REPORT.md`}>research report</a> (CI run 42287159440, <code>node bench/structure.mjs</code>):</p>
+  <table class="num">
+    <tr><th>scenario</th><th>cursor hits / reads</th><th>scan hits</th><th>lookups</th><th>moves</th><th>new / removed</th><th>alien-signals new / removed</th></tr>
+    <tr><td>stable.wide-256</td><td>256 / 256</td><td>0</td><td>0</td><td>0</td><td>0 / 0</td><td>0 / 0</td></tr>
+    <tr><td>reorder.rotate-256</td><td>2 / 257</td><td>255</td><td>0</td><td>0</td><td>0 / 0</td><td>255 / 255</td></tr>
+    <tr><td>edit.insert-one-256</td><td>193 / 258</td><td>64</td><td>0</td><td>0</td><td>0.5 / 0.5</td><td>65 / 65</td></tr>
+    <tr><td>shared-chaotic.64x32</td><td>150 / 2,080</td><td>2</td><td>1,952</td><td>1,928</td><td>0 / 0</td><td>2,002 / 2,002</td></tr>
+    <tr><td>long-reorder.256</td><td>6.6 / 257</td><td>0.06</td><td>250</td><td>250</td><td>0 / 0</td><td>255 / 255</td></tr>
+    <tr><td>replace-half.256</td><td>129 / 257</td><td>0</td><td>0</td><td>0</td><td>128 / 128</td><td>128 / 128</td></tr>
+  </table>
+  <p>Read the last two columns together. Quant allocates a relation only when one is genuinely new: replacing half the sources creates 128, exactly as many as changed. Every reorder is a move. A rotation is resolved by the bounded scan alone; a uniform random permutation of 256 sources is the hostile case and pays one walk and a move per read.</p>
+
+  <h2>When the run fails</h2>
+  <p>A throw in the middle of a run leaves the list in two parts: relations the attempt reached, and relations from the last success it did not reach. Both matter. The unreached ones are still real dependencies, so they are kept and still wake the node: pruning happens on success only. The ones born in the failed attempt are tentative: they wake it too, but a later validation does not treat them as proof. Repeated failures do not accumulate relations, which is one of the structural bounds.</p>
+
+  <h2>What it costs, honestly</h2>
+  <p>Against a runtime that relinks on every out-of-place read, moving is a large win: Quant takes 0.15 to 0.17 of alien-signals' time on the reorder scenarios. Against Reflex, whose tracking is specialized for permutations, Quant is the slower one there, at 1.20 to 1.21 of its time. The general machinery is cheaper to state and to check; it is not the fastest possible answer to a pure permutation. Numbers and method: <a href={href("/benchmarks/")}>benchmarks</a>. The picture of the same mechanism, step by step: <a href={href("/reactive-runtime-anatomy/")}>anatomy</a>.</p>
+  <EvidenceLinks items={["log", "report", "churn", "bench"]} />
 </Base>

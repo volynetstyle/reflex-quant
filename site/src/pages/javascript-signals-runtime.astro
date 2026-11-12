@@ -18,42 +18,54 @@ import { BLOB, href, REPO } from "../site";
     ["Why do signal libraries use push-pull?", "Pushing invalidation is cheap and lets reads stay lazy; pulling values on read avoids recomputing unread branches and enables cutoff."],
   ]}
 >
-  <p class="lede">Building a 2.2 KB reactive engine with exact dynamic dependencies, stack-safe propagation and executable semantics.</p>
-  <p>Signals are now the common core of Solid, Preact Signals, Angular, Vue's reactivity system and the TC39 Signals proposal. The API is always similar: a writable <em>signal</em>, a derived <em>computed</em>, a side-effecting <em>effect</em>. The interesting part is underneath. This article works from the other direction: start from the guarantees a signals runtime must give, and keep only the machinery those guarantees force. The result is <a href={REPO}>Reflex Quant</a>.</p>
+  <p class="lede">The API of signals has converged. The insides have not. This is what a runtime owes you once you write the guarantees down first and build only what they force.</p>
+  <p>Solid, Preact Signals, Angular, Vue and the TC39 proposal all offer the same three things: a writable <em>signal</em>, a derived <em>computed</em>, a side-effecting <em>effect</em>. What differs is everything you cannot see from the API: what counts as a change, what a failed computation leaves behind, how deep a chain may go, whether a reordered read allocates. Most runtimes answer those questions in their implementation. <a href={REPO}>Reflex Quant</a> answers them in a contract, then derives the implementation from it.</p>
 
   <h2>1. The guarantees</h2>
+  <p>The <a href={`${BLOB}/CONTRACT.md`}>contract</a> has eighteen semantic invariants in four groups, three recorded decisions, one precondition and eight structural bounds. The ones you meet first:</p>
   <table>
     <tr><th>Guarantee</th><th>Meaning</th></tr>
-    <tr><td>Exact tracking</td><td>A computation depends on exactly the sources its last run read.</td></tr>
-    <tr><td>Uniqueness</td><td>One relation per (source, consumer) pair, whatever the read order or repetition.</td></tr>
-    <tr><td>Version fact</td><td>A change is a committed value that differs by <code>Object.is</code>.</td></tr>
-    <tr><td>Cutoff</td><td>A computed that recomputes to the same value does not propagate.</td></tr>
-    <tr><td>Glitch freedom</td><td>No consumer sees a mix of old and new values; each node executes at most once per wave.</td></tr>
-    <tr><td>Failure</td><td>A computed that throws commits nothing and executes again on its next demand.</td></tr>
+    <tr><td>Exact tracking (T1)</td><td>A computation depends on exactly the sources its last run read. Branches add and drop relations.</td></tr>
+    <tr><td>Uniqueness (T2)</td><td>One relation per (source, consumer) pair, under repeats, reorders, nesting and failures.</td></tr>
+    <tr><td>Change is a version (P1)</td><td>A change is a committed value that differs by <code>Object.is</code>. A → B → A is two changes, not none.</td></tr>
+    <tr><td>Cutoff (P2)</td><td>A computed that recomputes to the same value does not propagate.</td></tr>
+    <tr><td>Glitch freedom (P3)</td><td>No consumer sees a mix of old and new values; one execution per node per wave.</td></tr>
+    <tr><td>In-pass invalidation (P5)</td><td>If a source changes after a computation has read it, the computation owes another execution.</td></tr>
+    <tr><td>Failure (F1, F4)</td><td>A computed that throws commits nothing and runs again on its next demand. The obligation to run survives the failure.</td></tr>
   </table>
-  <p>The full list, with structural bounds on memory and work, is in <a href={`${BLOB}/CONTRACT.md`}>CONTRACT.md</a>.</p>
+  <p>The structural bounds are as binding as the semantics: no allocation and no lookup on a stable read, no quadratic tracking, graph size proportional to live relations, traversal that is bounded and stack-safe.</p>
 
   <h2>2. Push dirty, pull values</h2>
-  <p>A write cannot eagerly recompute everything downstream: that wastes work on branches nobody reads and causes glitches in diamonds. Nor can a read re-run everything upstream. Signals runtimes therefore <strong>push invalidation</strong> (mark consumers possibly stale) and <strong>pull values</strong> (a read validates its sources, oldest first, and re-executes only if one actually changed). Cutoff falls out of the pull: if a validated computed has the same value, its consumers stay clean.</p>
+  <p>A write cannot recompute everything downstream: that wastes work on branches nobody reads, and in a diamond it shows a consumer one new input and one old. A read cannot re-run everything upstream either. So a write <strong>pushes invalidation</strong> and a read <strong>pulls values</strong>.</p>
+  <p>The push knows less than it seems. For a direct subscriber of the written signal it knows "must run". For everything further down it knows only "may have changed", because a computed in between might recompute to the same value. Those are two different facts, and Quant keeps them as two states: DIRTY and STALE. A read of a STALE node validates its sources in the order it read them and runs only if one really changed. The first changed source is enough to decide. Cutoff is not an extra feature: it is what happens when validation finds nothing.</p>
 
-  <h2>3. Dynamic dependencies are the hard part</h2>
-  <p>With conditional reads, the dependency set changes on every run. A naive runtime clears all edges and rebuilds them, which allocates on every execution. Quant keeps the previous run's relations and moves them into place as they are read again, so a stable or merely reordered read set allocates nothing. Details: <a href={href("/dynamic-dependency-tracking/")}>dynamic dependency tracking</a>.</p>
+  <h2>3. A change is a version, not a flag</h2>
+  <p>Many runtimes record "this changed" as a bit and clear the bit when they have dealt with it. Quant puts a version counter on every node and remembers, on every relation, which version the consumer saw. Two things follow.</p>
+  <p>A write that lands while a computation is running is classified for free: a source written before it is read is simply read at the new version; a source written after it was read no longer matches the version on the relation, so the run is owed again. And a failure cannot erase a change, because the evidence is not a bit that a failure path might clear. An unconsumed change stays visible until a successful read consumes it.</p>
 
-  <h2>4. No recursion</h2>
-  <p>A recursive propagate or validate overflows the JavaScript call stack on long chains. Quant runs both on one explicit work stack, so depth is bounded by heap, not by the engine's stack limit.</p>
+  <h2>4. Dynamic dependencies are the hard part</h2>
+  <p>With conditional reads the dependency set is data. A naive runtime clears every relation and rebuilds it on each run, which allocates on every execution. Quant keeps the previous run's relations in read order and checks each read against the next expected one: on a stable trace that is one comparison and two stores, no lookup, no allocation. When the order changes, relations are moved, not rebuilt. How a miss is resolved, cheapest proof first: <a href={href("/dynamic-dependency-tracking/")}>dynamic dependency tracking</a>.</p>
 
-  <h2>5. Effects are a host concern</h2>
-  <p>The graph machine knows nothing about scheduling. Watchers (effects) live in a separate host layer that queues, batches and delivers them, and whose queue is itself bounded: one effect invalidated many times in one drain occupies one slot.</p>
+  <h2>5. Failure is part of the semantics</h2>
+  <p>What does a computed depend on after it threw halfway through? Quant's answer is exact. Nothing commits. Relations created during the failed attempt are tentative: they can wake the node, but they are not treated as evidence of what it depends on. Relations from the last success that the failed attempt did not reach are kept, because a write to one of them must still wake it. Only a successful run prunes. A failed read is not an observation at all.</p>
 
-  <h2>6. How to know it is correct</h2>
-  <p>A runtime this small is only interesting if it is also right. Quant is run differentially against an executable specification on 27,061 bounded programs, 18,660 recovery programs and 100,000 generated ones, checking graph integrity after every operation. Each of its 34 mechanisms was removed in turn (ablation); every removal fails a test. See <a href={`${BLOB}/research/REPORT.md`}>the research report</a>.</p>
+  <h2>6. No recursion</h2>
+  <p>A recursive propagate or validate ties graph depth to the JavaScript call stack: the recursive version of this kernel overflows on a 20,000-deep chain. Quant runs the push, the pull and the tracking bookkeeping on one explicit work stack that stores existing edges, so depth is bounded by memory. The same stack shrinks back when it is empty, so one deep walk does not hold memory forever.</p>
 
-  <h2>7. What it costs</h2>
+  <h2>7. Effects are a host concern</h2>
+  <p>The graph machine does not schedule. It decides what reactive evidence exists and tells the host when a watcher becomes eligible. The host owns the queue, the drain loop, batching and the order of a watcher's own cleanup. That boundary is deliberate: ownership of groups of effects, component lifetimes, render scheduling and async resources are framework policy, and they stay out of the runtime until a counterexample shows the contract breaks without them.</p>
+  <p>The host has a bound of its own: its queue holds storage proportional to the watchers queued at once, not to the deliveries ever made.</p>
+
+  <h2>8. How to know it is correct</h2>
+  <p>A runtime this small is only interesting if it is right. Quant runs differentially against an executable specification on 27,061 bounded programs, 18,660 recovery programs and 100,000 generated ones, checking graph integrity after every operation. Then each mechanism was removed in turn. All 34 ablations fail a test: 25 a semantic test, 8 a structural bound or representation test, 1 a test of sibling order, which is a convention.</p>
+  <p>That is a claim about this implementation, and the project says so: an ablation shows that this runtime, minus this mechanism, breaks a named obligation. It does not show that every correct runtime must contain the same mechanism. The <a href={`${BLOB}/research/REPORT.md`}>research report</a> keeps the two claims apart.</p>
+
+  <h2>9. What it costs</h2>
   <BenchmarkSummary />
 
   <h2>Try it</h2>
   <Install />
   <Example />
-  <p>How these guarantees are implemented, piece by piece: <a href={href("/reactive-runtime-anatomy/")}>anatomy of a reactive engine</a>.</p>
+  <p>How each guarantee is implemented, with diagrams and runnable counterexamples: <a href={href("/reactive-runtime-anatomy/")}>anatomy of a reactive engine</a>. What the same machine can express beyond derived values: <a href={href("/game-of-life/")}>Game of Life</a>, <a href={href("/fireflies/")}>Fireflies</a>, <a href={href("/constraints/")}>Constraints</a>.</p>
   <EvidenceLinks items={["source", "contract", "report", "log"]} />
 </Base>

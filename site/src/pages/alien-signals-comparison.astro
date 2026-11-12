@@ -2,7 +2,9 @@
 import Base from "../layouts/Base.astro";
 import Install from "../components/Install.astro";
 import BenchmarkSummary from "../components/BenchmarkSummary.astro";
+import ReorderCallout from "../components/ReorderCallout.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
+import { BLOB, href } from "../site";
 ---
 <Base
   path="/alien-signals-comparison/"
@@ -14,24 +16,43 @@ import EvidenceLinks from "../components/EvidenceLinks.astro";
     ["Is Reflex Quant faster than alien-signals?", "On the project's own 18-scenario CI suite its geometric-mean time is 0.45 of alien-signals' (CI run 42794143933). The suite is the project's own; per-scenario numbers are on the benchmarks page of this site."],
   ]}
 >
-  <p class="lede">Both are small, framework-agnostic JavaScript signals runtimes. They make different trade-offs.</p>
-  <p><a href="https://github.com/stackblitz/alien-signals">alien-signals</a> is a fast, widely used signals library whose ideas also shaped Vue 3.5's reactivity rewrite. Reflex Quant was derived from a written contract instead of from existing runtimes, and benchmarks against alien-signals 3.2.1 on every CI run.</p>
+  <p class="lede">Two small, framework-agnostic signals runtimes. One is known for raw speed. The other was derived from a written contract and then measured. They agree on the API and differ in what they consider part of the job.</p>
+  <p><a href="https://github.com/stackblitz/alien-signals">alien-signals</a> is a fast, widely used signals library. Reflex Quant treats it the way its <a href={`${BLOB}/ARCHITECTURE.md`}>architecture rules</a> treat every other runtime: as a source of counterexamples and workloads, not of obligations. It is benchmarked against alien-signals 3.2.1 on every CI run, and before any timing both must produce the same answers on every scenario.</p>
 
   <h2>At a glance</h2>
   <table>
-    <tr><th></th><th>Reflex Quant</th><th>alien-signals</th></tr>
-    <tr><td>Primitives</td><td><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>get</code>/<code>set</code>, <code>peek</code>, <code>update</code>, <code>batch</code></td><td><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>effectScope</code>, accessor functions</td></tr>
+    <tr><th></th><th>Reflex Quant</th><th>alien-signals 3.2.1</th></tr>
+    <tr><td>Reactive primitives</td><td><code>signal</code>, <code>computed</code>, <code>effect</code></td><td><code>signal</code>, <code>computed</code>, <code>effect</code>, <code>effectScope</code></td></tr>
+    <tr><td>Reading and writing</td><td>functions over handles: <code>get</code>, <code>peek</code>, <code>set</code>, <code>update</code></td><td>the signal is a function: call it to read, call it with a value to write</td></tr>
+    <tr><td>Previous value in a computed</td><td><code>computed((prev) =&gt; …, initial)</code>: the last committed value</td><td>see its documentation</td></tr>
+    <tr><td>Manual invalidation</td><td>none</td><td><code>trigger</code></td></tr>
+    <tr><td>Reordered reads (256 sources)</td><td>0 relations created or removed per pass</td><td>255 relinked per pass</td></tr>
+    <tr><td>Depth of a chain</td><td>bounded by memory: one explicit work stack, no recursion</td><td>see its documentation</td></tr>
+    <tr><td>Specified by</td><td>a written contract, an executable spec, differential tests</td><td>its test suite</td></tr>
     <tr><td>Size (ESM, gzip)</td><td>about 2.2 KB</td><td>see <a href="https://bundlephobia.com/package/alien-signals">bundlephobia</a></td></tr>
-    <tr><td>Reordered reads (256 sources)</td><td>0 relations relinked per pass</td><td>255 relinked per pass</td></tr>
-    <tr><td>Effect scopes / nested ownership</td><td>not included (not required by its contract)</td><td>included</td></tr>
-    <tr><td>Specification</td><td>written contract + executable spec, differential tests</td><td>test suite</td></tr>
   </table>
+
+  <h2>The structural difference: a reorder</h2>
+  <p>When a computation reads the same sources in a different order, something has to happen to its dependency list. alien-signals unlinks and relinks on every out-of-place read. Quant keeps the relation and moves it.</p>
+  <ReorderCallout />
+  <p>This is counted, not timed, so it does not depend on a machine. It is also where the timing gap is widest: on the three reorder scenarios Quant takes 0.15 to 0.17 of alien-signals' time, and on a shared graph whose read order changes every pass, 0.22. How the old relation is found without a hash table: <a href={href("/dynamic-dependency-tracking/")}>dynamic dependency tracking</a>.</p>
+
+  <h2>Where alien-signals is faster</h2>
+  <p>On the shortest paths. Reading a clean value (<code>static.read-clean</code>) costs Quant 1.22 of alien-signals' time, and mounting effects (<code>lifecycle.mount-100</code>) 1.04. A read that finds nothing to do is almost all call overhead, and alien-signals has less of it. The pattern across the suite is consistent: the more a scenario looks like a graph, with shared nodes, fan-in and changing read order, the further Quant pulls ahead; the more it looks like a single function call, the closer alien-signals gets, and on the two above it wins.</p>
 
   <h2>Benchmarks</h2>
   <BenchmarkSummary />
+  <p>Per-scenario chart and method: <a href={href("/benchmarks/")}>benchmarks</a>.</p>
+
+  <h2>What Quant leaves out on purpose</h2>
+  <p><code>effectScope</code>, nested-effect ownership and manual invalidation are real answers to real problems: who owns a group of effects, and how to tell the graph that a mutable container changed. They are answers to different questions from the one Quant asks. Its rule for admitting a mechanism is a named obligation and a minimal program that violates it without the mechanism. "Another runtime has it" is explicitly not a reason. So Quant has <code>dispose</code> for one node and no notion of a scope; ownership is left to the framework above it.</p>
+  <p>That is a cost if you want those features in the box, and the reason the runtime is small if you do not.</p>
+
+  <h2>What Quant writes down</h2>
+  <p>What a computed depends on after it throws. Whether A → B → A is a change. What happens to a computation whose source is written while it runs. Whether an obligation to run survives a failure. Quant answers each of these in its <a href={`${BLOB}/CONTRACT.md`}>contract</a>, executes the answers against a specification on over 140,000 programs, and removes each mechanism in turn to check that a test notices. This page makes no claim about how alien-signals behaves in those cases; only that Quant's behaviour is specified and tested there.</p>
 
   <h2>When to choose which</h2>
-  <p>Choose alien-signals if you want effect scopes, a large user base, and the runtime that Vue's design draws on. Choose Reflex Quant if you want a documented contract for failure and edge cases, allocation-free dependency reordering, and a smaller surface.</p>
+  <p>Choose alien-signals if you want effect scopes in the library, a large user base, and the fastest possible read of a clean value. Choose Reflex Quant if your graphs reorder and share, if you want behaviour under failure written down, or if you want a runtime small enough to read in an afternoon and argue with.</p>
 
   <h2>Try Quant</h2>
   <Install />

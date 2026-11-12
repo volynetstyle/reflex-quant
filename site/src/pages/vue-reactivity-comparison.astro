@@ -3,7 +3,7 @@
 import Base from "../layouts/Base.astro";
 import Install from "../components/Install.astro";
 import Example from "../components/Example.astro";
-import { BLOB } from "../site";
+import { BLOB, href } from "../site";
 ---
 <Base
   path="/vue-reactivity-comparison/"
@@ -14,27 +14,43 @@ import { BLOB } from "../site";
     ["Can I use Reflex Quant instead of Vue's reactivity?", "Outside Vue components, for plain state, yes: ref maps to signal, computed to computed, watchEffect to effect. Inside Vue templates, Vue's own refs are what the renderer tracks."],
   ]}
 >
-  <p class="lede">Vue reactivity and signal runtimes share a dependency-graph core; Vue additionally tracks object properties through proxies. This page compares the two models: how Vue concepts map onto a plain signals runtime (Reflex Quant), and what each leaves out.</p>
+  <p class="lede">Vue reactivity and signal runtimes share a dependency-graph core; Vue additionally tracks object properties through proxies. Underneath the different spelling it is the same idea. The differences are in what each one decides for you.</p>
+  <p>This page compares models, not speed: Quant has not been benchmarked against <code>@vue/reactivity</code>, and it is not a drop-in replacement for it. Vue's reactivity is one part of a framework with a renderer and a component model. Quant is the graph alone.</p>
 
   <h2>Concept map</h2>
   <table>
     <tr><th>Vue</th><th>Reflex Quant</th></tr>
     <tr><td><code>ref(x)</code>, <code>r.value</code></td><td><code>signal(x)</code>, <code>get(s)</code> / <code>set(s, v)</code></td></tr>
-    <tr><td><code>computed(() =&gt; …)</code></td><td><code>computed((prev) =&gt; …, initial?)</code></td></tr>
+    <tr><td><code>computed(() =&gt; …)</code>; since 3.4 the getter receives the previous value</td><td><code>computed((prev) =&gt; …, initial?)</code>; <code>prev</code> is the last committed value</td></tr>
     <tr><td><code>watchEffect(fn)</code></td><td><code>effect(fn)</code></td></tr>
     <tr><td><code>reactive(obj)</code> (deep Proxy)</td><td>no equivalent: compose signals explicitly</td></tr>
-    <tr><td><code>effectScope()</code></td><td>no equivalent; <code>dispose(node)</code></td></tr>
-    <tr><td><code>toRaw</code>, <code>untracked</code> reads</td><td><code>peek(x)</code></td></tr>
+    <tr><td><code>effectScope()</code></td><td>no equivalent; <code>dispose(node)</code> for one node</td></tr>
+    <tr><td>untracked reads</td><td><code>peek(x)</code>, <code>untracked(fn)</code></td></tr>
   </table>
 
-  <h2>Differences that matter</h2>
-  <ul>
-    <li><strong>No Proxies.</strong> Quant tracks only explicit <code>get</code> calls, so there is no deep reactivity and no proxy identity issues.</li>
-    <li><strong>Framework-agnostic.</strong> Quant has no component model or scheduler tied to rendering; it is the graph only.</li>
-    <li><strong>Size.</strong> Quant's whole runtime is about 2.2 KB gzip.</li>
-    <li><strong>Contract.</strong> Failure, cutoff and reorder behaviour are written down in <a href={`${BLOB}/CONTRACT.md`}>CONTRACT.md</a> and tested differentially.</li>
+  <h2>Tracking: properties or calls</h2>
+  <p>Vue can make a plain object reactive: a Proxy intercepts property access, so <code>state.user.name</code> is tracked without you naming a signal. That is the convenience Vue is known for, and it has a price in identity (the proxy is not the original object) and in knowing what exactly was tracked.</p>
+  <p>Quant tracks one thing: a call to <code>get</code>. There is no deep reactivity and nothing implicit. A dependency exists because a line of code asked for it, and that is the whole rule. The granularity is whatever you make a signal.</p>
+
+  <h2>What a computed may do</h2>
+  <p>Vue's documentation is direct about it: a computed getter should only perform pure computation and be free of side effects, and should not mutate other state. Derived values are derived; changing state belongs in watchers.</p>
+  <p>Quant does not draw that line in the same place. A computation may write, and the contract says what follows: a source that changes after the computation read it leaves the computation owing another run, and an effect invalidated during its own run is delivered again. That turns a computed with a previous value into something Vue's model asks you to build from two parts: a state transition that keeps its own state, takes causes in through reads and sends consequences out through writes. <a href={href("/fireflies/")}>Fireflies</a> and <a href={href("/constraints/")}>Constraints</a> are built on exactly that.</p>
+  <p>The permission is not an invitation. A demand that reaches a computation whose own evaluation is in progress is a broken precondition, and the development build reports it as a cycle.</p>
+
+  <h2>Scheduling and ownership</h2>
+  <p>Vue schedules. Its watchers are tied to the component update cycle, and <code>effectScope</code> collects the effects created inside it so they can be stopped together. Those are framework decisions, made well, for a framework.</p>
+  <p>Quant makes neither. Its host runs effects in a synchronous drain, <code>batch</code> defers that drain and nothing else, and there is no scope: one node is disposed at a time. When a watcher runs, and who owns a group of watchers, are left to whatever sits above the runtime.</p>
+
+  <h2>What is written down</h2>
+  <ul class="fingers">
+    <li><strong>Failure.</strong> A computed that throws commits nothing, keeps its previous dependencies and runs again on its next demand.</li>
+    <li><strong>Change.</strong> Decided by <code>Object.is</code> at commit; A → B → A counts as a change.</li>
+    <li><strong>Reorders.</strong> Reading the same sources in another order moves relations and allocates nothing.</li>
   </ul>
-  <p class="note">Quant is not a drop-in replacement for Vue and has not been benchmarked against <code>@vue/reactivity</code>; this page compares models, not speed.</p>
+  <p>All of it is in <a href={`${BLOB}/CONTRACT.md`}>CONTRACT.md</a> and tested differentially against an executable specification. This page does not claim Vue behaves differently in these cases; only that in Quant they are specified.</p>
+
+  <h2>Which one</h2>
+  <p>Inside a Vue application, Vue's reactivity: the renderer tracks Vue's refs, and nothing else will re-render a template. Outside one, for plain state in a library, a worker or another framework, a signals runtime of about 2.2 KB with no rendering assumptions is the smaller dependency and the more explicit one.</p>
 
   <h2>Try it</h2>
   <Install />
