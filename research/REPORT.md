@@ -154,8 +154,8 @@ after its failure, the spec does.
 The development build adds CHECKING (a computed's validation on the stack),
 on WOKEN's bit: no node is both a watcher and a computed.
 **Host bits:** AUTO, QUEUED. **Mutable globals:** kernel `active`,
-`wake`, one work stack with `top`; host `queue` with `size`, `depth`,
-`draining`. **API:** `signal`, `computed`, `effect`, `get`, `peek`, `set`,
+`wake`, one work stack with `top`; host ring `queue` with `head`, `mask`,
+`size`, and `hold` (open batches plus an open drain, LOG 48). **API:** `signal`, `computed`, `effect`, `get`, `peek`, `set`,
 `update`, `dispose`, `batch`, `untracked`; a handle is the node itself, so a
 signal costs one allocation.
 
@@ -285,7 +285,7 @@ recorded the work they save, not because they save none (LOG 30).
 | drain-loop-only effects | "effects created inside a batch or another effect run after it" (`run-direct`, `start-outside-drain`) |
 | iterative push and pull | "push and pull are not bounded by the call stack" (the recursive v2 kernel overflows) |
 | first error kept at a batch end and in a rollback (F5) | "a batch body's error survives a deferred watcher's error", "an inner batch's error passes through the outer batch end unchanged" (`batch-error-replaces`); "a failed effect() call reports its run's error, not its rollback's" (`rollback-error-replaces`) |
-| drain compaction and queue trim at rest (S8) | "a long drain holds O(queued watchers) slots, not O(deliveries)", "many watchers invalidating themselves stay within max(TRIM + W, 2W)" (`no-queue-compact`); "a burst of queued watchers does not keep its high water after the drain" (`no-queue-trim`) |
+| ring queue, shrunk at rest when four times too large (S8, LOG 48) | "a long drain holds O(queued watchers) slots, not O(deliveries)", "many watchers invalidating themselves stay within max(KEEP, 2W)" (the ring itself: a taken slot is free again); "a steady wave keeps its ring; a burst is given back by the next small drain" (`no-queue-shrink`) |
 | rollback of an `effect()` call that throws (W5) | "a failed first run leaves no live watcher and no relation", "a sibling's failure … rolls the new watcher back" (`construction-commits`) |
 | relations restamped twice a generation cycle (SETTLE) | a watcher driven by a computed keeps running after its generation wraps; F1, F3 and P4 under wrap (`no-settle`); both restamp phases (`settle-once-a-cycle`) |
 | empty work stack releases oversized capacity at every producer exit | successful/failed validation, cold indexed runs, direct watchers and push without later demand (`no-trim`, placement ablations; LOG 40) |
@@ -298,7 +298,7 @@ recorded the work they save, not because they save none (LOG 30).
 | --- | --- |
 | correctness | relation versions; read-ordered deps; uniqueness (index, UNREAD on an indexed or marked pass, displaced stack, repeat check); STALE/DIRTY; clear-before-pass; BUSY (cycles, deferred disposal); WATCH delivery |
 | failure semantics | prune on success only; generations (tentative relations); DIRTY after failure; STALE after failed validation (LOG 25); universal watcher validation (V3); first error kept at a batch end and in a rollback (F5, LOG 46) |
-| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the empty work stack cut back to KEEP at producer exits, so retained memory does not follow the deepest walk ever (LOG 35, placement corrected in LOG 40); drain compaction and the queue cut back to KEEP at rest, so host storage follows queued watchers, not deliveries (S8, LOG 45) |
+| asymptotic | the slot index (exact O(1) per read after an O(d) walk, instead of Θ(d²) scans); iterative push and pull (depth not bounded by the stack); the empty work stack cut back to KEEP at producer exits, so retained memory does not follow the deepest walk ever (LOG 35, placement corrected in LOG 40); a ring queue that doubles only when full and is cut back at rest when four times too large, so host storage follows queued watchers, not deliveries (S8, LOG 45, LOG 48) |
 | resource correctness | sever detached intrusive pointers; keep the dependency cursor in execution context so disposed handles cannot root former dependencies through it (LOG 43, superseding LOG 39's final-detach reset) |
 | constant factor | DIRTY on direct writes (O2); WOKEN (no vacuous watcher validation); bounded scans before indexing (O1); the no-subscriber absence check; a marked pass finds pairs through subscribers instead of the slot index (LOG 28); `readSignal`; delivery on the STALE transition; no version compares once owed |
 | convention | `subsTail` (FIFO sibling order; only order-asserting tests fail without it) |
@@ -320,7 +320,7 @@ not counted). Code lines are lines that are neither blank nor comment-only.
 | node fields | 8 | 10 |
 | relation fields | 7 | 8 |
 | node state bits | 10 production (+2 dev) | 7 kernel + 2 host (+1 dev, on WOKEN's bit) |
-| global runtime state | context bank: consumer, stamp, propagation and batch depth, phase, frame, hooks; module registers; walker stacks | kernel `active`, `wake`, one work stack with `top`; host queue, `size`, `depth`, `draining` |
+| global runtime state | context bank: consumer, stamp, propagation and batch depth, phase, frame, hooks; module registers; walker stacks | kernel `active`, `wake`, one work stack with `top`; host ring queue, `head`, `mask`, `size`, `hold` |
 | queues | host-owned (none in the kernel) | one FIFO in the host |
 | allocations per new relation | 1 | 1 |
 | allocations per stable read | 0 | 0 |
