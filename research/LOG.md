@@ -1456,6 +1456,58 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   computed-create about 15 % behind on Node 22, all of it in the first read
   and link (a first run without reads is level).
 
+### 50. Two costs that grew with load: swaps and the ring's give-back (optimization)
+
+- **Classification:** optimization; same answers. One edge marker
+  (`SKIPPED`, an edge version value like UNREAD) and two host registers.
+- **Witnesses** (`research/TRADEOFFS.md`, `bench/tradeoffs.mjs`): of the
+  costs LOG 47–49 accepted, two grew with load. `swaps@k` (k adjacent swaps
+  per pass in 1,024 sources) went 1.08 -> 1.61 of the pre-LOG 47 kernel as k
+  grew to 256: every swap was two misses, the first paying the failed tail
+  scan, the call to `near` and the deferral. `burst-waves@W` (a wave of W
+  effects, then four of one) paid 1.18–1.47 against a ring that keeps its
+  size, growing with W: every small drain gave the ring back (LOG 48) and
+  every burst grew it again, copying.
+- **Change (tracking):** a read that finds its edge past `next` skips it
+  (`skip`). The first time, the found edge moves to the cursor and `next`
+  is marked SKIPPED: it is most likely read next (a swap, an earlier move),
+  as before LOG 47. Only a marked edge skipped again goes to the end of the
+  list (a rotation, a deletion, a later move). The one-past-`next` test
+  moves into `miss`, before the tail scan, so a swap's single miss pays
+  neither. SKIPPED, like UNREAD, stands only where the old version is never
+  read: a read overwrites it, success cuts what is left unread, failure
+  leaves the node DIRTY; a marking or indexing pass overwrites it with
+  UNREAD.
+- **Change (host):** a drain whose deliveries fill less than a quarter of
+  the ring is small; the ring is given back once the small drains since the
+  last large one have delivered as many watchers as it holds (`spare`),
+  to KEEP or the power of two above twice the largest of them (`calm`).
+  Growing back costs O(ring), so give-back plus regrowth is O(1) per
+  delivery; bursts between small drains keep the ring, and a burst
+  followed by small drains is still given back. S8 is unchanged:
+  max(KEEP, 2W).
+- **Bound:** misses per pass, now: adjacent swap 1 (was 2), move earlier 1
+  (2), move later 3 (2), rotation and one deletion 2 (1), a deleted block of
+  k 2k (k), reversal one per read. All still follow the edit, not the list.
+  Nested skips read back oldest first mark the pass from k = 6, where LOG 47
+  did from k = 3 and the pre-LOG 47 kernel from k = 9: one sweep per pass,
+  bounded.
+- **Evidence:** the edit-bound tests take the new counts and a move earlier
+  by 6; the S8 witness now alternates bursts with small drains (the ring
+  must stay) and then counts the small drains until it is given back (a
+  ring's worth). Ablations `no-skip-marker` (LOG 47's rule) and
+  `queue-shrink-eager` (LOG 48's rule) are new and killed; `no-defer`,
+  `no-suffix-scan` and `no-queue-shrink` were re-anchored and are killed.
+  The site's reorder model gains the `skip` kind and matches the kernel on
+  4,800 passes per read kind. Production tests 180 passed, seven skipped;
+  checksums equal on every suite.
+- **Timing (local, Node 22, against the pre-LOG 47 kernel; not evidence):**
+  swaps@1..256 0.97–1.04 (LOG 49: 1.08–1.61); burst-waves@1024..16384
+  0.41–0.56 (LOG 49: 0.54–0.67; Reflex 0.42–0.56); swaps-nested@3 1.06
+  (1.24). Kept: rotate-256 0.42, insert-one-256 0.64, reverse-8 0.88,
+  replace-all-256 0.59, replace-half 0.87, push.effects-1000 0.49,
+  computed-create 0.92; the rest within spread.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

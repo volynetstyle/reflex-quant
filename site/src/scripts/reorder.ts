@@ -12,16 +12,19 @@
 //                    moved to the cursor;
 //            tail    one of the last 2 relations (an edge deferred earlier, or a source moved to
 //                    the front), moved to the cursor;
-//            defer   a relation up to 8 past the cursor's: the relation under the cursor goes to
-//                    the end of the list (read later or never), and the found one, unless it was
-//                    right behind it, moves to the cursor.
+//            skip    a relation up to 8 past the cursor's, while the relation under the cursor
+//                    has not been skipped before: the found one moves to the cursor, the skipped
+//                    one is marked (it is most likely read next: a swap, an earlier move);
+//            defer   the same with a marked relation under the cursor: it goes to the end of the
+//                    list (read later or never: a rotation, a deletion), and the found one,
+//                    unless it was right behind it, moves to the cursor.
 //          A read the scans do not settle marks the pass: from then on every out-of-place read is a
 //          move. After the pass, relations not read are removed.
 //   alien  alien-signals 3.2.1, link() and purgeDeps(): a read reuses the next link only if it is
 //          the very next one; otherwise a new link is inserted after the tail. Links left after the
 //          tail at the end of the pass are unlinked, including the old links of re-read sources.
 
-export type Kind = "hit" | "repeat" | "new" | "move" | "defer" | "tail";
+export type Kind = "hit" | "repeat" | "new" | "move" | "skip" | "defer" | "tail";
 export type Ev = { src: string; kind: Kind; list: string[]; cursor: number; deferred?: string };
 export type Pass = {
   list: string[];
@@ -44,8 +47,10 @@ const SCAN = 8, TAIL = 2;
 /** One pass of quant over a consumer whose sources nobody else reads. */
 export function quantPass(prev: readonly string[], reads: readonly string[]): Pass {
   const list = [...prev], events: Ev[] = [];
-  const counts: Record<Kind, number> = { hit: 0, repeat: 0, new: 0, move: 0, defer: 0, tail: 0 };
+  const counts: Record<Kind, number> = { hit: 0, repeat: 0, new: 0, move: 0, skip: 0, defer: 0, tail: 0 };
   let c = 0, marked = false;
+  // Relations skipped once in this pass (the kernel's SKIPPED marker); a read clears it.
+  const skipped = new Set<string>();
   const toCursor = (at: number) => { const [s] = list.splice(at, 1); list.splice(c, 0, s); };
   const toEnd = (at: number) => { const [s] = list.splice(at, 1); list.push(s); return s; };
 
@@ -61,32 +66,41 @@ export function quantPass(prev: readonly string[], reads: readonly string[]): Pa
       if (at > c) { toCursor(at); c++; kind = "move"; } else kind = "repeat";
     } else {
       const n = list.length;
-      // Positions the kernel compares: the last 2 down to the cursor's, up to 8 past the
-      // cursor's, then up to 8 behind the cursor.
+      // Found past the relation under the cursor, which the read skips: the first time the
+      // found one moves to the cursor and the skipped one is marked; skipped again, it goes
+      // to the end of the list.
+      const pass = () => {
+        if (skipped.has(list[c])) { deferred = toEnd(c); if (at > c + 1) toCursor(at - 1); c++; return "defer" as const; }
+        skipped.add(list[c]); toCursor(at); c++; return "skip" as const;
+      };
+      // Positions the kernel compares: one past the cursor's, the last 2 down to the cursor's,
+      // up to 8 past the cursor's, then up to 8 behind the cursor.
       const tailFrom = Math.max(c + 1, n - TAIL);
-      if (c < n && at >= tailFrom) { toCursor(at); c++; kind = "tail"; }
-      else if (c < n && at > c && at <= c + SCAN) { deferred = toEnd(c); if (at > c + 1) toCursor(at - 1); c++; kind = "defer"; }
+      if (c < n && at === c + 1) kind = pass();
+      else if (c < n && at >= tailFrom) { toCursor(at); c++; kind = "tail"; }
+      else if (c < n && at > c + 1 && at <= c + SCAN) kind = pass();
       else if (at < c && at >= c - 1 - SCAN) kind = "repeat";
       else {
         // Not settled by the scans: the lookup finds the relation, and marks the unread suffix.
-        if (c < n) marked = true;
+        if (c < n) { marked = true; skipped.clear(); }
         if (at > c) { toCursor(at); c++; kind = "move"; } else kind = "repeat";
       }
     }
+    if (kind !== "repeat") skipped.delete(s);
     counts[kind]++;
     events.push({ src: s, kind, list: [...list], cursor: c, ...(deferred ? { deferred } : {}) });
   }
   const dropped = list.splice(c);
   return {
     list, created: counts.new, removed: dropped.length, hits: counts.hit,
-    moved: counts.move + counts.defer + counts.tail, counts, marked, events, dropped,
+    moved: counts.move + counts.skip + counts.defer + counts.tail, counts, marked, events, dropped,
   };
 }
 
 export function alienPass(prev: readonly string[], reads: readonly string[]): Pass {
   // A link is [source, readThisPass]; the list may hold two links to one source until the purge.
   const list: [string, boolean][] = prev.map((s) => [s, false]), events: Ev[] = [];
-  const counts: Record<Kind, number> = { hit: 0, repeat: 0, new: 0, move: 0, defer: 0, tail: 0 };
+  const counts: Record<Kind, number> = { hit: 0, repeat: 0, new: 0, move: 0, skip: 0, defer: 0, tail: 0 };
   let t = -1;
   for (const s of reads) {
     let kind: Kind;

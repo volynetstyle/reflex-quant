@@ -86,3 +86,26 @@ delivery than the old linear queue, with or without give-back.
    absence for many subscribers appears.
 4. **Nested skips past TAIL** (bounded): leave as is; TAIL = 8 costs more
    than it saves.
+
+## After LOG 50
+
+The two growing costs were taken back; nothing else moved beyond spread
+(local, Node 22, ratio to the pre-LOG 47 kernel, 5–7 rounds).
+
+| family | LOG 49 | LOG 50 | Reflex |
+| --- | ---: | ---: | ---: |
+| swaps@1..256 | 1.08, 1.10, 1.10, 1.27, 1.61 | 1.02, 1.00, 0.97, 1.01, 1.04 | 0.86–0.92 |
+| burst-waves@1024..16384 | 0.67, 0.54, 0.63 | 0.56, 0.41, 0.44 | 0.56, 0.42, 0.51 |
+| swaps-nested@3 / @4 / @8 | 1.24 / 1.06 / 1.23 | 1.06 / 0.99 / 1.19 | |
+| rotate-256, insert-one-256 | 0.42, 0.60 | 0.42, 0.64 | |
+| reverse@64, @1024 | 0.89, 0.86 | 0.92, 0.90 | |
+
+A swap is one miss again and pays neither the tail scan nor a call; a
+rotation or a deletion is two misses instead of one, independent of the
+list. Nested skips past TAIL mark the pass from k = 6 (LOG 49: k = 3; before
+LOG 47: k = 9), bounded by one sweep. A reversed read pays one more failed
+comparison (the one-past-`next` test now stands before the tail scan).
+Unchanged and flat: absent sources with three or more subscribers
+(`link-fanout`, `replace-all-k3`, 1.12–1.28), small effect waves (LOG 48,
+about 3 ns per delivery).
+

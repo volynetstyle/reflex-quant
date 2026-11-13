@@ -8,6 +8,7 @@ import {
   CounterLimit,
   SCAN,
   SETTLE,
+  SKIPPED,
   TAIL,
   TRIM,
   UNREAD,
@@ -586,11 +587,19 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
     return settle(c, s, last, next, pair(first, c));
 
   if (next !== null) {
-    // The end of the list holds the edges reads skipped (`near`), the latest
-    // last: read after all (a swap, a reversal), or a source moved to the
-    // front. A match is the pair's only edge.
+    let e = next.nextDep;
+
+    // One past `next`: the commonest skip (a swap, a rotation, a deletion).
+    if (e !== null && e.from === s) {
+      if (__STATS__) stats.scans++;
+
+      return skip(c, s, last, next, e);
+    }
+    // The end of the list holds the edges reads skipped twice (`skip`), the
+    // latest last: read after all, or a source moved to the front. A match
+    // is the pair's only edge.
     let budget = TAIL;
-    let e = c.lastDep!;
+    e = c.lastDep!;
 
     while (e !== next && e.from !== s && --budget !== 0) e = e.prevDep!;
 
@@ -631,12 +640,7 @@ function near(
     if (e !== null && e.from === s) {
       if (__STATS__) stats.scans++;
 
-      e.ver = s.ver;
-      cursor = e;
-      // `next` was skipped: read later or never (a deletion, a rotation, a
-      // later move). Left in place it would stand before every following
-      // read; at the end it does not, and `miss` finds it there.
-      return skipDep(c, last, next, e);
+      return skip(c, s, last, next, e);
     }
   }
   let p = last !== null ? last.prevDep : null;
@@ -653,6 +657,24 @@ function near(
   if (e === null && p === null) return link(c, s, last, next);
 
   lookup(c, s, last, next, first);
+}
+
+/**
+ * A read found its edge `e` past `next`, which it skips. The first time,
+ * `next` is most likely read next (a swap, a source moved earlier): `e` moves
+ * to the cursor and `next` is marked. Skipped again, it is read later or
+ * never (a rotation, a deletion, a later move); left in place it would stand
+ * before every following read, so it goes to the end of the list, where the
+ * tail scan in `miss` finds it if it is read after all.
+ */
+function skip(c: Node, s: Node, last: Edge | null, next: Edge, e: Edge): void {
+  e.ver = s.ver;
+  cursor = e;
+
+  if (next.ver === SKIPPED) return skipDep(c, last, next, e);
+
+  next.ver = SKIPPED;
+  moveDep(c, e, last, next);
 }
 
 /**

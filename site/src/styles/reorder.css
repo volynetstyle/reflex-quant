@@ -18,7 +18,7 @@
 .rs-edge.now.new,.rs-edge.born{border-style:dashed;border-color:var(--lose)}
 .rs-edge.now.new{background:var(--lose);color:#000}
 .rs-edge.now.repeat{background:transparent;color:var(--fg);border-color:#eee}
-.rs-edge.now.move{background:var(--win);border-color:var(--win)}
+.rs-edge.now.move,.rs-edge.now.skip{background:var(--win);border-color:var(--win)}
 .rs-edge.now.tail{background:var(--ok);border-color:var(--ok)}
 .rs-edge.deferred{border-style:dashed;border-color:var(--win);color:var(--win)}
 .rs-ev{margin:6px 0 0;min-height:1.5em;font:12px var(--mono);color:var(--muted)}
