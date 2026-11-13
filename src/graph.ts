@@ -20,11 +20,15 @@ export interface Node {
   ver: Version;
   /** null for a signal and for a disposed node. */
   fn: NodeFn | null;
-  /** First dependency edge, in read order. */
+  /** First and last dependency edges, in read order. */
   firstDep: Edge | null;
-  /** First and last subscriber edges, in birth order. */
+  lastDep: Edge | null;
+  /**
+   * First subscriber edge, in birth order. Its prevSub is the LAST subscriber,
+   * not null: the list is circular backwards only. Walk it forwards (nextSub
+   * ends at null); a backward walk must stop at firstSub, or it loops.
+   */
   firstSub: Edge | null;
-  lastSub: Edge | null;
   /** While a reader indexes: this node's edge into that reader. */
   slot: Edge | null;
   /** Successful runs; edges born since the last one are tentative. */
@@ -41,7 +45,11 @@ export interface Edge {
   /** Neighbours in the consumer's dependency list. */
   prevDep: Edge | null;
   nextDep: Edge | null;
-  /** Neighbours in the source's subscriber list. */
+  /**
+   * Neighbours in the source's subscriber list. prevSub is the predecessor,
+   * except on the source's firstSub, where it is the last subscriber (the
+   * tail: link appends there). Null only on a detached edge.
+   */
   prevSub: Edge | null;
   nextSub: Edge | null;
 }
@@ -100,6 +108,13 @@ export const SETTLE = 0x1fffffff;
 /** Scan budget of every bounded search: a constant keeps a run linear. */
 export const SCAN = 8;
 /**
+ * Budget of the scan from the end of a reader's list (LOG 47). Skipped edges
+ * go to the end in skip order, so the latest is last: a swap, a reversal and
+ * a source moved to the front find theirs there. Each absent source pays the
+ * whole budget, so it is small.
+ */
+export const TAIL = 2;
+/**
  * Work-stack (and host-queue) slots kept at rest, and the length past which the outermost
  * walk's end cuts the stack back to them. The gap keeps walks only a little
  * deeper than KEEP from cutting and regrowing on every pass.
@@ -116,8 +131,8 @@ export function createNode(fn: Node["fn"], value: unknown, flags: Flags): Node {
     ver: 0,
     fn,
     firstDep: null,
+    lastDep: null,
     firstSub: null,
-    lastSub: null,
     slot: null,
     gen: 0,
   };
@@ -130,6 +145,7 @@ export function moveDep(c: Node, e: Edge, last: Edge | null, next: Edge): void {
   before.nextDep = after;
 
   if (after !== null) after.prevDep = before;
+  else c.lastDep = before;
 
   e.prevDep = last;
   e.nextDep = next;
@@ -137,6 +153,29 @@ export function moveDep(c: Node, e: Edge, last: Edge | null, next: Edge): void {
   if (last !== null) last.nextDep = e;
   else c.firstDep = e;
   next.prevDep = e;
+}
+
+/**
+ * A read found `e` past `next`, the edge under the cursor: `next` goes to the
+ * end of the list (read later or never, see `miss`), and `e`, unless it was
+ * right behind `next`, moves to the cursor, after `last`.
+ */
+export function skipDep(c: Node, last: Edge | null, next: Edge, e: Edge): void {
+  const after = next.nextDep!;
+  const tail = c.lastDep!;
+
+  if (last !== null) last.nextDep = after;
+  else c.firstDep = after;
+  after.prevDep = last;
+
+  next.prevDep = tail;
+  next.nextDep = null;
+  tail.nextDep = next;
+  c.lastDep = next;
+  // A failed marked pass can leave a marked suffix behind: stay inside it.
+  if (tail.ver === UNREAD) next.ver = UNREAD;
+
+  if (e !== after) moveDep(c, e, last, after);
 }
 
 /** Remove every edge of `c` after `last` (all of them when null). */
@@ -147,6 +186,7 @@ export function cutDeps(c: Node, last: Edge | null): void {
 
   if (last === null) c.firstDep = null;
   else last.nextDep = null;
+  c.lastDep = last;
   // The cut head's back pointer would tie this garbage to the live list, and
   // so to garbage cut later: old garbage keeps newer garbage alive.
   e.prevDep = null;
@@ -166,14 +206,14 @@ export function unlinkSub(e: Edge): void {
   if (__STATS__) stats.unlinks++;
 
   const s = e.from;
-  const before = e.prevSub;
+  const before = e.prevSub!;
   const after = e.nextSub;
 
-  if (before !== null) before.nextSub = after;
-  else s.firstSub = after;
+  if (e === s.firstSub) s.firstSub = after;
+  else before.nextSub = after;
 
   if (after !== null) after.prevSub = before;
-  else s.lastSub = before;
+  else if (s.firstSub !== null) s.firstSub.prevSub = before;
   // Subscribers are in birth order, so an old removed edge would point at a
   // much younger one and keep it (and its watcher) alive across scavenges.
   e.prevSub = null;

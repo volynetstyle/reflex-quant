@@ -176,12 +176,17 @@ describe("structural bounds", () => {
     const ps = range(width).map(signal);
     const fresh = signal(1000);
     const tick = signal(0);
+    // The middle source first: no bounded scan of the reader's list finds
+    // it, so the pass marks at once; the first source last, so no read before
+    // it meets the cursor.
+    const half = width / 2;
+    const scattered = [half, ...range(width - half - 1).map((i) => width - 1 - i), ...range(half).map((i) => half - 1 - i)];
     const c = computed(() => {
-      const reverse = read(tick) !== 0;
+      const reorder = read(tick) !== 0;
       let sum = 0;
       for (let i = 0; i < width; i++) {
-        sum += read(ps[reverse ? width - i - 1 : i]!) as number;
-        if (reverse && i === width / 2) sum += read(fresh) as number;
+        sum += read(ps[reorder ? scattered[i]! : i]!) as number;
+        if (reorder && i === half) sum += read(fresh) as number;
       }
       return sum;
     });

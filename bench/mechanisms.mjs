@@ -175,6 +175,80 @@ export const scenarios = [
       return (i) => (tick.set(i), c.get());
     },
   },
+  // Relation creation and removal where the source already has subscribers:
+  // link appends after the last one (LOG 47: found as the first subscriber's
+  // prevSub, one load more than a lastSub field), unlink takes it out again.
+  {
+    id: "track.link-shared-1",
+    group: "track",
+    note: "computed alternates between a and b, each also read by 64 other computeds: one relation added after 64 subscribers, one removed",
+    setup(api) {
+      const cond = api.signal(true);
+      const a = api.signal(1);
+      const b = api.signal(2);
+      for (let k = 0; k < 64; k++) for (const s of [a, b]) api.computed(() => s.get()).get();
+      const c = api.computed(() => (cond.get() ? a.get() : b.get()));
+      c.get();
+      return (i) => (cond.set((i & 1) === 0), c.get());
+    },
+  },
+  {
+    id: "track.link-fanout-256",
+    group: "track",
+    note: "256 computeds alternate between a and b: each pass appends 256 subscribers to one source and removes them from the other",
+    setup(api) {
+      const cond = api.signal(true);
+      const a = api.signal(1);
+      const b = api.signal(2);
+      const cs = range(256).map(() => api.computed(() => (cond.get() ? a.get() : b.get())));
+      for (const c of cs) c.get();
+      return (i) => {
+        cond.set((i & 1) === 0);
+        let t = 0;
+        for (const c of cs) t += c.get();
+        return t;
+      };
+    },
+  },
+  {
+    id: "track.replace-all-256",
+    group: "track",
+    note: "computed alternates between two disjoint sets of 256 sources, each also read by one other computed",
+    setup(api) {
+      const cond = api.signal(true);
+      const pools = range(2).map((side) => range(256).map((k) => api.signal(side * 256 + k)));
+      for (const pool of pools) for (const s of pool) api.computed(() => s.get()).get();
+      const c = api.computed(() => {
+        const set = pools[cond.get() ? 0 : 1];
+        let t = 0;
+        for (let k = 0; k < 256; k++) t += set[k].get();
+        return t;
+      });
+      c.get();
+      return (i) => (cond.set((i & 1) === 0), c.get());
+    },
+  },
+  {
+    id: "track.new-sources-64",
+    group: "track",
+    note: "every pass reads 64 signals created for it: 64 relations to sources nobody reads, the previous 64 removed",
+    setup(api) {
+      const tick = api.signal(0);
+      let fresh = range(64).map((k) => api.signal(k));
+      const c = api.computed(() => {
+        tick.get();
+        let t = 0;
+        for (const s of fresh) t += s.get();
+        return t;
+      });
+      c.get();
+      return (i) => {
+        fresh = range(64).map((k) => api.signal(i + k));
+        tick.set(i);
+        return c.get();
+      };
+    },
+  },
   // --------------------------------------------------------------- push
   {
     id: "push.chain-cutoff-100",

@@ -80,15 +80,16 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
       inDeps.add(e);
       prev = e;
     }
+    check(n.lastDep === prev, `${label}: lastDep of ${id(n)} is not its last edge`);
     prev = null;
     for (let e = n.firstSub; e !== null; e = e.nextSub) {
       check(e.from === n, `${label}: subs edge of ${id(n)} comes from ${id(e.from)}`);
-      check(e.prevSub === prev, `${label}: broken prevSub in ${id(n)}`);
+      if (prev !== null) check(e.prevSub === prev, `${label}: broken prevSub in ${id(n)}`);
       check(!inSubs.has(e), `${label}: edge in two subs lists`);
       inSubs.add(e);
       prev = e;
     }
-    check(n.lastSub === prev, `${label}: lastSub of ${id(n)} is not its last edge`);
+    check(n.firstSub === null || n.firstSub.prevSub === prev, `${label}: first subscriber of ${id(n)} does not point at its last one`);
     if (n.fn !== null && (n.flags & (Flag.Stale | Flag.Dirty)) === 0) {
       for (let e = n.firstDep; e !== null; e = e.nextDep) {
         const f = e.from.flags;

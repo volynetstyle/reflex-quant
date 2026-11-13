@@ -18,6 +18,7 @@ import "../styles/reorder.css";
     <section class="rs-lane" data-lane="quant" aria-label="Reflex Quant dependency list">
       <div class="rs-lh"><b>Reflex Quant</b><span>keeps relations, reorders them</span></div>
       <div class="rs-list" data-rs-list></div>
+      <p class="rs-ev" aria-live="polite" data-rs-ev></p>
       <dl class="rs-count">
         <div><dt>created</dt><dd data-c="created">0</dd></div>
         <div><dt>removed</dt><dd data-c="removed">0</dd></div>
@@ -28,6 +29,7 @@ import "../styles/reorder.css";
     <section class="rs-lane" data-lane="alien" aria-label="alien-signals dependency list">
       <div class="rs-lh"><b>alien-signals 3.2.1</b><span>reuses only the next link</span></div>
       <div class="rs-list" data-rs-list></div>
+      <p class="rs-ev" data-rs-ev></p>
       <dl class="rs-count">
         <div><dt>created</dt><dd data-c="created">0</dd></div>
         <div><dt>removed</dt><dd data-c="removed">0</dd></div>
@@ -37,7 +39,7 @@ import "../styles/reorder.css";
     </section>
   </div>
   <p class="rs-total" aria-live="polite" data-rs-total></p>
-  <figcaption>Each lane is one computed's dependency list during the pass: the cursor (▸) moves along it as sources are read, and what is left after it at the end is removed. Counts are relations, checked against both libraries with their research counters on 2,400 random passes (<code>site/scripts/validate-reorder.mjs</code>). The model does not say how Quant finds an out-of-place relation (scan, lookup or index), only that it reuses it.</figcaption>
+  <figcaption>Each lane is one computed's dependency list during the pass: the cursor (▸) moves along it as sources are read, and what is left after it at the end is removed. Quant's reads are of six kinds: <b>hit</b> (the relation under the cursor), <b>repeat</b> (read already), <b>new</b>, <b>defer</b> (found ahead of the cursor: the skipped relation goes to the end of the list, read later or never), <b>tail</b> (found among the last two, a skipped relation read after all, moved to the cursor) and <b>move</b> (found through the source's subscribers once the scans of the list have given up). Counts and kinds are checked against both libraries with their research counters on 4,800 random passes, short lists and lists past the scan budget (<code>site/scripts/validate-reorder.mjs</code>).</figcaption>
 </figure>
 <script>
   import "../scripts/reorder-stand";

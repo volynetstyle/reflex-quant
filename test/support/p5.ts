@@ -26,14 +26,18 @@ export interface FoundRepeat {
 }
 
 /**
- * Twelve sources read in order, then reversed: the reversed pass misses at
- * once, so it marks its suffix (one reader) or indexes it (another reader
- * subscribed first), and its last read repeats the first one after a write,
- * a repeat found through the subscribers or the slot.
+ * Twenty-four sources read in order, then the middle one first and the rest
+ * from both ends inward: no bounded scan of the reader's list finds the
+ * middle one, so the pass marks its suffix (one reader) or indexes it
+ * (another reader subscribed first), and its last read repeats the first one
+ * after a write, a repeat found through the subscribers or the slot. The
+ * values are 0..10 and 11 on the middle one (sum 66).
  */
 export function foundRepeat(indexed: boolean): FoundRepeat {
-  const n = 12;
-  const ps = Array.from({ length: n }, (_, i) => signal(i));
+  const n = 24;
+  const mid = n / 2;
+  const ps = Array.from({ length: n }, (_, i) => signal(i < 11 ? i : i === mid ? 11 : 0));
+  const order = [mid, ...Array.from({ length: n - mid - 1 }, (_, i) => n - 1 - i), ...Array.from({ length: mid }, (_, i) => mid - 1 - i)];
   if (indexed) get(computed(() => ps.reduce((s, p) => s + get(p), 0)));
   const tick = signal(0);
   let wrote = false;
@@ -45,12 +49,12 @@ export function foundRepeat(indexed: boolean): FoundRepeat {
       for (const p of ps) sum += get(p);
       return sum;
     }
-    for (let i = n - 1; i >= 0; i--) sum += get(ps[i]!);
+    for (const i of order) sum += get(ps[i]!);
     if (!wrote) {
       wrote = true;
-      set(ps[n - 1]!, 100);
+      set(ps[mid]!, 100);
     }
-    return sum + get(ps[n - 1]!);
+    return sum + get(ps[mid]!);
   });
   return { c, tick, runs: () => runs };
 }

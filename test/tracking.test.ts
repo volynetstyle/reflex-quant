@@ -2,7 +2,7 @@ import { Flag } from "../src/graph";
 // Level 1: adversarial dependency tracking on the kernel. Every case checks
 // values, relation uniqueness, list integrity and the work counters.
 import { beforeEach, describe, expect, it } from "vitest";
-import { idle, createNode, read, stats, write } from "../src/kernel";
+import { idle, createNode, dispose, read, stats, write } from "../src/kernel";
 import type { Edge, Node } from "../src/graph";
 import { checkGraph, deps, edgeCount, indices, resetStats, subs } from "./support/graph";
 
@@ -78,9 +78,83 @@ describe("tracking", () => {
     expect(indices(deps(c), [tick, ...ps])).toEqual([0, 5, 1, 2, 3, 4]);
     expect(stats.links).toBe(0);
     expect(stats.unlinks).toBe(0);
-    expect(stats.moves + stats.scans).toBe(1);
+    // E is the last edge: found from the end, moved once.
+    expect([stats.tails, stats.scans, stats.moves]).toEqual([1, 0, 0]);
     expect(edges(c).every((e) => before.has(e))).toBe(true);
     checkGraph([c]);
+  });
+
+  it("a source's first subscriber points back at its last one through every link and unlink", () => {
+    // firstSub.prevSub is the tail (link appends there); every other prevSub
+    // is the predecessor. A backward walk that stops at firstSub visits each
+    // subscriber once; one that waited for null would loop.
+    const s = signal(0);
+    const cs = range(6).map(() => computed(() => read(s)));
+    const live: Node[] = [];
+    const ring = () => {
+      const forward: Edge[] = [];
+      for (let e = s.firstSub; e !== null; e = e.nextSub) forward.push(e);
+      expect(forward.map((e) => e.to)).toEqual(live);
+      if (s.firstSub === null) return;
+      expect(s.firstSub.prevSub).toBe(forward.at(-1));
+      const backward: Edge[] = [];
+      for (let e = s.firstSub.prevSub!; ; e = e.prevSub!) {
+        backward.push(e);
+        if (e === s.firstSub) break;
+        expect(backward.length).toBeLessThanOrEqual(forward.length);
+      }
+      expect(backward.reverse()).toEqual(forward);
+    };
+    ring();
+    for (const c of cs) {
+      read(c);
+      live.push(c);
+      ring();
+    }
+    // A middle one, the first, the last, then the rest.
+    for (const c of [cs[2]!, cs[0]!, cs[5]!, cs[1]!, cs[4]!, cs[3]!]) {
+      dispose(c);
+      live.splice(live.indexOf(c), 1);
+      ring();
+      for (let e = c.firstDep; e !== null; e = e.nextDep) expect(e.prevSub).toBe(null);
+    }
+    expect(s.firstSub).toBe(null);
+    // Relinking after the list emptied starts a new ring of one.
+    const again = computed(() => read(s));
+    read(again);
+    live.push(again);
+    ring();
+    expect(s.firstSub!.prevSub).toBe(s.firstSub);
+    checkGraph([again]);
+    expect(idle()).toBe(true);
+  });
+
+  // A skipped edge goes to the end of the list (`near`): a deletion or a
+  // rotation leaves every later read on the cursor, and an edge read after
+  // all is found from the end. Misses are hits' complement: reads - hits.
+  it.each([
+    ["rotation by one", range(256), range(256).map((i) => (i + 1) & 255), 1],
+    ["one source dropped mid-list", range(256), range(256).filter((i) => i !== 128), 1],
+    ["four adjacent sources dropped", range(256), range(256).filter((i) => i < 100 || i >= 104), 4],
+    ["one source moved 200 places later", range(256), [...range(256).filter((i) => i !== 20).slice(0, 219), 20, ...range(256).filter((i) => i !== 20).slice(219)], 2],
+    ["adjacent swap", range(256), [...range(100), 101, 100, ...range(154).map((i) => i + 102)], 2],
+    ["reversal", range(64), range(64).reverse(), 63],
+  ])("%s: misses bounded by the edit, not by the list", (_, from, to, misses) => {
+    const n = (from as number[]).length;
+    const ps = range(n).map(signal);
+    const tick = signal(0);
+    let order = from as number[];
+    const c = scripted(ps, { get: () => order }, tick);
+    read(c);
+    order = to as number[];
+    write(tick, 1);
+    resetStats();
+    read(c);
+    expect(stats.reads - stats.hits).toBe(misses);
+    expect([stats.lookups, stats.sweeps, stats.indexes, stats.links]).toEqual([0, 0, 0, 0]);
+    expect(indices(deps(c), [tick, ...ps])).toEqual([0, ...(to as number[]).map((i) => i + 1)]);
+    checkGraph([c]);
+    expect(idle()).toBe(true);
   });
 
   it("random permutations of 64 shared sources: exact, no allocation, linear work", () => {

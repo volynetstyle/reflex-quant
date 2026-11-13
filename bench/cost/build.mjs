@@ -28,12 +28,12 @@ const H = "host.ts";
 const I = "index.ts";
 
 const prefixScan =
-  "    let p = last !== null ? last.prevDep : null;\n    budget = SCAN;\n    while (p !== null && p.from !== s && --budget !== 0) p = p.prevDep;\n    if (p !== null && p.from === s) {\n      if (__STATS__) stats.dups++;\n      return;\n    }\n";
+  "  let p = last !== null ? last.prevDep : null;\n  let budget = SCAN;\n  while (p !== null && p.from !== s && --budget !== 0) p = p.prevDep;\n  if (p !== null && p.from === s) {\n    if (__STATS__) stats.dups++;\n    return;\n  }\n";
 const displaced = [
   [K, "  const cell = s.slot;\n  if (cell !== null) stack[top++] = cell;\n  s.slot = e;", "  s.slot = e;"],
 ];
 const firstMiss = [
-  [T, "  const first = s.firstSub;", "  index(c, next);\n  return slot(c, s, last, next);\n  const first = s.firstSub;"],
+  [T, "  const first = s.firstSub;\n  // A source without", "  index(c, next);\n  return slot(c, s, last, next);\n  const first = s.firstSub;\n  // A source without"],
 ];
 
 /** variant -> [what it removes, ...edits] */
@@ -41,7 +41,7 @@ export const variants = {
   identity: ["no edit: the same bytes as quant (control for the noise of one cell)"],
   "scan-1": ["bounded scans look at one edge (SCAN = 8 -> 1)", [F, "export const SCAN = 8;", "export const SCAN = 1;"]],
   "no-absent": ["no source-side absence proof: an unproven miss indexes", [T, "  return null;\n}", "  return undefined;\n}"]],
-  "no-prefix-scan": ["no backward scan for a repeated read: repeats go to the index", [T, prefixScan, "    const p = last;\n"]],
+  "no-prefix-scan": ["no backward scan for a repeated read: repeats go to the index", [T, prefixScan, "  const p = last;\n"]],
   "index-first-miss": ["the first miss indexes at once: no fresh-source, scan or absence steps", ...firstMiss],
   "no-displaced": ["no save/restore of displaced slot cells (nesting unsupported)", ...displaced],
   lean: ["index-first-miss and no-displaced together", ...firstMiss, ...displaced],
@@ -91,7 +91,7 @@ export const reorderVariants = {
   "refresh-repeats": [
     "release dd13a76, before P5: a repeated read refreshes the observed version (fails the P5 semantic tests; kept to time the change)",
     [T, "      if (__STATS__) stats.repeats++;\n      return;", "      if (__STATS__) stats.repeats++;\n      last.ver = s.ver;\n      return;"],
-    [T, "      if (__STATS__) stats.dups++;\n      return;\n    }", "      if (__STATS__) stats.dups++;\n      p.ver = s.ver;\n      return;\n    }"],
+    [T, "  if (p !== null && p.from === s) {\n    if (__STATS__) stats.dups++;\n    return;", "  if (p !== null && p.from === s) {\n    if (__STATS__) stats.dups++;\n    p.ver = s.ver;\n    return;"],
     [T, "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    return;", "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    e.ver = s.ver;\n    return;"],
   ],
   "mark-any": [
