@@ -8,12 +8,13 @@ import {
   CounterLimit,
   SCAN,
   SETTLE,
+  TAIL,
   TRIM,
   UNREAD,
   cutDeps,
-  deferDep,
   moveDep,
   settleDeps,
+  skipDep,
   unlinkSub,
 } from "./graph";
 import type { Edge, Flags, Node, WorkStack } from "./graph";
@@ -580,44 +581,19 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   if (first === null) return link(c, s, last, next);
 
   // Marking, moves and links preserve a continuous UNREAD suffix.
-  if (next === null || next.ver !== UNREAD)
-    return near(c, s, last, next, first);
+  if (next !== null && next.ver === UNREAD)
+    return settle(c, s, last, next, pair(first, c));
 
-  settle(c, s, last, next, pair(first, c));
-}
-
-/**
- * A miss before the pass has a lookup. Bounded scans of this reader's list:
- * the unread suffix after `next` and from its end (a match is the pair's
- * only edge), the accepted prefix (a match is a repeat). Absence needs one
- * side scanned completely: this reader's list, or the source's subscribers.
- *
- * A read past `next` skips it: `next` is read later or never (a deletion, a
- * rotation, a later move). Left in place it would stand before every
- * following read, each paying a miss; at the end it does not, and when it is
- * read after all (a swap, an earlier move), the scan from the end finds it.
- */
-function near(
-  c: Node,
-  s: Node,
-  last: Edge | null,
-  next: Edge | null,
-  first: Edge,
-): void {
+  // Bounded scans of this reader's list: the unread suffix from its end and
+  // after `next` (a match is the pair's only edge), the accepted prefix (a
+  // match is a repeat). Absence needs one side scanned completely: this
+  // reader's list, or the source's subscribers.
   let e: Edge | null = null;
 
   if (next !== null) {
-    const after = next.nextDep;
-
-    if (after !== null && after.from === s) {
-      if (__STATS__) stats.scans++;
-
-      after.ver = s.ver;
-      cursor = after;
-      return deferDep(c, next);
-    }
-    // The end: skipped edges read after all, or a source moved to the front.
-    let budget = SCAN;
+    // The end holds the edges reads skipped (below), the latest last: read
+    // after all (a swap, a reversal), or a source moved to the front.
+    let budget = TAIL;
     e = c.lastDep!;
 
     while (e !== next && e.from !== s && --budget !== 0) e = e.prevDep!;
@@ -630,7 +606,7 @@ function near(
       return moveDep(c, e, last, next);
     }
     budget = SCAN;
-    e = after;
+    e = next.nextDep;
 
     while (e !== null && e.from !== s && --budget !== 0) e = e.nextDep;
 
@@ -639,8 +615,10 @@ function near(
 
       e.ver = s.ver;
       cursor = e;
-      deferDep(c, next);
-      return moveDep(c, e, last, after!);
+      // `next` was skipped: read later or never (a deletion, a rotation, a
+      // later move). Left in place it would stand before every following
+      // read; at the end it does not, and the scan above finds it there.
+      return skipDep(c, last, next, e);
     }
   }
   let p = last !== null ? last.prevDep : null;
@@ -654,13 +632,27 @@ function near(
     return;
   }
 
-  // Absent if this reader's whole list was scanned; otherwise the source's
-  // first subscribers decide. Found as the first one: a lookup through the
-  // subscribers costs no load beyond the read itself, so mark the unread
-  // suffix and let the rest of the pass find its pairs that way, with no
-  // slot to fill or clear. Found deeper: every lookup would walk other
-  // readers' edges, so index; either way the found edge is taken at once.
-  const found = e === null && p === null ? null : pair(first, c);
+  if (e === null && p === null) return link(c, s, last, next);
+
+  lookup(c, s, last, next, first);
+}
+
+/**
+ * The source's first subscribers decide what the reader's list could not.
+ * Found as the first one: a lookup through the subscribers costs no load
+ * beyond the read itself, so mark the unread suffix and let the rest of the
+ * pass find its pairs that way, with no slot to fill or clear. Found deeper:
+ * every lookup would walk other readers' edges, so index; either way the
+ * found edge is taken at once.
+ */
+function lookup(
+  c: Node,
+  s: Node,
+  last: Edge | null,
+  next: Edge | null,
+  first: Edge,
+): void {
+  const found = pair(first, c);
 
   if (found !== null && found !== undefined) begin(c, found, first, next);
 

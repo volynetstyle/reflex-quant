@@ -158,7 +158,7 @@ console.log("after batch");`;
     <div class="stat"><b>0 / 0</b><span>Reflex Quant: edges created / removed per pass</span></div>
     <div class="stat"><b>255 / 255</b><span>alien-signals 3.2.1: relinks per pass</span></div>
   </div>
-  <p class="note">Structure counter <code>reorder.rotate-256</code>: 256 sources rotated every pass. Quant moves existing edges; it does not rebuild them. <a href={href("/dynamic-dependency-tracking/")}>More on dynamic tracking</a>.</p>
+  <p class="note">Structure counter <code>reorder.rotate-256</code>: 256 sources rotated every pass. Quant reuses existing edges and sends the one skipped edge to the end of the list; it does not rebuild them. <a href={href("/dynamic-dependency-tracking/")}>More on dynamic tracking</a>.</p>
 
   <h3>How a read finds its edge, cheapest proof first</h3>
   <ol class="ladder">

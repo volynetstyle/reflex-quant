@@ -1,6 +1,6 @@
 // UI of the reorder stand. Each change of the read order runs one pass through both models and
 // replays it read by read: the list re-renders after every read, chips slide to their new place.
-import { alienPass, quantPass, type Pass } from "./reorder";
+import { alienPass, quantPass, type Ev, type Pass } from "./reorder";
 import { still, within } from "./util";
 
 const START = ["A", "B", "C", "D", "E", "F", "G", "H"];
@@ -54,13 +54,14 @@ function mount(root: HTMLElement) {
 
   // ---- lanes: render a list with FLIP so chips slide instead of jumping
   const keyed = (list: string[]) => { const seen: Record<string, number> = {}; return list.map((s) => `${s}${(seen[s] = (seen[s] ?? 0) + 1)}`); };
-  const drawLane = (el: HTMLElement, list: string[], cursor: number, mark: { src?: string; kind?: string; dropped?: string[] } = {}) => {
+  const drawLane = (el: HTMLElement, list: string[], cursor: number, mark: { src?: string; kind?: string; deferred?: string; dropped?: string[] } = {}) => {
     const box = el.querySelector<HTMLElement>("[data-rs-list]")!;
     for (const a of box.getAnimations({ subtree: true })) a.finish();   // measure settled positions
     const before = new Map([...box.children].map((c) => [(c as HTMLElement).dataset.key!, c.getBoundingClientRect()]));
     const keys = keyed(list);
     box.innerHTML = list.map((s, k) => {
-      const cls = ["rs-edge", k < cursor ? "read" : "", mark.src === s && k === cursor - 1 ? `now ${mark.kind}` : "", mark.dropped && k >= cursor ? "gone" : ""].join(" ");
+      const now = mark.src === s && (mark.kind === "repeat" ? k < cursor : k === cursor - 1);
+      const cls = ["rs-edge", k < cursor ? "read" : "", now ? `now ${mark.kind}` : "", mark.deferred === s && k === list.length - 1 ? "deferred" : "", mark.dropped && k >= cursor ? "gone" : ""].join(" ");
       return `${k === cursor ? '<i class="rs-cur" aria-hidden="true">▸</i>' : ""}<span class="${cls}" data-key="${keys[k]}">${s}</span>`;
     }).join("") + (cursor >= list.length ? '<i class="rs-cur" aria-hidden="true">▸</i>' : "");
     if (still) return;
@@ -78,6 +79,21 @@ function mount(root: HTMLElement) {
     }
   };
 
+  // What one read did, in the words of the model (scripts/reorder.ts).
+  const say = (lane: string, ev: Ev) => {
+    const s = ev.src;
+    if (lane === "alien") return ev.kind === "hit" ? `${s}: the next link, reused` : ev.kind === "new" ? `${s}: a new link after the tail` : `${s}: linked already`;
+    switch (ev.kind) {
+      case "hit": return `${s}: hit, the relation under the cursor`;
+      case "repeat": return `${s}: repeat, read already in this pass`;
+      case "new": return `${s}: no relation yet, a new one at the cursor`;
+      case "move": return `${s}: found through its subscribers, moved to the cursor`;
+      case "tail": return `${s}: found at the end of the list, moved to the cursor`;
+      case "defer": return `${s}: found ahead of the cursor; ${ev.deferred}, skipped, goes to the end`;
+    }
+  };
+  const tell = (el: HTMLElement, text: string) => { const t = el.querySelector<HTMLElement>("[data-rs-ev]"); if (t) t.textContent = text; };
+
   const run = () => {
     clearTimeout(timer);
     passes++;
@@ -91,14 +107,20 @@ function mount(root: HTMLElement) {
     const n = Math.max(...results.map((r) => r.p.events.length));
     const tick = () => {
       if (i < n) {
-        for (const { L, p } of results) {
+        for (const [lane, { L, p }] of [["quant", results[0]], ["alien", results[1]]] as const) {
           const ev = p.events[Math.min(i, p.events.length - 1)];
-          const cursor = p.events.slice(0, i + 1).reduce((c, e) => c + (e.kind === "repeat" ? 0 : 1), 0);
-          drawLane(L.el, ev.list, cursor, i < p.events.length ? { src: ev.src, kind: ev.kind } : {});
+          if (!ev) continue;
+          const live = i < p.events.length;
+          drawLane(L.el, ev.list, ev.cursor, live ? { src: ev.src, kind: ev.kind, deferred: ev.deferred } : {});
+          if (live) tell(L.el, say(lane, ev));
         }
         i++; timer = window.setTimeout(tick, 230);
       } else if (i === n) {
-        for (const { L, p } of results) { const last = p.events.at(-1); const cursor = p.list.length; drawLane(L.el, last ? last.list : L.list, cursor, { dropped: p.dropped }); }
+        for (const { L, p } of results) {
+          const last = p.events.at(-1); const cursor = p.list.length;
+          drawLane(L.el, last ? last.list : L.list, cursor, { dropped: p.dropped });
+          tell(L.el, p.dropped.length ? `after the pass: ${p.dropped.join(" ")} not read, removed` : "after the pass: nothing left to remove");
+        }
         i++; timer = window.setTimeout(tick, 420);
       } else done();
     };
@@ -117,7 +139,7 @@ function mount(root: HTMLElement) {
     else if (a === "replace") { const free = [...START, ...SPARE].filter((s) => !reads.includes(s)); reads[Math.floor(rnd() * reads.length)] = free[Math.floor(rnd() * free.length)]; }
     else if (a === "reset") {
       clearTimeout(timer); reads = [...START]; passes = 0;
-      for (const L of Object.values(lanes)) { L.list = [...START]; L.total = { created: 0, removed: 0 }; drawLane(L.el, L.list, L.list.length); count(L.el, { created: 0, removed: 0, hits: 0, moved: 0 } as Pass); }
+      for (const L of Object.values(lanes)) { L.list = [...START]; L.total = { created: 0, removed: 0 }; drawLane(L.el, L.list, L.list.length); count(L.el, { created: 0, removed: 0, hits: 0, moved: 0 } as Pass); tell(L.el, ""); }
       $("[data-rs-total]").textContent = "Both lists hold A to H from the previous pass. Change the read order to run the next one.";
       drawReads(); return;
     }

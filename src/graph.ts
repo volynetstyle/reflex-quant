@@ -23,7 +23,11 @@ export interface Node {
   /** First and last dependency edges, in read order. */
   firstDep: Edge | null;
   lastDep: Edge | null;
-  /** First subscriber edge, in birth order; its prevSub is the last one. */
+  /**
+   * First subscriber edge, in birth order. Its prevSub is the LAST subscriber,
+   * not null: the list is circular backwards only. Walk it forwards (nextSub
+   * ends at null); a backward walk must stop at firstSub, or it loops.
+   */
   firstSub: Edge | null;
   /** While a reader indexes: this node's edge into that reader. */
   slot: Edge | null;
@@ -41,7 +45,11 @@ export interface Edge {
   /** Neighbours in the consumer's dependency list. */
   prevDep: Edge | null;
   nextDep: Edge | null;
-  /** Neighbours in the source's subscriber list; the first one's prevSub is the last one. */
+  /**
+   * Neighbours in the source's subscriber list. prevSub is the predecessor,
+   * except on the source's firstSub, where it is the last subscriber (the
+   * tail: link appends there). Null only on a detached edge.
+   */
   prevSub: Edge | null;
   nextSub: Edge | null;
 }
@@ -100,6 +108,13 @@ export const SETTLE = 0x1fffffff;
 /** Scan budget of every bounded search: a constant keeps a run linear. */
 export const SCAN = 8;
 /**
+ * Budget of the scan from the end of a reader's list (LOG 47). Skipped edges
+ * go to the end in skip order, so the latest is last: a swap, a reversal and
+ * a source moved to the front find theirs there. Each absent source pays the
+ * whole budget, so it is small.
+ */
+export const TAIL = 2;
+/**
  * Work-stack (and host-queue) slots kept at rest, and the length past which the outermost
  * walk's end cuts the stack back to them. The gap keeps walks only a little
  * deeper than KEEP from cutting and regrowing on every pass.
@@ -141,24 +156,26 @@ export function moveDep(c: Node, e: Edge, last: Edge | null, next: Edge): void {
 }
 
 /**
- * Move an unread edge that is not the last one to the end of the list: a
- * read skipped it, so it is read later or never (see `miss`).
+ * A read found `e` past `next`, the edge under the cursor: `next` goes to the
+ * end of the list (read later or never, see `miss`), and `e`, unless it was
+ * right behind `next`, moves to the cursor, after `last`.
  */
-export function deferDep(c: Node, e: Edge): void {
-  const before = e.prevDep;
-  const after = e.nextDep!;
+export function skipDep(c: Node, last: Edge | null, next: Edge, e: Edge): void {
+  const after = next.nextDep!;
   const tail = c.lastDep!;
 
-  if (before !== null) before.nextDep = after;
+  if (last !== null) last.nextDep = after;
   else c.firstDep = after;
-  after.prevDep = before;
+  after.prevDep = last;
 
-  e.prevDep = tail;
-  e.nextDep = null;
-  tail.nextDep = e;
-  c.lastDep = e;
+  next.prevDep = tail;
+  next.nextDep = null;
+  tail.nextDep = next;
+  c.lastDep = next;
   // A failed marked pass can leave a marked suffix behind: stay inside it.
-  if (tail.ver === UNREAD) e.ver = UNREAD;
+  if (tail.ver === UNREAD) next.ver = UNREAD;
+
+  if (e !== after) moveDep(c, e, last, after);
 }
 
 /** Remove every edge of `c` after `last` (all of them when null). */
