@@ -1305,6 +1305,66 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   production tests pass with seven skipped. With LOG 45, the ESM bundle
   grows from 2,279 to 2,349 B gzip.
 
+### 47. A skipped edge goes to the end of the list (optimization)
+
+- **Classification:** optimization; same answers, no new state. One node
+  field is exchanged for another (`lastSub` out, `lastDep` in).
+- **Witness:** a read past `next` moved the found edge back to the cursor,
+  so `next` stood before every following read. Rotation by one cost 255
+  misses per pass on 256 sources (`reorder.rotate-256`); dropping one source
+  mid-list cost a miss for every later read (`edit.insert-one-256`, 64 per
+  step). Graph mutations grew with the list, not with the edit.
+- **From Reflex:** its incoming list keeps its physical tail (`lastIn`) and
+  tests it among the locality tiers. Its pass stamp, lockstep, finger and
+  tape were not taken: quant's slot index already is the tape, its UNREAD
+  sweep is a lazy stamp, and a stamp field would cost a store on every hit.
+- **Change:** in `miss`, before the prefix scan: a scan of the last TAIL
+  (2) edges of the list, then the forward scan of SCAN (8) edges past
+  `next`. A forward match skips `next`: `skipDep` sends it to the end of the
+  list and, unless the match was right behind it, moves the match to the
+  cursor. Skipped edges reach the end in skip order, so a swap, a reversal
+  and a source moved to the front find theirs at the very end; a deletion
+  or rotation leaves every later read on the cursor. The prefix scan,
+  subscriber lookup, mark and index are unchanged, and a reader list scanned
+  completely now links at once. A skipped edge stays inside a marked suffix
+  (a failed marked pass can leave one). The tail is `lastDep`; the
+  subscriber tail it replaces is the first subscriber's `prevSub`, so a node
+  keeps nine fields. That `prevSub` means the last subscriber on `firstSub`
+  only: the list is circular backwards, so a backward walk must stop at
+  `firstSub` (documented on both fields, and pinned by a ring test through
+  head, middle and tail removals).
+- **Bound:** misses per pass follow the edit: rotation 1, one dropped
+  source 1, a dropped block of k sources k, one source moved later 2, an
+  adjacent swap 2 (was 1), reversal one per read, each settled at the end.
+  `miss` is 437 B of bytecode, under V8's 460, so it stays inlined into
+  reads. (A split into `miss` and `near` kept it small but put a call on
+  every absent source: +16 % on `track.link-shared-1`.)
+- **Price:** every miss on a source that already has subscribers pays the
+  tail's two comparisons, and relations pay `lastDep` upkeep. Four new
+  mechanism probes measure it (local, 9 rounds): `track.link-shared-1`
+  1.12, `track.replace-all-256` 1.10, `track.link-fanout-256` 1.03,
+  `track.new-sources-64` 1.00 of the baseline. A build with a `lastSub`
+  field instead of the circular subscriber list measured the same within
+  spread, so the price is the dependency tail, not the ring. TAIL was 8 at
+  first: 1.26 on `replace-all-256`.
+- **Evidence:** six tests in `test/tracking.test.ts` pin the misses per
+  edit, one the subscriber ring; five witnesses that used a reversal to
+  reach the mark or index path now read the middle source first. Ablations
+  `no-defer` and `no-tail-scan` are new and killed; `no-suffix-scan`,
+  `no-absence-proof`, `repeat-refresh` and `prepend-subs` were re-anchored
+  and are still killed. The site's reorder model (`site/src/scripts/
+  reorder.ts`) now follows these tiers read by read (hit, repeat, new, move,
+  defer, tail); `validate-reorder.mjs` checks each kind against its kernel
+  counter on 4,800 passes, short lists and lists past the scan budget, and
+  fails on `no-defer`, `no-tail-scan` and `no-suffix-scan`. Production tests
+  pass (179, seven skipped).
+- **Timing (CI run 43406089437 for the first form, against main):**
+  quant/Reflex on rotate-256 1.17 -> 0.53, insert-one-256 1.09 -> 0.66,
+  insert-one at every N 0.96–1.10 -> 0.70–0.76, reverse-8 1.22 -> 1.07.
+  Local, final form: rotate 0.45, insert-one 0.65, reverse-8 0.88,
+  replace-half 0.87 of the baseline. Not addressed: value-sort (its gap is
+  the hit path) and long-reorder (a lookup per read is inherent).
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

@@ -17,6 +17,11 @@
 .rs-edge.now{background:#eee;color:#000;border-color:#eee}
 .rs-edge.now.new,.rs-edge.born{border-style:dashed;border-color:var(--lose)}
 .rs-edge.now.new{background:var(--lose);color:#000}
+.rs-edge.now.repeat{background:transparent;color:var(--fg);border-color:#eee}
+.rs-edge.now.move{background:var(--win);border-color:var(--win)}
+.rs-edge.now.tail{background:var(--ok);border-color:var(--ok)}
+.rs-edge.deferred{border-style:dashed;border-color:var(--win);color:var(--win)}
+.rs-ev{margin:6px 0 0;min-height:1.5em;font:12px var(--mono);color:var(--muted)}
 .rs-edge.gone{opacity:.45;text-decoration:line-through;border-color:var(--lose);color:var(--lose)}
 .rs-cur{font-style:normal;color:var(--fg);font-size:12px;width:10px;text-align:center}
 .rs-count{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:10px 0 0}

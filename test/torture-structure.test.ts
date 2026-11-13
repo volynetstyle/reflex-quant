@@ -21,6 +21,15 @@ import {
 const range = (n: number) =>
   Array.from({ length: n }, (_, i) => i);
 
+/**
+ * The middle index first, then both ends inward: no bounded scan of the
+ * reader's list finds the first read, so the pass needs a lookup at once.
+ */
+const scatter = (n: number) => {
+  const half = n >> 1;
+  return [half, ...range(n - half - 1).map((i) => n - 1 - i), ...range(half).map((i) => half - 1 - i)];
+};
+
 beforeEach(resetStats);
 
 describe("torture: repeated failed frontiers", () => {
@@ -105,10 +114,10 @@ describe("torture: tracking index under failure", () => {
     const failing = signal(false);
 
     const normal = range(n);
-    const reverse = [...normal].reverse();
+    const scattered = scatter(n);
 
     const c = computed(() => {
-      const order = get(tick) & 1 ? reverse : normal;
+      const order = get(tick) & 1 ? scattered : normal;
 
       let sum = 0;
 
@@ -232,12 +241,12 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
   const failInner = signal(false);
 
   const normal = range(n);
-  const reverse = [...normal].reverse();
+  const scattered = scatter(n);
 
   let innerSawOuterIndex = false;
   let innerFailures = 0;
   const inner = computed(() => {
-    const order = get(innerTick) ? reverse : normal;
+    const order = get(innerTick) ? scattered : normal;
 
     if ((sources[0] as unknown as Node).slot !== null) {
       innerSawOuterIndex = true;
@@ -261,7 +270,7 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
   const outer = computed(() => {
     outerRuns++;
 
-    const order = get(outerTick) ? reverse : normal;
+    const order = get(outerTick) ? scattered : normal;
     let sum = 0;
 
     // Force the outer pass into its own nontrivial reorder first.
