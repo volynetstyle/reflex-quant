@@ -1427,12 +1427,13 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
     cursor's own source again (a repeat, P5) and the first read of an
     empty list (links at once). The repeat check left `miss`, where it was
     now dead.
-  - The reader-list scans move back out of `miss` into `near`: with absent
-    sources settled before them, only out-of-place reads of existing
-    relations pay the call. `read` 146, `miss` 151, `near` 312 B of
-    bytecode, far under V8's 460 (the single `miss` of LOG 47 was 437 B,
-    and the suspect for `value-sort.256x32` going 1.10 -> 1.43 in CI, bimodal
-    across rounds and not reproduced locally on Node 22 or 25).
+  - The forward and prefix scans move back out of `miss` into `near`; the
+    tail scan stays in `miss`, so a reversal, a swap's second read and a
+    source moved to the front pay no call (with it in `near` too, reverse
+    at N = 64..1024 lost 10 %). `read` 146, `miss` 247, `near` 220 B of
+    bytecode, well under V8's 460 (the single `miss` of LOG 47 was 437 B,
+    and the suspect for `value-sort.256x32` going 1.10 -> 1.43 in CI,
+    bimodal across rounds and not reproduced locally on Node 22 or 25).
 - **Evidence:** the absence structure test now gives half its sources two
   other readers and requires no subscriber lookup and no sweep; the new
   ablation `no-source-absence` fails it. `no-fresh-source`,
@@ -1441,11 +1442,15 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   sees it and it has no ablation. The site's reorder model needed no change
   (4,800 passes match per read kind). Production tests 179 passed, seven
   skipped; bench checksums equal. ESM bundle 2,601 -> 2,650 B gzip.
-- **Timing (local, against main, 9–15 rounds, not evidence):**
-  replace-all-256 0.52 (Node 22) and 0.54 (Node 25); computed-create 0.95
-  (Node 22), 1.01 (Node 25); duplicate-64 0.97 / 0.98; link-fanout-256
-  +0–10 % (more than two subscribers: three loads that prove nothing);
-  hot read paths within spread. Left: duplicate-64 stays about 1 ns per
+- **Timing:** CI run 43446903020 (with the tail scan in `near`) against
+  main's 43417637122, quant/Reflex: replace-all-256 1.67 -> 0.88,
+  value-sort 1.43 -> 1.09, duplicate-64 1.55 -> 1.36, computed-create
+  1.25 -> 1.14, link-fanout-256 0.87 -> 0.91; shuffle@4096 1.26 -> 1.46 on
+  the same CPU model, not reproduced locally (0.98 on Node 22). Final form,
+  local Node 22, 9 rounds against main: replace-all 0.52, computed-create
+  0.91, insert-one-256 0.88, reverse-8 1.00, reverse@1024 1.05, value-sort
+  1.01, link-fanout-256 1.13 (an absent source with more than two
+  subscribers: the source check proves nothing and the scans cost a call). Left: duplicate-64 stays about 1 ns per
   repeat behind Reflex, whose signal read skips the pull test and whose
   cursor is a consumer field (LOG 30 and LOG 43 chose otherwise);
   computed-create about 15 % behind on Node 22, all of it in the first read

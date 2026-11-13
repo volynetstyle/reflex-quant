@@ -585,28 +585,12 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   if (next !== null && next.ver === UNREAD)
     return settle(c, s, last, next, pair(first, c));
 
-  near(c, s, last, next, first);
-}
-
-/** A miss that neither source proves absent nor a marked pass looks up. */
-function near(
-  c: Node,
-  s: Node,
-  last: Edge | null,
-  next: Edge | null,
-  first: Edge,
-): void {
-  // Bounded scans of this reader's list: the unread suffix from its end and
-  // after `next` (a match is the pair's only edge), the accepted prefix (a
-  // match is a repeat). Absence needs one side scanned completely: this
-  // reader's list, or the source's subscribers.
-  let e: Edge | null = null;
-
   if (next !== null) {
-    // The end holds the edges reads skipped (below), the latest last: read
-    // after all (a swap, a reversal), or a source moved to the front.
+    // The end of the list holds the edges reads skipped (`near`), the latest
+    // last: read after all (a swap, a reversal), or a source moved to the
+    // front. A match is the pair's only edge.
     let budget = TAIL;
-    e = c.lastDep!;
+    let e = c.lastDep!;
 
     while (e !== next && e.from !== s && --budget !== 0) e = e.prevDep!;
 
@@ -617,7 +601,29 @@ function near(
       cursor = e;
       return moveDep(c, e, last, next);
     }
-    budget = SCAN;
+  }
+  near(c, s, last, next, first);
+}
+
+/**
+ * A miss that neither the source, a marked pass nor the end of the list
+ * settles.
+ */
+function near(
+  c: Node,
+  s: Node,
+  last: Edge | null,
+  next: Edge | null,
+  first: Edge,
+): void {
+  // Bounded scans of this reader's list: the unread suffix after `next` (a
+  // match is the pair's only edge), the accepted prefix (a match is a
+  // repeat). Absence needs one side scanned completely: this reader's list,
+  // or the source's subscribers.
+  let e: Edge | null = null;
+
+  if (next !== null) {
+    let budget = SCAN;
     e = next.nextDep;
 
     while (e !== null && e.from !== s && --budget !== 0) e = e.nextDep;
@@ -629,7 +635,7 @@ function near(
       cursor = e;
       // `next` was skipped: read later or never (a deletion, a rotation, a
       // later move). Left in place it would stand before every following
-      // read; at the end it does not, and the scan above finds it there.
+      // read; at the end it does not, and `miss` finds it there.
       return skipDep(c, last, next, e);
     }
   }
