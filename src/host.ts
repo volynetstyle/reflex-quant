@@ -13,6 +13,13 @@ import { check, createNode, dispose, exec, onWake, untracked } from "./kernel";
 let queue: (Node | null)[] = new Array<Node | null>(KEEP).fill(null);
 let mask = KEEP - 1;
 let head = 0;
+/**
+ * Deliveries of the small drains since the last drain that needed the ring,
+ * and the largest of them: the ring is given back once they add up to its
+ * size (see `drain`).
+ */
+let spare = 0;
+let calm = 0;
 // The host's registers. Exported so a write's caller can test for work
 // without a call into the host; ES bindings are read-only to importers, so
 // only this module writes them.
@@ -152,10 +159,15 @@ export function start(w: Node): void {
 
 /**
  * The drain loop, opened by the caller (`hold` is 1): FIFO, the first error
- * rethrown at the end. A ring more than four times larger than this drain's
- * deliveries (which bound its watchers queued at once) is cut back at rest,
- * to KEEP or to twice the deliveries, so a burst does not keep its high
- * water while a steady wave keeps its ring.
+ * rethrown at the end.
+ *
+ * A drain whose deliveries (which bound its watchers queued at once) fill
+ * less than a quarter of the ring is small. The ring is cut back at rest,
+ * to KEEP or to the power of two above twice the largest small drain, once
+ * the small drains since the last large one have delivered as many watchers
+ * as the ring holds. Growing back costs O(ring), so a give-back followed by
+ * a burst is O(1) per delivery; a burst after every few small drains keeps
+ * its ring, and a burst followed by small drains is still given back.
  */
 function drain(failed: boolean, first: unknown): void {
   let taken = 0;
@@ -176,8 +188,13 @@ function drain(failed: boolean, first: unknown): void {
   }
   head = 0;
 
-  if (mask >= TRIM && taken + taken < mask >> 1) shrink(taken);
+  if (mask >= TRIM) {
+    if (taken + taken < mask >> 1) {
+      if (taken > calm) calm = taken;
 
+      if ((spare += taken) > mask) shrink(calm);
+    } else spare = calm = 0;
+  }
   hold = 0;
 
   if (failed) throw first;
@@ -191,6 +208,7 @@ function shrink(taken: number): void {
 
   queue.length = length;
   mask = length - 1;
+  spare = calm = 0;
 }
 
 /**

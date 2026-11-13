@@ -5,12 +5,14 @@
 //               effect, batch, lifecycle (mechanisms.mjs)
 //   scaling     the same families at N = 16..4096 (scaling.mjs)
 //   cost        cost-model probes, per bundle (cost/scenarios.mjs, cost/run.mjs)
+//   tradeoffs   the costs LOG 47-49 accepted, along their load axes (tradeoffs.mjs)
 import { scenarios as graph } from "./scenarios.mjs";
 import { scenarios as mechanisms } from "./mechanisms.mjs";
 import { scenarios as scaling } from "./scaling.mjs";
 import { scenarios as cost } from "./cost/scenarios.mjs";
+import { scenarios as tradeoffs } from "./tradeoffs.mjs";
 
-export const suites = { scenarios: graph, mechanisms, scaling, cost };
+export const suites = { scenarios: graph, mechanisms, scaling, cost, tradeoffs };
 
 export function suiteOf(argv) {
   const i = argv.indexOf("--suite");

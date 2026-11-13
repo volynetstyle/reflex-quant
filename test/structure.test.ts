@@ -108,7 +108,10 @@ describe("structural bounds", () => {
     const cond = signal(true);
     const a = range(50).map(signal);
     const b = range(50).map(signal);
-    [...a, ...b].forEach((p) => read(computed(() => read(p)))); // one other subscriber each
+    // One other subscriber on each of a, two on each of b: the source's first
+    // and last subscribers are all it has, so neither is the reader (LOG 49).
+    a.forEach((p) => read(computed(() => read(p))));
+    b.forEach((p) => range(2).forEach(() => read(computed(() => read(p)))));
     const tail = range(20).map(signal); // a long list, so neither scan is complete
     const cs = range(50).map((k) =>
       computed(() => {
@@ -125,6 +128,8 @@ describe("structural bounds", () => {
     }
     expect(stats.indexes).toBe(0);
     expect(stats.links).toBe(10 * 50);
+    // Proven absent from the source's side: no subscriber lookup, no sweep.
+    expect([stats.lookups, stats.sweeps]).toEqual([0, 0]);
   });
 
   it("LOG 22: a source nobody reads is linked without a scan's proof or a lookup", () => {
@@ -419,7 +424,7 @@ describe("S8 host queue capacity", () => {
     for (const e of effects) publicDispose(e);
   });
 
-  it("a steady wave keeps its ring; a burst is given back by the next small drain", () => {
+  it("bursts between small drains keep the ring; small drains give it back after a ring's worth", () => {
     const s = publicSignal(0);
     const small = publicSignal(0);
     publicEffect(() => void publicGet(small));
@@ -427,12 +432,23 @@ describe("S8 host queue capacity", () => {
     const ring = queueLength();
     expect(ring).toBeGreaterThanOrEqual(4 * TRIM);
     expect(ring).toBeLessThanOrEqual(bound(4 * TRIM));
-    for (let i = 1; i <= 3; i++) {
+    // A burst after every few small drains: no give-back, so no regrowth.
+    for (let i = 1; i <= 20; i++) {
       publicSet(s, i);
       expect(queueLength()).toBe(ring);
+      for (let k = 0; k < 4; k++) publicSet(small, i * 4 + k);
+      expect(queueLength()).toBe(ring);
     }
-    publicSet(small, 1);
+    // Then only small drains: the ring stays until they have delivered as
+    // many watchers as it holds, then it is cut back (LOG 50).
+    let drains = 0;
+    while (queueLength() === ring) {
+      publicSet(small, -++drains);
+      expect(drains).toBeLessThanOrEqual(ring);
+    }
+    expect(drains).toBeGreaterThanOrEqual(ring - 4 * 20);
     expect(queueLength()).toBeLessThanOrEqual(KEEP);
     for (const e of effects) publicDispose(e);
   });
+
 });

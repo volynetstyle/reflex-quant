@@ -33,7 +33,7 @@ const displaced = [
   [K, "  const cell = s.slot;\n  if (cell !== null) stack[top++] = cell;\n  s.slot = e;", "  s.slot = e;"],
 ];
 const firstMiss = [
-  [T, "  const first = s.firstSub;\n  // A source without", "  index(c, next);\n  return slot(c, s, last, next);\n  const first = s.firstSub;\n  // A source without"],
+  [T, "  const first = s.firstSub;\n  // Absent, whatever", "  index(c, next);\n  return slot(c, s, last, next);\n  const first = s.firstSub;\n  // Absent, whatever"],
 ];
 
 /** variant -> [what it removes, ...edits] */
@@ -90,7 +90,7 @@ export const reorderVariants = {
   ],
   "refresh-repeats": [
     "release dd13a76, before P5: a repeated read refreshes the observed version (fails the P5 semantic tests; kept to time the change)",
-    [T, "      if (__STATS__) stats.repeats++;\n      return;", "      if (__STATS__) stats.repeats++;\n      last.ver = s.ver;\n      return;"],
+    [T, "      else if (__STATS__) stats.repeats++;", "      else last.ver = n.ver;"],
     [T, "  if (p !== null && p.from === s) {\n    if (__STATS__) stats.dups++;\n    return;", "  if (p !== null && p.from === s) {\n    if (__STATS__) stats.dups++;\n    p.ver = s.ver;\n    return;"],
     [T, "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    return;", "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    e.ver = s.ver;\n    return;"],
   ],

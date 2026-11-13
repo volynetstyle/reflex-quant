@@ -89,7 +89,8 @@ function mount(root: HTMLElement) {
       case "new": return `${s}: no relation yet, a new one at the cursor`;
       case "move": return `${s}: found through its subscribers, moved to the cursor`;
       case "tail": return `${s}: found at the end of the list, moved to the cursor`;
-      case "defer": return `${s}: found ahead of the cursor; ${ev.deferred}, skipped, goes to the end`;
+      case "skip": return `${s}: found ahead of the cursor, moved to it; the one it skipped is marked`;
+      case "defer": return `${s}: found ahead of the cursor; ${ev.deferred}, skipped a second time, goes to the end`;
     }
   };
   const tell = (el: HTMLElement, text: string) => { const t = el.querySelector<HTMLElement>("[data-rs-ev]"); if (t) t.textContent = text; };
