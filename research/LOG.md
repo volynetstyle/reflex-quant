@@ -1305,6 +1305,50 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   production tests pass with seven skipped. With LOG 45, the ESM bundle
   grows from 2,279 to 2,349 B gzip.
 
+### 47. A skipped edge goes to the end of the list (optimization)
+
+- **Classification:** optimization; same answers, no new state. One node
+  field is exchanged for another (`lastSub` out, `lastDep` in).
+- **Witness:** a read past `next` moved the found edge back to the cursor,
+  so `next` stood before every following read. Rotation by one cost 255
+  misses per pass on 256 sources (`reorder.rotate-256`); dropping one source
+  mid-list cost a miss for every later read (`edit.insert-one-256`, 64 per
+  step). Graph mutations grew with the list, not with the edit.
+- **From Reflex:** its incoming list keeps its physical tail (`lastIn`) and
+  tests it among the locality tiers. Its pass stamp, lockstep, finger and
+  tape were not taken: quant's slot index already is the tape, its UNREAD
+  sweep is a lazy stamp, and a stamp field would cost a store on every hit.
+- **Change:** `near` (the reader-list half of `miss`): a match one past
+  `next` defers `next` to the end of the list (`deferDep`); otherwise a
+  bounded scan from the end (`tails`), where deferred edges read after all
+  (a swap, an earlier move) and a source moved to the front are found; then
+  the forward scan, which also defers `next`. The prefix scan, subscriber
+  lookup, mark and index are unchanged. Deferral stays inside a marked
+  suffix (a failed marked pass can leave one). The tail is `lastDep`; the
+  subscriber tail it replaces is the first subscriber's `prevSub`, so a node
+  keeps nine fields.
+- **Bound:** misses per pass follow the edit: rotation 1, one dropped
+  source 1, a dropped block of k sources k, one source moved later 2, an
+  adjacent swap 2 (was 1), reversal one per read with no scan. `miss` is
+  split into the mode dispatch (150 B of bytecode) and `near` (351 B), so
+  marked and indexed passes keep `miss` inlined (in one piece it was 476 B,
+  over V8's 460, and long-reorder lost 15 %).
+- **Evidence:** six new tests in `test/tracking.test.ts` pin the misses per
+  edit; five witnesses that used a reversal to reach the mark or index path
+  now read the middle source first (a reversal no longer reaches it). New
+  ablations `no-defer` and `no-tail-scan` are killed by them;
+  `no-suffix-scan`, `no-absence-proof`, `repeat-refresh` and `prepend-subs`
+  were re-anchored and are still killed. Production tests pass (172, seven
+  skipped).
+- **Timing (local only, Node 25, 7 rounds, not evidence):** rotate-256
+  0.42 of the baseline, insert-one-256 0.61, replace-half 0.90, reverse-8
+  0.94; quant goes from 1.20 to 0.50 of Reflex on rotate and from 1.08 to
+  0.66 on insert-one. Not addressed: value-sort (its gap is the hit path,
+  63 misses in 8,224 reads) and long-reorder (a lookup per read is
+  inherent). Within local spread or JIT shape: stable.wide-256 +5 % (with a
+  smaller `miss`, TurboFan inlines `exec` into the reading loop through
+  `peek` → `pull`), branch.switch +3–8 %. A paired CI run decides.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

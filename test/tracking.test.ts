@@ -78,9 +78,38 @@ describe("tracking", () => {
     expect(indices(deps(c), [tick, ...ps])).toEqual([0, 5, 1, 2, 3, 4]);
     expect(stats.links).toBe(0);
     expect(stats.unlinks).toBe(0);
-    expect(stats.moves + stats.scans).toBe(1);
+    // E is the last edge: found from the end, moved once.
+    expect([stats.tails, stats.scans, stats.moves]).toEqual([1, 0, 0]);
     expect(edges(c).every((e) => before.has(e))).toBe(true);
     checkGraph([c]);
+  });
+
+  // A skipped edge goes to the end of the list (`near`): a deletion or a
+  // rotation leaves every later read on the cursor, and an edge read after
+  // all is found from the end. Misses are hits' complement: reads - hits.
+  it.each([
+    ["rotation by one", range(256), range(256).map((i) => (i + 1) & 255), 1],
+    ["one source dropped mid-list", range(256), range(256).filter((i) => i !== 128), 1],
+    ["four adjacent sources dropped", range(256), range(256).filter((i) => i < 100 || i >= 104), 4],
+    ["one source moved 200 places later", range(256), [...range(256).filter((i) => i !== 20).slice(0, 219), 20, ...range(256).filter((i) => i !== 20).slice(219)], 2],
+    ["adjacent swap", range(256), [...range(100), 101, 100, ...range(154).map((i) => i + 102)], 2],
+    ["reversal", range(64), range(64).reverse(), 63],
+  ])("%s: misses bounded by the edit, not by the list", (_, from, to, misses) => {
+    const n = (from as number[]).length;
+    const ps = range(n).map(signal);
+    const tick = signal(0);
+    let order = from as number[];
+    const c = scripted(ps, { get: () => order }, tick);
+    read(c);
+    order = to as number[];
+    write(tick, 1);
+    resetStats();
+    read(c);
+    expect(stats.reads - stats.hits).toBe(misses);
+    expect([stats.lookups, stats.sweeps, stats.indexes, stats.links]).toEqual([0, 0, 0, 0]);
+    expect(indices(deps(c), [tick, ...ps])).toEqual([0, ...(to as number[]).map((i) => i + 1)]);
+    checkGraph([c]);
+    expect(idle()).toBe(true);
   });
 
   it("random permutations of 64 shared sources: exact, no allocation, linear work", () => {

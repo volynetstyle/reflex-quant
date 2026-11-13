@@ -11,6 +11,7 @@ import {
   TRIM,
   UNREAD,
   cutDeps,
+  deferDep,
   moveDep,
   settleDeps,
   unlinkSub,
@@ -445,6 +446,7 @@ function fail(n: Node, base: number, last: Edge | null): void {
       else n.firstDep = after;
 
       if (after !== null) after.prevDep = before;
+      else n.lastDep = before;
 
       unlinkSub(e);
       e.prevDep = null;
@@ -519,7 +521,8 @@ export function link(
 ): void {
   if (__STATS__) stats.links++;
 
-  const tail = s.lastSub;
+  const first = s.firstSub;
+  const tail = first !== null ? first.prevSub : null;
   const e: Edge = {
     from: s,
     to: c,
@@ -535,10 +538,15 @@ export function link(
   else c.firstDep = e;
 
   if (next !== null) next.prevDep = e;
+  else c.lastDep = e;
 
-  if (tail !== null) tail.nextSub = e;
-  else s.firstSub = e;
-  s.lastSub = e;
+  if (first !== null) {
+    tail!.nextSub = e;
+    first.prevSub = e;
+  } else {
+    s.firstSub = e;
+    e.prevSub = e;
+  }
   cursor = e;
 }
 
@@ -566,19 +574,63 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
     // An indexed pass owns its cursor's source slot. Nested passes restore it.
     if (from.slot === last) return slot(c, s, last, next);
   }
-  /** The pair's edge through the source's subscribers; undefined: unknown. */
-  let found: Edge | null | undefined;
   const first = s.firstSub;
 
   // A source without subscribers is absent, whatever the unread suffix mode.
   if (first === null) return link(c, s, last, next);
 
   // Marking, moves and links preserve a continuous UNREAD suffix.
-  if (next === null || next.ver !== UNREAD) {
-    // An edge found by a scan is the pair's only one; absence needs one side
-    // scanned completely (this reader's list, or the source's subscribers).
-    let e = next !== null ? next.nextDep : null;
+  if (next === null || next.ver !== UNREAD)
+    return near(c, s, last, next, first);
+
+  settle(c, s, last, next, pair(first, c));
+}
+
+/**
+ * A miss before the pass has a lookup. Bounded scans of this reader's list:
+ * the unread suffix after `next` and from its end (a match is the pair's
+ * only edge), the accepted prefix (a match is a repeat). Absence needs one
+ * side scanned completely: this reader's list, or the source's subscribers.
+ *
+ * A read past `next` skips it: `next` is read later or never (a deletion, a
+ * rotation, a later move). Left in place it would stand before every
+ * following read, each paying a miss; at the end it does not, and when it is
+ * read after all (a swap, an earlier move), the scan from the end finds it.
+ */
+function near(
+  c: Node,
+  s: Node,
+  last: Edge | null,
+  next: Edge | null,
+  first: Edge,
+): void {
+  let e: Edge | null = null;
+
+  if (next !== null) {
+    const after = next.nextDep;
+
+    if (after !== null && after.from === s) {
+      if (__STATS__) stats.scans++;
+
+      after.ver = s.ver;
+      cursor = after;
+      return deferDep(c, next);
+    }
+    // The end: skipped edges read after all, or a source moved to the front.
     let budget = SCAN;
+    e = c.lastDep!;
+
+    while (e !== next && e.from !== s && --budget !== 0) e = e.prevDep!;
+
+    if (e.from === s) {
+      if (__STATS__) stats.tails++;
+
+      e.ver = s.ver;
+      cursor = e;
+      return moveDep(c, e, last, next);
+    }
+    budget = SCAN;
+    e = after;
 
     while (e !== null && e.from !== s && --budget !== 0) e = e.nextDep;
 
@@ -587,30 +639,42 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 
       e.ver = s.ver;
       cursor = e;
-      return moveDep(c, e, last, next!);
+      deferDep(c, next);
+      return moveDep(c, e, last, after!);
     }
-    let p = last !== null ? last.prevDep : null;
-    budget = SCAN;
+  }
+  let p = last !== null ? last.prevDep : null;
+  let budget = SCAN;
 
-    while (p !== null && p.from !== s && --budget !== 0) p = p.prevDep;
+  while (p !== null && p.from !== s && --budget !== 0) p = p.prevDep;
 
-    if (p !== null && p.from === s) {
-      if (__STATS__) stats.dups++;
+  if (p !== null && p.from === s) {
+    if (__STATS__) stats.dups++;
 
-      return;
-    }
+    return;
+  }
 
-    // Absent if this reader's whole list was scanned; otherwise the source's
-    // first subscribers decide. Found as the first one: a lookup through the
-    // subscribers costs no load beyond the read itself, so mark the unread
-    // suffix and let the rest of the pass find its pairs that way, with no
-    // slot to fill or clear. Found deeper: every lookup would walk other
-    // readers' edges, so index; either way the found edge is taken at once.
-    found = e === null && p === null ? null : pair(first, c);
+  // Absent if this reader's whole list was scanned; otherwise the source's
+  // first subscribers decide. Found as the first one: a lookup through the
+  // subscribers costs no load beyond the read itself, so mark the unread
+  // suffix and let the rest of the pass find its pairs that way, with no
+  // slot to fill or clear. Found deeper: every lookup would walk other
+  // readers' edges, so index; either way the found edge is taken at once.
+  const found = e === null && p === null ? null : pair(first, c);
 
-    if (found !== null && found !== undefined) begin(c, found, first, next);
-  } else found = pair(first, c);
+  if (found !== null && found !== undefined) begin(c, found, first, next);
 
+  settle(c, s, last, next, found);
+}
+
+/** A lookup's answer: absent links, found is taken, unknown indexes the pass. */
+function settle(
+  c: Node,
+  s: Node,
+  last: Edge | null,
+  next: Edge | null,
+  found: Edge | null | undefined,
+): void {
   if (found === null) return link(c, s, last, next);
 
   if (found !== undefined) return take(c, found, s, last, next);

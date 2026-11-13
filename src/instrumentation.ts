@@ -4,6 +4,7 @@ export const stats = {
   hits: 0,
   repeats: 0,
   scans: 0,
+  tails: 0,
   lookups: 0,
   dups: 0,
   moves: 0,

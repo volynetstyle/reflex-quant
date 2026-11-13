@@ -20,11 +20,11 @@ export interface Node {
   ver: Version;
   /** null for a signal and for a disposed node. */
   fn: NodeFn | null;
-  /** First dependency edge, in read order. */
+  /** First and last dependency edges, in read order. */
   firstDep: Edge | null;
-  /** First and last subscriber edges, in birth order. */
+  lastDep: Edge | null;
+  /** First subscriber edge, in birth order; its prevSub is the last one. */
   firstSub: Edge | null;
-  lastSub: Edge | null;
   /** While a reader indexes: this node's edge into that reader. */
   slot: Edge | null;
   /** Successful runs; edges born since the last one are tentative. */
@@ -41,7 +41,7 @@ export interface Edge {
   /** Neighbours in the consumer's dependency list. */
   prevDep: Edge | null;
   nextDep: Edge | null;
-  /** Neighbours in the source's subscriber list. */
+  /** Neighbours in the source's subscriber list; the first one's prevSub is the last one. */
   prevSub: Edge | null;
   nextSub: Edge | null;
 }
@@ -116,8 +116,8 @@ export function createNode(fn: Node["fn"], value: unknown, flags: Flags): Node {
     ver: 0,
     fn,
     firstDep: null,
+    lastDep: null,
     firstSub: null,
-    lastSub: null,
     slot: null,
     gen: 0,
   };
@@ -130,6 +130,7 @@ export function moveDep(c: Node, e: Edge, last: Edge | null, next: Edge): void {
   before.nextDep = after;
 
   if (after !== null) after.prevDep = before;
+  else c.lastDep = before;
 
   e.prevDep = last;
   e.nextDep = next;
@@ -137,6 +138,27 @@ export function moveDep(c: Node, e: Edge, last: Edge | null, next: Edge): void {
   if (last !== null) last.nextDep = e;
   else c.firstDep = e;
   next.prevDep = e;
+}
+
+/**
+ * Move an unread edge that is not the last one to the end of the list: a
+ * read skipped it, so it is read later or never (see `miss`).
+ */
+export function deferDep(c: Node, e: Edge): void {
+  const before = e.prevDep;
+  const after = e.nextDep!;
+  const tail = c.lastDep!;
+
+  if (before !== null) before.nextDep = after;
+  else c.firstDep = after;
+  after.prevDep = before;
+
+  e.prevDep = tail;
+  e.nextDep = null;
+  tail.nextDep = e;
+  c.lastDep = e;
+  // A failed marked pass can leave a marked suffix behind: stay inside it.
+  if (tail.ver === UNREAD) e.ver = UNREAD;
 }
 
 /** Remove every edge of `c` after `last` (all of them when null). */
@@ -147,6 +169,7 @@ export function cutDeps(c: Node, last: Edge | null): void {
 
   if (last === null) c.firstDep = null;
   else last.nextDep = null;
+  c.lastDep = last;
   // The cut head's back pointer would tie this garbage to the live list, and
   // so to garbage cut later: old garbage keeps newer garbage alive.
   e.prevDep = null;
@@ -166,14 +189,14 @@ export function unlinkSub(e: Edge): void {
   if (__STATS__) stats.unlinks++;
 
   const s = e.from;
-  const before = e.prevSub;
+  const before = e.prevSub!;
   const after = e.nextSub;
 
-  if (before !== null) before.nextSub = after;
-  else s.firstSub = after;
+  if (e === s.firstSub) s.firstSub = after;
+  else before.nextSub = after;
 
   if (after !== null) after.prevSub = before;
-  else s.lastSub = before;
+  else if (s.firstSub !== null) s.firstSub.prevSub = before;
   // Subscribers are in birth order, so an old removed edge would point at a
   // much younger one and keep it (and its watcher) alive across scavenges.
   e.prevSub = null;
