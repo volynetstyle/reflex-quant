@@ -39,7 +39,7 @@ export interface Edge {
   readonly from: Node;
   readonly to: Node;
   /** from.ver when `to` read it; UNREAD in the pass's marked unread suffix. */
-  ver: Version | typeof UNREAD;
+  ver: Version | typeof UNREAD | typeof SKIPPED;
   /** to.gen + 1 at birth: tentative while it still equals to.gen + 1. */
   gen: Generation;
   /** Neighbours in the consumer's dependency list. */
@@ -98,6 +98,13 @@ export const enum CounterLimit {
 
 /** edge.ver of an edge the marked or indexed run has not read yet. */
 export const UNREAD = -1;
+/**
+ * edge.ver of an unread edge a read has skipped once in this pass (`skip` in
+ * the kernel). Like UNREAD it only stands where the old version is never
+ * read: a read overwrites it, a successful run cuts what is left unread, and
+ * a failed one leaves its node DIRTY.
+ */
+export const SKIPPED = -2;
 /**
  * A committed edge keeps its birth generation, and generations wrap: an edge
  * 2^30 - 1 commits old would read as born in the next run (tentative). So a

@@ -52,17 +52,17 @@ import { BLOB, href } from "../site";
 
   <h2>What the counters show</h2>
   <ReorderCallout />
-  <p>Structural work per step, counted, not timed (CI run 43406089437, <code>node bench/structure.mjs</code>). Defers and tails are the reads the bounded scans settle (LOG 47); lookups go through the source's subscribers or the index:</p>
+  <p>Structural work per step, counted, not timed (<code>node bench/structure.mjs</code>, LOG 50; counting, so the same on any machine). Skips, defers and tails are the reads the bounded scans settle; lookups go through the source's subscribers or the index:</p>
   <table class="num">
-    <tr><th>scenario</th><th>cursor hits / reads</th><th>defers + tails</th><th>lookups</th><th>moves</th><th>new / removed</th><th>alien-signals new / removed</th></tr>
+    <tr><th>scenario</th><th>cursor hits / reads</th><th>skips + tails</th><th>lookups</th><th>moves</th><th>new / removed</th><th>alien-signals new / removed</th></tr>
     <tr><td>stable.wide-256</td><td>256 / 256</td><td>0</td><td>0</td><td>0</td><td>0 / 0</td><td>0 / 0</td></tr>
-    <tr><td>reorder.rotate-256</td><td>256 / 257</td><td>1</td><td>0</td><td>0</td><td>0 / 0</td><td>255 / 255</td></tr>
-    <tr><td>edit.insert-one-256</td><td>257 / 258</td><td>0.5</td><td>0</td><td>0</td><td>0.5 / 0.5</td><td>65 / 65</td></tr>
-    <tr><td>shared-chaotic.64x32</td><td>152 / 2,080</td><td>4</td><td>1,942</td><td>1,918</td><td>0 / 0</td><td>2,002 / 2,002</td></tr>
+    <tr><td>reorder.rotate-256</td><td>255 / 257</td><td>2</td><td>0</td><td>0</td><td>0 / 0</td><td>255 / 255</td></tr>
+    <tr><td>edit.insert-one-256</td><td>256 / 258</td><td>1</td><td>0</td><td>0</td><td>0.5 / 0.5</td><td>65 / 65</td></tr>
+    <tr><td>shared-chaotic.64x32</td><td>150 / 2,080</td><td>2</td><td>1,952</td><td>1,928</td><td>0 / 0</td><td>2,002 / 2,002</td></tr>
     <tr><td>long-reorder.256</td><td>6.6 / 257</td><td>0.06</td><td>250</td><td>250</td><td>0 / 0</td><td>255 / 255</td></tr>
     <tr><td>replace-half.256</td><td>129 / 257</td><td>0</td><td>0</td><td>0</td><td>128 / 128</td><td>128 / 128</td></tr>
   </table>
-  <p>Read the last two columns together. Quant allocates a relation only when one is genuinely new: replacing half the sources creates 128, exactly as many as changed. No reorder allocates. A read that skips a relation sends it to the end of the list, read later or never, so a rotation costs one out-of-place read per pass and every other read is a cursor hit; dropping one source mid-list costs the same. A uniform random permutation of 256 sources is the hostile case and pays one walk and a move per read.</p>
+  <p>Read the last two columns together. Quant allocates a relation only when one is genuinely new: replacing half the sources creates 128, exactly as many as changed. No reorder allocates. A read that skips a relation moves the found one to the cursor and marks the skipped one, which is most likely read next (a swap costs one out-of-place read); skipped a second time, it goes to the end of the list, read later or never, so a rotation or dropping one source mid-list costs two out-of-place reads per pass and every other read is a cursor hit. A uniform random permutation of 256 sources is the hostile case and pays one walk and a move per read.</p>
 
   <h2>When the run fails</h2>
   <p>A throw in the middle of a run leaves the list in two parts: relations the attempt reached, and relations from the last success it did not reach. Both matter. The unreached ones are still real dependencies, so they are kept and still wake the node: pruning happens on success only. The ones born in the failed attempt are tentative: they wake it too, but a later validation does not treat them as proof. Repeated failures do not accumulate relations, which is one of the structural bounds.</p>

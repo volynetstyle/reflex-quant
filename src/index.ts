@@ -96,7 +96,7 @@ export function effect(fn: () => void | (() => void)): Effect {
     try {
       stop(effectNode);
     } catch {
-      // F5
+      /** F5 */
     }
     throw error;
   }

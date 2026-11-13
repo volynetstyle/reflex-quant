@@ -129,15 +129,18 @@ describe("tracking", () => {
     expect(idle()).toBe(true);
   });
 
-  // A skipped edge goes to the end of the list (`near`): a deletion or a
-  // rotation leaves every later read on the cursor, and an edge read after
-  // all is found from the end. Misses are hits' complement: reads - hits.
+  // A read past `next` skips it (`skip`): the first time the found edge
+  // moves to the cursor and `next` is marked (a swap, an earlier move); a
+  // marked edge skipped again goes to the end of the list (a rotation, a
+  // deletion, a later move), where the tail scan finds it if it is read
+  // after all. Misses are hits' complement: reads - hits.
   it.each([
-    ["rotation by one", range(256), range(256).map((i) => (i + 1) & 255), 1],
-    ["one source dropped mid-list", range(256), range(256).filter((i) => i !== 128), 1],
-    ["four adjacent sources dropped", range(256), range(256).filter((i) => i < 100 || i >= 104), 4],
-    ["one source moved 200 places later", range(256), [...range(256).filter((i) => i !== 20).slice(0, 219), 20, ...range(256).filter((i) => i !== 20).slice(219)], 2],
-    ["adjacent swap", range(256), [...range(100), 101, 100, ...range(154).map((i) => i + 102)], 2],
+    ["rotation by one", range(256), range(256).map((i) => (i + 1) & 255), 2],
+    ["one source dropped mid-list", range(256), range(256).filter((i) => i !== 128), 2],
+    ["four adjacent sources dropped", range(256), range(256).filter((i) => i < 100 || i >= 104), 8],
+    ["one source moved 200 places later", range(256), [...range(256).filter((i) => i !== 20).slice(0, 219), 20, ...range(256).filter((i) => i !== 20).slice(219)], 3],
+    ["adjacent swap", range(256), [...range(100), 101, 100, ...range(154).map((i) => i + 102)], 1],
+    ["one source moved 6 places earlier", range(256), [...range(100), 106, ...range(6).map((i) => i + 100), ...range(149).map((i) => i + 107)], 1],
     ["reversal", range(64), range(64).reverse(), 63],
   ])("%s: misses bounded by the edit, not by the list", (_, from, to, misses) => {
     const n = (from as number[]).length;

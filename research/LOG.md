@@ -1408,6 +1408,106 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   fan-out.effects-1000 0.51 (2.14x -> 1.09x), write.same-value 0.43; every
   other mechanism and graph scenario within round-to-round spread.
 
+### 49. Absence from the source's side; the first relation and repeats in `read` (optimization)
+
+- **Classification:** optimization; same answers, no new state or field.
+- **Witnesses (CI run 43417637122, quant/Reflex):**
+  `track.replace-all-256` 1.67 (a computed alternating between two sets of
+  256 sources, each with one other reader), `track.duplicate-64` 1.55,
+  `lifecycle.computed-create` 1.25. On `replace-all-256` every read was
+  absent, yet paid the tail, forward and prefix scans and a subscriber
+  lookup (about 20 comparisons) before the link; Reflex answers from the
+  producer in O(1) (its sole outgoing edge goes to another consumer).
+- **Change:**
+  - `miss` proves a source absent from its own side before any scan: no
+    subscribers (LOG 22), or its first and last subscribers, which the
+    ring gives one load apart (LOG 47), are all it has and neither is the
+    reader (`alien`). Taken from Reflex's producer-side probes.
+  - `read` settles two more reads itself, as Reflex's resolver does: the
+    cursor's own source again (a repeat, P5) and the first read of an
+    empty list (links at once). The repeat check left `miss`, where it was
+    now dead.
+  - The forward and prefix scans move back out of `miss` into `near`; the
+    tail scan stays in `miss`, so a reversal, a swap's second read and a
+    source moved to the front pay no call (with it in `near` too, reverse
+    at N = 64..1024 lost 10 %). `read` 146, `miss` 247, `near` 220 B of
+    bytecode, well under V8's 460 (the single `miss` of LOG 47 was 437 B,
+    and the suspect for `value-sort.256x32` going 1.10 -> 1.43 in CI,
+    bimodal across rounds and not reproduced locally on Node 22 or 25).
+- **Evidence:** the absence structure test now gives half its sources two
+  other readers and requires no subscriber lookup and no sweep; the new
+  ablation `no-source-absence` fails it. `no-fresh-source`,
+  `no-repeat-check` and `repeat-refresh` were re-anchored and are killed.
+  The first-relation tier saves calls, not structural work, so only timing
+  sees it and it has no ablation. The site's reorder model needed no change
+  (4,800 passes match per read kind). Production tests 179 passed, seven
+  skipped; bench checksums equal. ESM bundle 2,601 -> 2,650 B gzip.
+- **Timing:** CI run 43446903020 (with the tail scan in `near`) against
+  main's 43417637122, quant/Reflex: replace-all-256 1.67 -> 0.88,
+  value-sort 1.43 -> 1.09, duplicate-64 1.55 -> 1.36, computed-create
+  1.25 -> 1.14, link-fanout-256 0.87 -> 0.91; shuffle@4096 1.26 -> 1.46 on
+  the same CPU model, not reproduced locally (0.98 on Node 22). Final form,
+  local Node 22, 9 rounds against main: replace-all 0.52, computed-create
+  0.91, insert-one-256 0.88, reverse-8 1.00, reverse@1024 1.05, value-sort
+  1.01, link-fanout-256 1.13 (an absent source with more than two
+  subscribers: the source check proves nothing and the scans cost a call). Left: duplicate-64 stays about 1 ns per
+  repeat behind Reflex, whose signal read skips the pull test and whose
+  cursor is a consumer field (LOG 30 and LOG 43 chose otherwise);
+  computed-create about 15 % behind on Node 22, all of it in the first read
+  and link (a first run without reads is level).
+
+### 50. Two costs that grew with load: swaps and the ring's give-back (optimization)
+
+- **Classification:** optimization; same answers. One edge marker
+  (`SKIPPED`, an edge version value like UNREAD) and two host registers.
+- **Witnesses** (`research/TRADEOFFS.md`, `bench/tradeoffs.mjs`): of the
+  costs LOG 47–49 accepted, two grew with load. `swaps@k` (k adjacent swaps
+  per pass in 1,024 sources) went 1.08 -> 1.61 of the pre-LOG 47 kernel as k
+  grew to 256: every swap was two misses, the first paying the failed tail
+  scan, the call to `near` and the deferral. `burst-waves@W` (a wave of W
+  effects, then four of one) paid 1.18–1.47 against a ring that keeps its
+  size, growing with W: every small drain gave the ring back (LOG 48) and
+  every burst grew it again, copying.
+- **Change (tracking):** a read that finds its edge past `next` skips it
+  (`skip`). The first time, the found edge moves to the cursor and `next`
+  is marked SKIPPED: it is most likely read next (a swap, an earlier move),
+  as before LOG 47. Only a marked edge skipped again goes to the end of the
+  list (a rotation, a deletion, a later move). The one-past-`next` test
+  moves into `miss`, before the tail scan, so a swap's single miss pays
+  neither. SKIPPED, like UNREAD, stands only where the old version is never
+  read: a read overwrites it, success cuts what is left unread, failure
+  leaves the node DIRTY; a marking or indexing pass overwrites it with
+  UNREAD.
+- **Change (host):** a drain whose deliveries fill less than a quarter of
+  the ring is small; the ring is given back once the small drains since the
+  last large one have delivered as many watchers as it holds (`spare`),
+  to KEEP or the power of two above twice the largest of them (`calm`).
+  Growing back costs O(ring), so give-back plus regrowth is O(1) per
+  delivery; bursts between small drains keep the ring, and a burst
+  followed by small drains is still given back. S8 is unchanged:
+  max(KEEP, 2W).
+- **Bound:** misses per pass, now: adjacent swap 1 (was 2), move earlier 1
+  (2), move later 3 (2), rotation and one deletion 2 (1), a deleted block of
+  k 2k (k), reversal one per read. All still follow the edit, not the list.
+  Nested skips read back oldest first mark the pass from k = 6, where LOG 47
+  did from k = 3 and the pre-LOG 47 kernel from k = 9: one sweep per pass,
+  bounded.
+- **Evidence:** the edit-bound tests take the new counts and a move earlier
+  by 6; the S8 witness now alternates bursts with small drains (the ring
+  must stay) and then counts the small drains until it is given back (a
+  ring's worth). Ablations `no-skip-marker` (LOG 47's rule) and
+  `queue-shrink-eager` (LOG 48's rule) are new and killed; `no-defer`,
+  `no-suffix-scan` and `no-queue-shrink` were re-anchored and are killed.
+  The site's reorder model gains the `skip` kind and matches the kernel on
+  4,800 passes per read kind. Production tests 180 passed, seven skipped;
+  checksums equal on every suite.
+- **Timing (local, Node 22, against the pre-LOG 47 kernel; not evidence):**
+  swaps@1..256 0.97–1.04 (LOG 49: 1.08–1.61); burst-waves@1024..16384
+  0.41–0.56 (LOG 49: 0.54–0.67; Reflex 0.42–0.56); swaps-nested@3 1.06
+  (1.24). Kept: rotate-256 0.42, insert-one-256 0.64, reverse-8 0.88,
+  replace-all-256 0.59, replace-half 0.87, push.effects-1000 0.49,
+  computed-create 0.92; the rest within spread.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

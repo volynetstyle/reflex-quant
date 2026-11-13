@@ -4,7 +4,7 @@
 // For random read sequences (permutations, repeats, new and dropped sources) one computed reads
 // them; per pass, relations created and removed must match the model exactly. For quant every
 // kind of read must match its kernel counter too: hits, repeats (repeats + dups), new relations
-// (links), moves, defers (scans), tails, and whether the pass marked its suffix (sweeps); no pass
+// (links), moves, skips + defers (scans), tails, and whether the pass marked its suffix (sweeps); no pass
 // indexes, since no source has a second reader.
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -60,7 +60,7 @@ function real(api, keys) {
 }
 
 let checked = 0, bad = 0;
-const seen = { hit: 0, repeat: 0, new: 0, move: 0, defer: 0, tail: 0, mark: 0 };
+const seen = { hit: 0, repeat: 0, new: 0, move: 0, skip: 0, defer: 0, tail: 0, mark: 0 };
 for (let trial = 0; trial < 800; trial++) {
   regime = REGIMES[trial & 1];
   const q = real(Q), a = real(A);
@@ -75,7 +75,7 @@ for (let trial = 0; trial < 800; trial++) {
     // the computed also reads `order` first, which is always a cursor hit / reused link
     const mq = quantPass(qList, next), ma = alienPass(aList, next);
     const real = [rq.hits - 1, rq.repeats + rq.dups, rq.links, rq.moves, rq.scans, rq.tails, rq.sweeps, rq.indexes, rq.unlinks];
-    const model = [mq.counts.hit, mq.counts.repeat, mq.counts.new, mq.counts.move, mq.counts.defer, mq.counts.tail, mq.marked ? 1 : 0, 0, mq.removed];
+    const model = [mq.counts.hit, mq.counts.repeat, mq.counts.new, mq.counts.move, mq.counts.skip + mq.counts.defer, mq.counts.tail, mq.marked ? 1 : 0, 0, mq.removed];
     const okQ = real.every((x, k) => x === model[k]);
     const okA = ra.linksCreated === ma.created && ra.linksUnlinked === ma.removed;
     checked++;
@@ -84,7 +84,7 @@ for (let trial = 0; trial < 800; trial++) {
     if (!okQ || !okA) {
       bad++;
       if (bad <= 5) console.log(`mismatch: ${prev.join("")} -> ${next.join("")}`,
-        okQ ? "" : `quant hit/repeat/new/move/defer/tail/mark/index/removed real ${real.join("/")} model ${model.join("/")}`,
+        okQ ? "" : `quant hit/repeat/new/move/skip+defer/tail/mark/index/removed real ${real.join("/")} model ${model.join("/")}`,
         okA ? "" : `alien real ${ra.linksCreated}/${ra.linksUnlinked} model ${ma.created}/${ma.removed}`);
     }
     qList = mq.list; aList = ma.list; prev = next;
@@ -93,6 +93,6 @@ for (let trial = 0; trial < 800; trial++) {
 // Every kind must occur, or the check would not cover it.
 const missing = Object.entries(seen).filter(([, n]) => n === 0).map(([k]) => k);
 if (missing.length) console.log(`no ${missing.join(", ")} read in ${checked} passes: the generator does not cover them`);
-console.log(bad ? `${bad} of ${checked} passes differ` : `all ${checked} passes match: relations created and removed (both); hit, repeat, new, move, defer, tail and mark per read (quant)`);
+console.log(bad ? `${bad} of ${checked} passes differ` : `all ${checked} passes match: relations created and removed (both); hit, repeat, new, move, skip, defer, tail and mark per read (quant)`);
 console.log(`quant reads: ${Object.entries(seen).map(([k, n]) => `${k} ${n}`).join(", ")}`);
 process.exit(bad || missing.length ? 1 : 0);
