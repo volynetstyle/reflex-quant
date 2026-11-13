@@ -375,10 +375,10 @@ describe("work stack at rest", () => {
 });
 
 describe("S8 host queue capacity", () => {
-  // During a drain, size <= max(TRIM + W, 2W) with W the watchers queued at
-  // once: with h slots spent and t <= W live, no move yet means h < TRIM or
-  // h < t, and a run adds at most W - t + 1 slots (LOG 45).
-  const bound = (w: number) => Math.max(TRIM + w, 2 * w);
+  // The ring doubles only when full, so it holds max(KEEP, 2W) slots at most
+  // with W the watchers queued at once; a delivery takes no slot of its own
+  // (LOG 45, LOG 48).
+  const bound = (w: number) => Math.max(KEEP, 2 * w);
 
   it("a long drain holds O(queued watchers) slots, not O(deliveries)", () => {
     // One watcher invalidates itself N times in one drain (W2): one watcher
@@ -397,7 +397,7 @@ describe("S8 host queue capacity", () => {
     expect(queueLength()).toBeLessThanOrEqual(KEEP);
   });
 
-  it("many watchers invalidating themselves stay within max(TRIM + W, 2W)", () => {
+  it("many watchers invalidating themselves stay within max(KEEP, 2W)", () => {
     const W = 4 * TRIM;
     const rounds = 40;
     const sources = range(W).map(() => publicSignal(0));
@@ -413,17 +413,25 @@ describe("S8 host queue capacity", () => {
       ),
     );
     for (const s of sources) expect(publicGet(s)).toBe(rounds);
-    expect(peakLength).toBeGreaterThan(W);
+    expect(peakLength).toBeGreaterThanOrEqual(W);
     expect(peakLength).toBeLessThanOrEqual(bound(W));
-    expect(queueLength()).toBeLessThanOrEqual(KEEP);
+    expect(queueLength()).toBeLessThanOrEqual(bound(W));
     for (const e of effects) publicDispose(e);
   });
 
-  it("a burst of queued watchers does not keep its high water after the drain", () => {
+  it("a steady wave keeps its ring; a burst is given back by the next small drain", () => {
     const s = publicSignal(0);
+    const small = publicSignal(0);
+    publicEffect(() => void publicGet(small));
     const effects = publicBatch(() => range(4 * TRIM).map(() => publicEffect(() => void publicGet(s))));
-    expect(queueLength()).toBeLessThanOrEqual(KEEP);
-    publicSet(s, 1);
+    const ring = queueLength();
+    expect(ring).toBeGreaterThanOrEqual(4 * TRIM);
+    expect(ring).toBeLessThanOrEqual(bound(4 * TRIM));
+    for (let i = 1; i <= 3; i++) {
+      publicSet(s, i);
+      expect(queueLength()).toBe(ring);
+    }
+    publicSet(small, 1);
     expect(queueLength()).toBeLessThanOrEqual(KEEP);
     for (const e of effects) publicDispose(e);
   });

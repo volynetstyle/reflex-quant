@@ -1,19 +1,25 @@
 // Policy around the kernel: the watcher lifecycle (check, consume the
 // cleanup, run), a FIFO queue for scheduled watchers, and batching.
 import { Flag, KEEP, TRIM } from "./graph";
-import type { Cleanup, Node, NodeFn } from "./graph";
+import type { Cleanup, Flags, Node, NodeFn } from "./graph";
 import { check, createNode, dispose, exec, onWake, untracked } from "./kernel";
 
-const queue: (Node | null)[] = [];
+/**
+ * The queue: a ring of `mask + 1` slots, a power of two, holding the `size`
+ * queued watchers from `head` on. It doubles only when full, so it holds
+ * fewer than 2W + KEEP slots for W watchers queued at once (S8), and a
+ * delivery takes no slot of its own: a slot is free again once taken.
+ */
+let queue: (Node | null)[] = new Array<Node | null>(KEEP).fill(null);
+let mask = KEEP - 1;
+let head = 0;
 // The host's registers. Exported so a write's caller can test for work
 // without a call into the host; ES bindings are read-only to importers, so
 // only this module writes them.
 /** Queued watchers. */
 export let size = 0;
-/** Open batches. */
-export let depth = 0;
-/** A drain loop is open. */
-export let draining = false;
+/** Open batches, plus one while a drain loop is open: work waits while > 0. */
+export let hold = 0;
 
 /** Queue a scheduled watcher once; the kernel calls this when it wakes one. */
 export function wake(w: Node): void {
@@ -22,10 +28,24 @@ export function wake(w: Node): void {
   if ((flags & Flag.AutoQueued) !== Flag.Auto) return;
 
   w.flags = flags | Flag.Queued;
-  queue[size++] = w;
+
+  if (size > mask) grow();
+
+  queue[(head + size++) & mask] = w;
 }
 
 onWake(wake);
+
+/** A full ring doubles, its watchers moved to the front in queue order. */
+function grow(): void {
+  const next = new Array<Node | null>(size + size).fill(null);
+
+  for (let i = 0; i < size; i++) next[i] = queue[(head + i) & mask] as Node;
+
+  queue = next;
+  mask = size + size - 1;
+  head = 0;
+}
 
 /** A watcher runs `fn` and keeps a returned function as its cleanup. */
 export function watcher(fn: NodeFn, auto: boolean): Node {
@@ -45,10 +65,19 @@ export function watcher(fn: NodeFn, auto: boolean): Node {
  * Precondition: its own run is not on the stack (flush is not reentrant).
  */
 export function run(w: Node): void {
-  const flags = w.flags;
+  deliver(w, w.flags);
+}
 
-  if (w.fn === null || (flags & Flag.Wake) === 0) return;
-
+/**
+ * `run` with the watcher's flags already loaded: the drain clears QUEUED in
+ * the same store that clears WAKE. WOKEN without STALE means only signals
+ * woke it, and they made it DIRTY: no check, no reload.
+ */
+function deliver(w: Node, flags: Flags): void {
+  if (w.fn === null || (flags & Flag.Wake) === 0) {
+    w.flags = flags;
+    return;
+  }
   w.flags = flags & ~Flag.Wake;
 
   if ((flags & Flag.Stale) !== 0) {
@@ -58,10 +87,9 @@ export function run(w: Node): void {
       w.flags |= Flag.Stale;
       throw error;
     }
+
+    if ((w.flags & Flag.Dirty) === 0 || w.fn === null) return;
   }
-
-  if ((w.flags & Flag.Dirty) === 0 || w.fn === null) return;
-
   const cleanup = w.value;
 
   if (typeof cleanup === "function") {
@@ -86,18 +114,18 @@ export function stop(w: Node): void {
 
 /** Run queued watchers until the queue drains; rethrow the first error. */
 export function flush(): void {
-  if (size === 0 || draining || depth !== 0) return;
+  if (size === 0 || hold !== 0) return;
 
   drainNow();
 }
 
 /**
  * `flush` with its guard at the call site: a write's caller tests
- * `size !== 0 && !draining && depth === 0` first (the queue first, so a write
- * that woke nothing costs one load), and calls this only when there is work.
+ * `size !== 0 && hold === 0` first (the queue first, so a write that woke
+ * nothing costs one load), and calls this only when there is work.
  */
 export function drainNow(): void {
-  draining = true;
+  hold = 1;
   drain(false, undefined);
 }
 
@@ -108,11 +136,11 @@ export function drainNow(): void {
  * fresh watcher has no sources to check and no cleanup, so `run` is `exec`.
  */
 export function start(w: Node): void {
-  if (draining || depth !== 0 || size !== 0) {
+  if (hold !== 0 || size !== 0) {
     wake(w);
     return flush();
   }
-  draining = true;
+  hold = 1;
 
   try {
     exec(w);
@@ -123,61 +151,62 @@ export function start(w: Node): void {
 }
 
 /**
- * The drain loop, opened by the caller: FIFO, the first error rethrown at the
- * end.
- *
- * A watcher leaves QUEUED when it is taken, so each delivery in one drain
- * takes a new slot. Slots before `i` are spent. Once at least TRIM are spent
- * and they make up at least half of the queue, the live tail moves to the
- * front. That costs O(live) <= O(spent), so the move is amortized O(1) per
- * delivery. The queue then holds less than TRIM + 2 * (watchers queued at
- * once) slots instead of one slot per delivery. Without the move, a long
- * drain grew the queue until a store threw `RangeError` inside `wake`.
- * `size` had already been advanced, so the next take read a hole outside the
- * per-run `try`, and `draining` stayed true for good. At rest the queue is
- * cut back to KEEP, as the work stack is.
+ * The drain loop, opened by the caller (`hold` is 1): FIFO, the first error
+ * rethrown at the end. A ring more than four times larger than this drain's
+ * deliveries (which bound its watchers queued at once) is cut back at rest,
+ * to KEEP or to twice the deliveries, so a burst does not keep its high
+ * water while a steady wave keeps its ring.
  */
 function drain(failed: boolean, first: unknown): void {
-  for (let i = 0; i < size; i++) {
-    if (i >= TRIM && i + i >= size) {
-      queue.copyWithin(0, i, size);
-      // [i, size) now duplicates the moved tail; [size - i, i) is spent.
-      queue.fill(null, i, size);
-      size -= i;
-      i = 0;
-    }
-    const queuedWatcher = queue[i]!;
-    queue[i] = null;
-    queuedWatcher.flags &= ~Flag.Queued;
+  let taken = 0;
+
+  for (; size !== 0; taken++) {
+    const queuedWatcher = queue[head]!;
+    queue[head] = null;
+    head = (head + 1) & mask;
+    size--;
 
     try {
-      run(queuedWatcher);
+      deliver(queuedWatcher, queuedWatcher.flags & ~Flag.Queued);
     } catch (error) {
       if (!failed) first = error;
 
       failed = true;
     }
   }
-  size = 0;
-  if (queue.length > TRIM) queue.length = KEEP;
-  draining = false;
+  head = 0;
+
+  if (mask >= TRIM && taken + taken < mask >> 1) shrink(taken);
+
+  hold = 0;
 
   if (failed) throw first;
+}
+
+/** Cut an empty ring to KEEP slots, or to the power of two above 2 * taken. */
+function shrink(taken: number): void {
+  let length = KEEP;
+
+  while (length < taken + taken) length += length;
+
+  queue.length = length;
+  mask = length - 1;
 }
 
 /**
  * The outermost batch end runs what the body deferred, also when the body
  * threw; then the body's error is the batch's error (F5), and a deferred
- * watcher's failure leaves only that watcher cold (F3).
+ * watcher's failure leaves only that watcher cold (F3). Inside a drain the
+ * drain runs it.
  */
 export function batch<T>(fn: () => T): T {
-  depth++;
+  hold++;
   let value: T;
 
   try {
     value = fn();
   } catch (error) {
-    if (--depth === 0) {
+    if (--hold === 0) {
       try {
         flush();
       } catch {
@@ -186,7 +215,7 @@ export function batch<T>(fn: () => T): T {
     }
     throw error;
   }
-  if (--depth === 0) flush();
+  if (--hold === 0) flush();
 
   return value;
 }

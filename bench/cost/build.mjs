@@ -47,9 +47,9 @@ export const variants = {
   lean: ["index-first-miss and no-displaced together", ...firstMiss, ...displaced],
 };
 
-const setGuard = "  write(source as unknown as Node, value);\n  if (size !== 0 && !draining && depth === 0) drainNow();";
-const hostImport = 'import { depth, drainNow, draining, size, start, stop, watcher } from "./host";';
-const withFlush = 'import { depth, drainNow, draining, flush, size, start, stop, watcher } from "./host";';
+const setGuard = "  write(source as unknown as Node, value);\n  if (size !== 0 && hold === 0) drainNow();";
+const hostImport = 'import { drainNow, hold, size, start, stop, watcher } from "./host";';
+const withFlush = 'import { drainNow, flush, hold, size, start, stop, watcher } from "./host";';
 const setFlush = [
   [I, hostImport, withFlush],
   [I, setGuard, "  write(source as unknown as Node, value);\n  flush();"],

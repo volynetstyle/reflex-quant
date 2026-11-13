@@ -1365,6 +1365,49 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   replace-half 0.87 of the baseline. Not addressed: value-sort (its gap is
   the hit path) and long-reorder (a lookup per read is inherent).
 
+### 48. The host queue is a ring (optimization; S8 kept)
+
+- **Classification:** optimization of the host; same delivery order, same
+  semantics. The S8 bound is kept; its witnesses are restated for the ring.
+- **Witness:** `push.effects-1000` and `fan-out.effects-1000` were the
+  largest gap in the suite: 1.65–2.1x Reflex in CI, 2.2x locally. Every
+  wave grew the queue array from KEEP to 1,000 slots (reallocations and
+  copies) and the drain cut it back to KEEP at its end, so a steady wave
+  paid both on every write; `drain` also tested the compaction condition on
+  every take.
+- **Change:** the queue is a ring of a power-of-two size: `head`, `mask`,
+  `size`. `wake` stores at `(head + size) & mask` and doubles a full ring,
+  its watchers moved to the front in order. A take frees its slot at once,
+  so deliveries take no storage and no compaction is needed. At rest a ring
+  four times larger than the drain's deliveries (which bound the watchers
+  queued at once) is cut back to KEEP or to the power of two above twice
+  the deliveries, in place (`length` right-trims). A steady wave keeps its
+  ring; a burst is given back by the next small drain.
+- **Registers:** `depth` and `draining` become one `hold` (open batches,
+  plus one while a drain is open): work waits exactly while `hold > 0`, so
+  `set` tests `size !== 0 && hold === 0`. A batch inside a drain ends at
+  `hold === 1` and leaves the work to the drain, as before.
+- **Delivery:** `deliver(w, flags)` clears QUEUED in the store that clears
+  WAKE (`run(w)` is `deliver(w, w.flags)`). WOKEN without STALE implies
+  DIRTY (`write` sets both, nothing else sets WOKEN), so that path skips
+  the reload after the check.
+- **Bound (S8):** the ring doubles only when full, so it holds at most
+  max(KEEP, 2W) slots for W watchers queued at once, during a drain and at
+  rest; the old max(TRIM + W, 2W) is no longer needed. Retention after a
+  burst lasts until the next drain with fewer than a quarter as many
+  deliveries; the burst witness now says so.
+- **Evidence:** production tests 172 passed, seven skipped. The S8
+  witnesses were restated for the ring. `no-queue-compact` is retired with
+  the compaction; `no-queue-trim` becomes `no-queue-shrink` and is killed;
+  `start-outside-drain`, `run-direct`, `batch-error-replaces`,
+  `rollback-error-replaces` and `no-retry` were re-anchored where needed
+  and are killed. Bench checksums are equal on every suite and cost probe.
+  ESM bundle 2,349 -> 2,468 B gzip on its own; 2,601 B with LOG 47.
+- **Timing (local only, Node 25, 7 rounds, not evidence):**
+  push.effects-1000 0.51 of the baseline (2.2x -> 1.14x Reflex),
+  fan-out.effects-1000 0.51 (2.14x -> 1.09x), write.same-value 0.43; every
+  other mechanism and graph scenario within round-to-round spread.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

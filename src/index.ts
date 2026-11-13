@@ -4,7 +4,7 @@
 // runtime wrapper). Every operation here exposes existing kernel and host
 // semantics; none adds state.
 import { Flag } from "./graph";
-import { depth, drainNow, draining, size, start, stop, watcher } from "./host";
+import { drainNow, hold, size, start, stop, watcher } from "./host";
 import {
   dispose as detach,
   createNode,
@@ -118,7 +118,7 @@ export const peek: <T>(source: Readable<T>) => T = refresh as never;
 export function set<T>(source: Signal<T>, value: T): void {
   write(source as unknown as Node, value);
 
-  if (size !== 0 && !draining && depth === 0) drainNow();
+  if (size !== 0 && hold === 0) drainNow();
 }
 
 /**
