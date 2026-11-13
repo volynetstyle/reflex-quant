@@ -19,19 +19,20 @@ import { BLOB, href } from "../site";
 
   <h2>Where Quant is ahead</h2>
   <ul class="fingers">
-    <li><strong>Batched writes</strong> (<code>batch.writes-32</code>, 0.55 of the better rival). A batch defers watcher delivery only; there is no transaction to open or commit.</li>
-    <li><strong>Shared dynamic graphs</strong> (<code>shared-chaotic.64x32</code>, 0.78; 0.22 of alien-signals). Reads arrive in a different order every pass, and Quant moves relations where alien-signals relinks them.</li>
-    <li><strong>Branch switching</strong> (<code>branch.switch-100</code>, 0.87) and <strong>replacing half the sources</strong> (<code>replace-half.256</code>, 0.91). A relation is allocated only when it is new.</li>
-    <li><strong>Effect fan-out</strong> (<code>fan-out.effects-1000</code>, 0.88) and <strong>diamonds</strong> (<code>diamond.8x8</code>, 0.93).</li>
+    <li><strong>Rotating the read order</strong> (<code>reorder.rotate-256</code>, 0.53 of the better rival; 0.07 of alien-signals) and <strong>inserting one source</strong> (<code>edit.insert-one-256</code>, 0.70). A relation skipped twice goes to the end of the list, so a rotation costs two out-of-place reads per pass and every other read is a cursor hit; an inserted source costs one new relation and no moves.</li>
+    <li><strong>Batched writes</strong> (<code>batch.writes-32</code>, 0.61). A batch defers watcher delivery only; there is no transaction to open or commit.</li>
+    <li><strong>Shared dynamic graphs</strong> (<code>shared-chaotic.64x32</code>, 0.73; 0.24 of alien-signals). Reads arrive in a different order every pass, and Quant moves relations where alien-signals relinks them.</li>
+    <li><strong>Replacing half the sources</strong> (<code>replace-half.256</code>, 0.74) and <strong>branch switching</strong> (<code>branch.switch-100</code>, 0.82). A relation is allocated only when it is new.</li>
+    <li><strong>Diamonds</strong> (<code>diamond.8x8</code>, 0.99) and <strong>effect fan-out</strong> (<code>fan-out.effects-1000</code>, 1.00: level with alien-signals, 0.97 of Reflex).</li>
   </ul>
 
   <h2>Where it is behind</h2>
   <ul class="fingers">
-    <li><strong>Sorting by value</strong> (<code>value-sort.256x32</code>, 1.43 of Reflex) and <strong>every reorder scenario</strong> (1.20 to 1.21 of Reflex). Reflex's tracking is specialized for permutations. Quant's is general: bounded scans, then one linear walk per pass. That is cheaper to specify and check, and slower on a pure permutation.</li>
-    <li><strong>The trivial paths</strong>: <code>static.read-clean</code> (1.22 of alien-signals) and the stable wide reads (1.17 of Reflex). A read of a clean value is almost all call overhead, and there is the least to save there.</li>
-    <li><strong>Computed fan-out</strong> (<code>fan-out.computeds-1000</code>, 1.18 of Reflex).</li>
+    <li><strong>Permutations</strong>: <code>long-reorder.256</code> (1.20 of Reflex), <code>value-sort.256x32</code> (1.19) and <code>reorder.reverse-8</code> (1.13). Reflex's tracking is specialized for permutations. Quant's is general: bounded scans, then one linear walk per pass. That is cheaper to specify and check, and slower on a pure permutation.</li>
+    <li><strong>The trivial paths</strong>: <code>static.read-clean</code> (1.22 of alien-signals), the stable wide reads (1.13 to 1.17 of Reflex) and <code>static.chain-100</code> (1.11). A read of a clean value is almost all call overhead, and there is the least to save there.</li>
+    <li><strong>Mounting effects</strong> (<code>lifecycle.mount-100</code>, 1.10 of alien-signals, 0.73 of Reflex), <strong>computed fan-out</strong> (<code>fan-out.computeds-1000</code>, 1.07 of Reflex) and <strong>fan-in</strong> (<code>fan-in.1024</code>, 1.06).</li>
   </ul>
-  <p>Against alien-signals alone the reorder scenarios are the widest gap in Quant's favour, at 0.15 to 0.17 of its time. That one is structural, and the counters on the <a href={href("/dynamic-dependency-tracking/")}>dependency tracking</a> page show it without a clock.</p>
+  <p>Against alien-signals alone the reorder scenarios are the widest gap in Quant's favour, at 0.07 to 0.19 of its time. That one is structural, and the counters on the <a href={href("/dynamic-dependency-tracking/")}>dependency tracking</a> page show it without a clock.</p>
 
   <h2>Method</h2>
   <ul class="fingers">
@@ -43,7 +44,7 @@ import { BLOB, href } from "../site";
   </ul>
 
   <h2>What these numbers are not</h2>
-  <p>The suite is this project's own, chosen to cover its task list. It is not a general ranking of signals libraries, and the numbers move between runs: an earlier run had Quant within 25 % of the better rival on all 18 scenarios with a geometric mean of 0.97; the one shown here has 17 of 18 and 1.03. The trajectory over every CI run is in <a href={`${BLOB}/research/HISTORY.md`}>HISTORY.md</a>.</p>
+  <p>The suite is this project's own, chosen to cover its task list. It is not a general ranking of signals libraries, and the numbers move between runs: the previous published run (1.1.2, run 42794143933) had Quant within 25 % of the better rival on 17 of 18 scenarios with a geometric mean of 1.03; the one shown here (1.2.0) has 18 of 18 and 0.94. Between the two, 1.2.0 changed how a skipped relation is handled and how effects are queued, and the jobs ran on different machines. The trajectory over every CI run is in <a href={`${BLOB}/research/HISTORY.md`}>HISTORY.md</a>.</p>
   <p>Benchmarks also reward skipped work. A runtime can win a scenario by not doing something its users rely on. Quant's timings count only for a build that passes its differential tests, so speed is measured against fixed semantics. In this project a benchmark may choose between two correct implementations. It may not change what correct means.</p>
   <EvidenceLinks items={["bench", "report", "history"]} />
 </Base>

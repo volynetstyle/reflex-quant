@@ -5,6 +5,7 @@ import BenchmarkSummary from "../components/BenchmarkSummary.astro";
 import ReorderCallout from "../components/ReorderCallout.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
 import { BLOB, href, REPO } from "../site";
+import { AGG, RUN } from "../bench";
 import "../styles/incident.css";
 ---
 <Base
@@ -14,7 +15,7 @@ import "../styles/incident.css";
   description="alien-signals 3.2.1 vs Reflex Quant: CI benchmark on 18 scenarios, dependency reordering counters, API, failure semantics and size. An alternative, measured."
   faq={[
     ["Is Reflex Quant an alternative to alien-signals?", "Yes: both provide framework-agnostic signal, computed and effect. Quant is smaller in surface, reuses dependency relations on reorder, and is specified by a written contract."],
-    ["Is Reflex Quant faster than alien-signals?", "On the project's own 18-scenario CI suite its geometric-mean time is 0.45 of alien-signals' (CI run 42794143933). The suite is the project's own; per-scenario numbers are on the benchmarks page of this site."],
+    ["Is Reflex Quant faster than alien-signals?", `On the project's own ${AGG.n}-scenario CI suite its geometric-mean time is ${AGG.alien} of alien-signals' (CI run ${RUN.id}, ${RUN.version}). The suite is the project's own; per-scenario numbers are on the benchmarks page of this site.`],
   ]}
 >
   <p class="lede">Two small, framework-agnostic signals runtimes. One is known for raw speed. The other was derived from a written contract and then measured. They agree on the API and differ in what they consider part of the job.</p>
@@ -36,7 +37,7 @@ import "../styles/incident.css";
   <h2>The structural difference: a reorder</h2>
   <p>When a computation reads the same sources in a different order, something has to happen to its dependency list. alien-signals unlinks and relinks on every out-of-place read. Quant keeps the relation and moves it.</p>
   <ReorderCallout />
-  <p>This is counted, not timed, so it does not depend on a machine. It is also where the timing gap is widest: on the three reorder scenarios Quant takes 0.15 to 0.17 of alien-signals' time, and on a shared graph whose read order changes every pass, 0.22. How the old relation is found without a hash table: <a href={href("/dynamic-dependency-tracking/")}>dynamic dependency tracking</a>.</p>
+  <p>This is counted, not timed, so it does not depend on a machine. It is also where the timing gap is widest: on the three reorder scenarios Quant takes 0.07 to 0.19 of alien-signals' time, and on a shared graph whose read order changes every pass, 0.24. How the old relation is found without a hash table: <a href={href("/dynamic-dependency-tracking/")}>dynamic dependency tracking</a>.</p>
 
   <h2>Writes inside an effect: two findings</h2>
   <p>The <a href={href("/fireflies/")}>Fireflies</a> model was ported to six runtimes on a fixed 64 × 40 grid and checked against a hand-written worklist after every tick. It is a hard model for a reactive runtime: a firefly that flashes writes into its neighbours' inboxes from inside its own transition, and some of those writes land on a computation that is still running. The code, the ports and the commands are in <a href={`${REPO}/tree/main/bench/fireflies`}>bench/fireflies</a>.</p>
@@ -89,7 +90,7 @@ import "../styles/incident.css";
   <p class="note">One model, one machine (Node 25.2.0), each port one reasonable way to write it. This is a probe of semantics and stack behaviour, not a ranking; the timings are in the folder's README.</p>
 
   <h2>Where alien-signals is faster</h2>
-  <p>On the shortest paths. Reading a clean value (<code>static.read-clean</code>) costs Quant 1.22 of alien-signals' time, and mounting effects (<code>lifecycle.mount-100</code>) 1.04. A read that finds nothing to do is almost all call overhead, and alien-signals has less of it. The pattern across the suite is consistent: the more a scenario looks like a graph, with shared nodes, fan-in and changing read order, the further Quant pulls ahead; the more it looks like a single function call, the closer alien-signals gets, and on the two above it wins.</p>
+  <p>On the shortest paths. Reading a clean value (<code>static.read-clean</code>) costs Quant 1.22 of alien-signals' time, and mounting effects (<code>lifecycle.mount-100</code>) 1.10. A read that finds nothing to do is almost all call overhead, and alien-signals has less of it. The pattern across the suite is consistent: the more a scenario looks like a graph, with shared nodes, fan-in and changing read order, the further Quant pulls ahead; the more it looks like a single function call, the closer alien-signals gets, and on the two above it wins.</p>
 
   <h2>Benchmarks</h2>
   <BenchmarkSummary />

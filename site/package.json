@@ -11,7 +11,8 @@
     "preview": "astro preview",
     "check:viz": "node scripts/validate-sim.mjs",
     "check:reorder": "node scripts/validate-reorder.mjs",
-    "check": "npm run check:viz && npm run check:reorder && npm run build && node scripts/check-build.mjs"
+    "check:tracking": "node scripts/validate-tracking.mjs",
+    "check": "npm run check:viz && npm run check:reorder && npm run check:tracking && npm run build && node scripts/check-build.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",
@@ -19,6 +20,6 @@
     "@lezer/highlight": "^1.2.5",
     "astro": "^7.4.10",
     "codemirror": "^6.0.2",
-    "reflex-quant": "^1.1.2"
+    "reflex-quant": "^1.2.0"
   }
 }

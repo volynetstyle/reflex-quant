@@ -429,15 +429,21 @@ full framework (Vue, Solid, Preact Signals, MobX) is a better fit.
 Measured on CI against [Reflex](https://github.com/volynetstyle/Reflex) and
 [alien-signals](https://github.com/stackblitz/alien-signals), with all three
 runtimes on the same runner
-([run 42794143933](https://github.com/volynetstyle/reflex-quant/actions/runs/42794143933), quant 1.1.2):
+([run 43479214912](https://github.com/volynetstyle/reflex-quant/actions/runs/43479214912), quant 1.2.0):
 
-- within 25 % of the faster of the two on **17 of 18** scenarios, and faster than both on **7**;
-- geometric mean: **0.99×** Reflex, **0.45×** alien-signals (lower is faster);
+- within 25 % of the faster of the two on **all 18** scenarios, and faster than both on **7** (plus a tie on
+  `fan-out.effects-1000`, 0.998× the faster of the two);
+- geometric mean: **0.94×** the faster of the two per scenario, **0.92×** Reflex,
+  **0.43×** alien-signals (lower is faster);
 - reorders allocate nothing. If a computation reads the same 256 sources in a
   rotated order on every pass, quant creates and removes **0** links per pass
-  where alien-signals relinks 255 (`node bench/structure.mjs`);
-- Reflex is still faster on the reorder scenarios (quant 1.20–1.21× of it) and on
-  `value-sort.256x32` (1.43×).
+  where alien-signals relinks 255 (`node bench/structure.mjs`), and takes 0.53×
+  Reflex's time and 0.07× alien-signals' there;
+- Reflex is still faster on reversals, random permutations and sorts
+  (`reorder.reverse-8` 1.13×, `value-sort.256x32` 1.19×, `long-reorder.256`
+  1.20×) and on the trivial read paths (`static.read-clean` 1.10×, the stable
+  wide reads 1.13–1.17×); alien-signals is faster on `static.read-clean` (1.22×)
+  and `lifecycle.mount-100` (1.10×).
 
 The suite is this project's own. Per-scenario numbers are on the
 [benchmarks page](https://volynetstyle.github.io/reflex-quant/benchmarks/), and the

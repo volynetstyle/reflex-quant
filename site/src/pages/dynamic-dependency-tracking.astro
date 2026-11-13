@@ -3,71 +3,180 @@ import Base from "../layouts/Base.astro";
 import Example from "../components/Example.astro";
 import ReorderCallout from "../components/ReorderCallout.astro";
 import ReorderStand from "../components/ReorderStand.astro";
+import Snippet from "../components/Snippet.astro";
+import TrackingLab from "../components/TrackingLab.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
-import { BLOB, href } from "../site";
+import { BLOB, REPO, href } from "../site";
+import "../styles/tracking.css";
+
+const PROOFS = `
+// "this run is indexed": the cursor's source holds the cursor in its slot
+cursor !== null && cursor.from.slot === cursor
+// "this run is marked": its unread edges form one contiguous suffix
+next !== null && next.ver === UNREAD`;
+
+// Lab scenario links: open the scenario in the lab and scroll to it.
+const lab = (id: string, text: string) => `<a href="#lab" data-lab="${id}">${text}</a>`;
 ---
 <Base
   path="/dynamic-dependency-tracking/"
   title="Dynamic Dependency Tracking in JavaScript Signals"
   headline="Dynamic Dependency Tracking Without Rebuilding the Graph"
-  description="How a signals runtime tracks dependencies that change between runs: exact tracking, edge reuse, reordering without allocation, and uniqueness of relations."
+  description="How Reflex Quant tracks dependencies that change between runs: one edge in two lists, a read cursor, bounded scans, marking and indexing once per run, failures and nesting. Every step shown live on the real runtime."
   faq={[
     ["What is dynamic dependency tracking?", "Recording, on each execution of a computed or effect, exactly which reactive sources it read, so that dependencies follow the code's branches instead of being declared up front."],
+    ["How does Reflex Quant find an existing dependency without a hash map?", "Reads usually arrive in the last run's order, so a cursor over the dependency list answers most of them with one comparison. The rest are settled by bounded scans of the list (one past the cursor, the last two edges, eight ahead, eight behind), by the source's own subscribers, and, once per run at most, by marking the unread edges or indexing them into a slot on each source."],
+    ["Does reordering reads allocate in Reflex Quant?", "No. An edge that exists is moved, never recreated: rotating 256 dependencies every run creates and removes none, where alien-signals 3.2.1 relinks 255."],
   ]}
 >
-  <p class="lede">A computation's dependencies are whatever its last run read. Keeping that exact is easy if you rebuild the list every time. Keeping it exact while allocating nothing is the actual problem.</p>
+  <p class="lede">A computation's dependencies are whatever its last run read. Keeping that exact is easy if you rebuild the list every time. Keeping it exact while allocating nothing, searching almost nothing, and never guessing is the actual problem. This page shows how Reflex Quant does it, on the real runtime, one read at a time.</p>
 
   <h2>The problem</h2>
-  <p>In <code>computed(() =&gt; get(flag) ? get(a) : get(b))</code> the dependency set depends on data. After every run the runtime must hold exactly what was read: drop <code>a</code> when the branch moves to <code>b</code>, never hold two relations to one source, and not leak relations when the computation throws. Three invariants of the <a href={`${BLOB}/CONTRACT.md`}>contract</a> say this (T1 exact tracking, T2 uniqueness, T3 nesting isolation), and three bounds say what it may cost: no allocation and no lookup per stable read, no new relation when one exists, no quadratic tracking.</p>
+  <p>In <code>computed(() =&gt; get(flag) ? get(a) : get(b))</code> the dependency set depends on data. After every run the runtime must hold exactly what was read: drop <code>a</code> when the branch moves to <code>b</code>, never hold two relations to one source, and keep the right ones when the computation throws. Each run is a pass over the list of the last one, and the runtime must decide, for every read, whether the relation exists, where it is, and whether it was read already in this run.</p>
   <Example />
 
-  <h2>Three strategies</h2>
+  <h2>What it must guarantee</h2>
+  <p>The <a href={`${BLOB}/CONTRACT.md`}>contract</a> fixes what tracking may and may not do. Each line links to the lab scenario below that shows it.</p>
   <table>
-    <tr><th>Strategy</th><th>Cost</th></tr>
-    <tr><td>Clear and rebuild every run</td><td>Allocation proportional to the read set on every execution.</td></tr>
-    <tr><td>Compare in order with the previous list</td><td>Free while the order holds; a reorder relinks everything after the first mismatch.</td></tr>
-    <tr><td>Reuse relations whatever the order</td><td>No allocation for any permutation of a known read set, if the old relation can be found cheaply and exactly.</td></tr>
+    <tr><th>Contract</th><th>What it means for tracking</th><th>Shown in</th></tr>
+    <tr><td>T1 exact tracking</td><td>After a successful run, the edges are exactly the sources it read.</td><td set:html={`${lab("branch", "Branch switch")}, ${lab("edits", "Insert and delete")}`} /></tr>
+    <tr><td>T2 uniqueness</td><td>One edge per (source, consumer) pair, under repeats, reorders, nesting and failures.</td><td set:html={`${lab("versions", "Versions")}, ${lab("reorder", "Reorders")}`} /></tr>
+    <tr><td>T3 nesting isolation</td><td>A run inside another run never corrupts the outer one's tracking.</td><td set:html={lab("nesting", "Nesting")} /></tr>
+    <tr><td>P5 / D6 in-pass invalidation</td><td>An edge keeps the version of its source's first read in a run; a change after that leaves the run owing another.</td><td set:html={lab("versions", "Versions")} /></tr>
+    <tr><td>S1</td><td>No allocation and no lookup per stable read.</td><td set:html={lab("reorder", "Reorders, step 2")} /></tr>
+    <tr><td>S2</td><td>No new edge when one exists, whatever the order.</td><td set:html={`${lab("reorder", "Reorders")}, ${lab("edits", "Insert and delete")}`} /></tr>
+    <tr><td>S3</td><td>No Θ(d²) tracking: a run over d sources is linear, however it permutes them.</td><td set:html={`${lab("shuffle", "Shuffle")}, ${lab("shared", "Shared sources")}`} /></tr>
+    <tr><td>S4</td><td>Graph size proportional to live edges: nothing stays behind a cut.</td><td><a href="#end">End of a run</a></td></tr>
+    <tr><td>S5</td><td>Repeated failures do not accumulate edges.</td><td set:html={lab("failure", "Failure")} /></tr>
+    <tr><td>S6</td><td>Nesting does not rebuild global state.</td><td set:html={lab("nesting", "Nesting")} /></tr>
   </table>
-  <p>Quant takes the third. The whole design is in that last condition: finding the old relation without a hash table, without a second pass, and without ever guessing.</p>
 
-  <h2>Try it: reorder the reads</h2>
-  <p>Both lists below start with the eight relations of a previous pass, A to H. Change the order in which the next pass reads them and watch what each runtime does with its list. Rotate it, reverse it, shuffle it: Quant keeps all eight relations and only changes their order. alien-signals keeps a link only when it is exactly the next one, so every other read allocates a new link and the old one is freed at the end of the pass. <strong>Replace one</strong> brings in a source the list has never seen: then Quant creates one relation and removes one, which is the least any runtime can do.</p>
+  <h2>One edge, two lists</h2>
+  <p>A dependency is one object, the edge, and the only thing tracking ever allocates. It sits in two doubly linked lists at once: the consumer's dependency list, in read order, and the source's subscriber list, in birth order. Unlinking it from either side is a few stores; finding it is the whole problem.</p>
+  <figure class="dg">
+    <svg class="fig-edge" viewBox="0 0 680 320" role="img" aria-label="Two consumers C1 and C2 and three sources a, b, c. C1 reads a, b, c; C2 reads c then a. Each edge is one box, linked horizontally into its consumer's dependency list and vertically into its source's subscriber list.">
+      <defs>
+        <marker id="md" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-dep" d="M0 0L8 4L0 8z" /></marker>
+        <marker id="ms" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path class="ah-sub" d="M0 0L8 4L0 8z" /></marker>
+      </defs>
+      <rect class="node" x="210" y="14" width="80" height="32" /><text x="250" y="35" text-anchor="middle">a</text>
+      <rect class="node" x="350" y="14" width="80" height="32" /><text x="390" y="35" text-anchor="middle">b</text>
+      <rect class="node" x="490" y="14" width="80" height="32" /><text x="530" y="35" text-anchor="middle">c</text>
+      <text class="lbl" x="620" y="35">sources</text>
+      <rect class="node" x="30" y="104" width="90" height="32" /><text x="75" y="125" text-anchor="middle">C1</text>
+      <rect class="node" x="30" y="204" width="90" height="32" /><text x="75" y="225" text-anchor="middle">C2</text>
+      <text class="lbl" x="30" y="92">consumers</text>
+
+      <path class="sub" d="M250 46V102" marker-end="url(#ms)" /><text class="lbl k-sub" x="256" y="80">firstSub</text>
+      <path class="sub" d="M390 46V102" marker-end="url(#ms)" />
+      <path class="sub" d="M530 46V102" marker-end="url(#ms)" />
+      <path class="sub" d="M250 136V202" marker-end="url(#ms)" /><text class="lbl k-sub" x="256" y="175">nextSub</text>
+      <path class="sub" d="M530 136V202" marker-end="url(#ms)" />
+      <path class="back" d="M212 128C186 150 186 192 210 214" marker-end="url(#ms)" /><text class="lbl k-sub" x="150" y="172">prevSub</text>
+      <path class="back" d="M568 128C594 150 594 192 570 214" marker-end="url(#ms)" /><text class="lbl k-sub" x="598" y="172">prevSub</text>
+
+      <path class="dep" d="M120 120H208" marker-end="url(#md)" /><text class="lbl k-dep" x="132" y="113">firstDep</text>
+      <path class="dep" d="M290 120H348" marker-end="url(#md)" /><text class="lbl k-dep" x="294" y="113">nextDep</text>
+      <path class="dep" d="M430 120H488" marker-end="url(#md)" />
+      <path class="dep" d="M120 228C220 300 430 300 508 238" marker-end="url(#md)" /><text class="lbl k-dep" x="300" y="290">firstDep</text>
+      <path class="dep" d="M490 214H292" marker-end="url(#md)" /><text class="lbl k-dep" x="360" y="207">nextDep</text>
+
+      <rect class="edge hl" x="210" y="104" width="80" height="32" /><text x="250" y="125" text-anchor="middle">a→C1</text>
+      <rect class="edge" x="350" y="104" width="80" height="32" /><text x="390" y="125" text-anchor="middle">b→C1</text>
+      <rect class="edge" x="490" y="104" width="80" height="32" /><text x="530" y="125" text-anchor="middle">c→C1</text>
+      <rect class="edge" x="210" y="204" width="80" height="32" /><text x="250" y="225" text-anchor="middle">a→C2</text>
+      <rect class="edge" x="490" y="204" width="80" height="32" /><text x="530" y="225" text-anchor="middle">c→C2</text>
+    </svg>
+    <figcaption>C1 read a, b, c; C2 read c, then a. Blue: each consumer's dependency list, in its read order (<code>prevDep</code>/<code>nextDep</code>, <code>firstDep</code>/<code>lastDep</code>). Green: each source's subscriber list, in the order the edges were born (<code>prevSub</code>/<code>nextSub</code>). The dashed back pointer is the one irregularity: the first subscriber's <code>prevSub</code> is the last subscriber, so a new edge is appended in O(1) and the tail is one load from the head.</figcaption>
+  </figure>
+  <div class="cols">
+    <div class="card"><h3>An edge</h3><code>from</code>, <code>to</code>; <code>ver</code>, the source's version when this run first read it (or a marker: <code>UNREAD</code>, <code>SKIPPED</code>); <code>gen</code>, the consumer's run in which it was born; four list links. Eight fields, nothing else.</div>
+    <div class="card"><h3>A node, for tracking</h3><code>firstDep</code>, <code>lastDep</code>, <code>firstSub</code>; <code>gen</code>, its count of successful runs; <code>slot</code>, a single cell used only while a run that reads it is indexed. No set, no map, no array per node.</div>
+  </div>
+
+  <h2>A run, read by read</h2>
+  <p>A run walks its old list with a cursor. Everything before the cursor has been read in this run, in read order; everything after it is what the last successful run read and this one has not read yet. A read that finds its source right after the cursor is a <strong>hit</strong>: one comparison, the cursor moves on. When the run succeeds, whatever is still after the cursor was not read, and is cut.</p>
+  <div class="pass" aria-label="A run in progress: read so far, then the cursor, then not read yet">
+    <span class="tl-e read"><b>order</b></span><span class="tl-e read"><b>a</b></span><span class="tl-e read"><b>c</b></span>
+    <i class="tl-cur">▸</i>
+    <span class="tl-e ahead"><b>b</b></span><span class="tl-e ahead"><b>d</b></span><span class="tl-e ahead"><b>e</b></span>
+    <span class="brace">read in this run │ cursor │ from the last run, not read yet: cut on success</span>
+  </div>
+  <p>Every other read is a <em>miss</em>, and the runtime has to answer three questions exactly: does an edge to this source exist, where is it, and was it read already in this run. The lab below runs real programs on the reflex-quant the site ships and draws the consumer's actual list after every read. Pick a scenario and press <strong>Next</strong>.</p>
+  <TrackingLab />
+
+  <h2>Which proof settles a read</h2>
+  <p>The kernel tries the proofs in order of cost and stops at the first that answers. Each one is exact: when a bounded search runs out, the answer is "unknown", never "absent", and the next proof takes over.</p>
+  <table class="proofs">
+    <tr><th>#</th><th>Proof</th><th>Cost</th><th>Shown in</th></tr>
+    <tr class="grp"><td colspan="4">in <code>read</code>: not a miss</td></tr>
+    <tr><td>1</td><td><strong>Hit.</strong> The edge after the cursor is this source's. The cursor moves on.</td><td>1 comparison</td><td set:html={lab("reorder", "Reorders")} /></tr>
+    <tr><td>2</td><td><strong>The cursor's own source</strong> again: a repeat. Nothing moves; the edge keeps the first read's version (P5).</td><td>1 comparison</td><td set:html={lab("versions", "Versions")} /></tr>
+    <tr><td>3</td><td><strong>An empty list</strong>: the first edge of a first run.</td><td>O(1)</td><td set:html={lab("failure", "Failure")} /></tr>
+    <tr class="grp"><td colspan="4"><code>miss</code>: the run's mode, then the source's side</td></tr>
+    <tr><td>4</td><td><strong>The run is indexed</strong>: the source's slot holds this consumer's edge (move it, or a repeat) or it does not (absent: a new edge, claimed into the slot).</td><td>1 load</td><td set:html={lab("shared", "Shared sources")} /></tr>
+    <tr><td>5</td><td><strong>Nobody reads the source</strong>: no edge can exist. New edge at the cursor.</td><td>1 load</td><td set:html={lab("branch", "Branch switch")} /></tr>
+    <tr><td>6</td><td><strong>The source's one or two readers are others</strong>: its first and last subscribers are one load apart, so both are checked and absence is proven.</td><td>2 edges</td><td set:html={lab("shared", "Shared sources")} /></tr>
+    <tr><td>7</td><td><strong>The run is marked</strong>: the source's first 8 subscribers decide. Found unread, it moves to the cursor; found read, a repeat; the list ends, absent; past 8, the run indexes.</td><td>≤ 8</td><td set:html={lab("shuffle", "Shuffle")} /></tr>
+    <tr class="grp"><td colspan="4"><code>miss</code>: this consumer's own list</td></tr>
+    <tr><td>8</td><td><strong>One past the cursor's edge</strong>: the commonest skip. The found edge moves to the cursor; the skipped one is marked, or, if it was skipped before, sent to the end of the list.</td><td>1 comparison</td><td set:html={lab("reorder", "Reorders")} /></tr>
+    <tr><td>9</td><td><strong>The last two edges</strong>, where skipped edges wait: a deferred edge read after all, or a source moved to the front. Moved to the cursor.</td><td>≤ 2</td><td set:html={lab("reorder", "Reorders")} /></tr>
+    <tr><td>10</td><td><strong>Up to 8 ahead</strong> of the cursor's edge: skip or defer, as in 8.</td><td>≤ 8</td><td set:html={lab("reorder", "Reorders, last step")} /></tr>
+    <tr><td>11</td><td><strong>Up to 8 behind</strong> the cursor: read earlier in this run. A repeat; nothing moves.</td><td>≤ 8</td><td set:html={lab("versions", "Versions")} /></tr>
+    <tr><td>12</td><td><strong>Both scans reached the ends</strong> of the list: absent, however many readers the source has. New edge.</td><td>(the scans)</td><td set:html={lab("shared", "Shared sources")} /></tr>
+    <tr class="grp"><td colspan="4"><code>lookup</code>: the source's subscribers, then once per run</td></tr>
+    <tr><td>13</td><td><strong>The source's first 8 subscribers.</strong> This consumer's edge first there: <em>mark</em> the unread edges. Deeper: <em>index</em> them. Either way the found edge moves to the cursor. Not there and the list ends: absent. Past 8: index, and the slot answers.</td><td>≤ 8, + one walk per run</td><td set:html={`${lab("shuffle", "Shuffle")}, ${lab("shared", "Shared sources")}`} /></tr>
+  </table>
+  <p>The order is the design. The source's side comes before the list's because it costs a load or two and proves absence, the one answer a bounded scan of the list cannot give. The list's own shapes come next because they are what real edits produce: a swap is one past the cursor, a rotation or a deletion leaves a skipped edge, and a move to the front lands among the last two. Only a read none of these settle pays a lookup, and only the first such read of a run pays a walk.</p>
+  <p>"Not found within 8" never means "absent". The scan limit is a price limit, not a precision limit, which is why tracking stays linear when hundreds of reads are shuffled, and why nothing here is a heuristic.</p>
+
+  <h2>Skip, defer, tail: an edit costs what it changes</h2>
+  <p>A read that finds its edge past the cursor's one moves it to the cursor and has to decide what to do with the edge it skipped. The first time, the skipped edge is most likely the next read (a swap, a source moved earlier), so it stays and is marked. Skipped a second time, it is read later or never (a rotation, a deletion), and left in place it would stand in front of every following read, so it goes to the end of the list. The last two edges are scanned on a miss, so if it is read after all, it is found there.</p>
+  <ul class="fingers">
+    <li><strong>Swap two</strong> (<code>acbdef</code> after <code>abcdef</code>): one skip, then hits. One out-of-place read.</li>
+    <li><strong>Rotate</strong> (<code>bcdefa</code>): a skip, then a defer sends <code>a</code> to the end, where the last read finds it as a hit. Two out-of-place reads, for any length: <code>reorder.rotate-256</code> has 255 hits in 257 reads.</li>
+    <li><strong>Delete one</strong>: the same skip and defer; the deleted edge waits at the end and is cut.</li>
+    <li><strong>Move to the front</strong>: one tail read.</li>
+    <li><strong>Move back</strong>: the edge is found a few places ahead, a skip; the edge it skipped is deferred by the next read.</li>
+    <li><strong>Reverse</strong>: almost every read finds its edge among the last two. One move per read, at most two comparisons each: <code>reorder.reverse-8</code> is 6 tails, 1 skip and 2 hits.</li>
+  </ul>
+  <p>Try your own order. Drag the sources of the next run; the left lane is Quant, the right one is alien-signals 3.2.1, which keeps a link only when it is exactly the next one.</p>
   <ReorderStand />
 
-  <h2>The stable path: one comparison</h2>
-  <p>The dependency list is kept in read order, and a cursor points at the next relation the run is expected to touch. If the source being read is the one under the cursor, the read is a hit: one comparison, two stores, the cursor moves on. On <code>stable.wide-256</code> that is 256 hits for 256 reads, with no lookup and no allocation.</p>
+  <h2>Marking and indexing: once per run</h2>
+  <p>A read the scans cannot settle asks the source's subscribers. If this consumer's edge is the source's <em>first</em> subscriber, that lookup cost nothing beyond the read itself, and it is likely to be as cheap for the run's other sources. The run then <strong>marks</strong> its unread edges (one walk over the rest of its list, setting <code>ver</code> to <code>UNREAD</code>), and every later out-of-place read is one lookup through the source's subscribers: an unread edge moves to the cursor, a read one is a repeat. In the <a href="#lab" data-lab="shuffle">Shuffle</a> scenario, sixteen sources in a new order cost one mark walk, then hits and moves only.</p>
+  <p>If the edge is deeper, or the source has more than 8 subscribers before it, a subscriber lookup would walk other consumers' edges on every read. The run <strong>indexes</strong> instead: one walk over its own list puts each edge into its source's <code>slot</code>, and every later miss in the run is one load. The slot is not a persistent structure. It holds this consumer's edge only while this run is indexed and is cleared when the run ends; a new edge born in an indexed run is claimed into its slot at once.</p>
+  <p>No mode flag says which of the two a run is in. The structure proves it: an indexed run's cursor is in its source's slot, and a marked run's unread edges form one suffix starting right after the cursor.</p>
+  <Snippet code={PROOFS} />
+  <p><strong>Nesting.</strong> A computed read in the middle of a run may run itself, and index the same sources. Its <code>claim</code> finds the outer run's edge in a slot and pushes it onto the kernel's shared work stack before taking the slot; when the inner run ends, <code>unindex</code> clears its own slots and pops the outer cells back. The outer run's next read finds every cell where it left it. Nothing is rebuilt, and the stack is the same one propagation uses, kept between walks. The <a href="#lab" data-lab="nesting">Nesting</a> scenario shows all twelve of an outer run's cells taken and given back. Even a first run can index: once its list holds nine edges, the scan behind the cursor no longer reaches the start of the list, so it cannot prove a new source absent, and a source with more than 8 readers sends the run to its slots.</p>
 
-  <h2>A miss: cheapest exact proof first</h2>
-  <p>When the next relation is not the expected one, the runtime has to decide between three exact answers: this is a repeat, this relation exists elsewhere and must move, or this relation is new. It tries the proofs in order of cost.</p>
-  <ol class="ladder">
-    <li><span><strong>Repeat.</strong> The same source as the previous read.</span><em>O(1)</em></li>
-    <li><span><strong>Nobody reads it.</strong> A source with no subscribers cannot have a relation to anyone: it is new.</span><em>O(1)</em></li>
-    <li><span><strong>Bounded scans.</strong> Up to 8 relations of the unread suffix, then up to 8 of the accepted prefix.</span><em>≤ 8 each</em></li>
-    <li><span><strong>Subscriber lookup.</strong> The source's first 8 subscribers.</span><em>≤ 8</em></li>
-    <li><span><strong>Mark or index, once per pass.</strong> One walk over the consumer's own list marks its unread relations, or indexes them in a cell on each source.</span><em>O(d), once</em></li>
-    <li><span><strong>Every later miss</strong> in the pass is an exact answer from the mark or the cell.</span><em>O(1)</em></li>
-  </ol>
-  <p>The scan limit is a price limit, not a precision limit. "Not found within 8" never means "absent": it means "stop scanning and build the index". That is why tracking stays linear when hundreds of reads are shuffled, and why nothing here is a heuristic.</p>
-  <p>The index is not a persistent structure. The cell on a source holds the consumer's own relation only during an indexed pass and is cleared at its end. A nested computation that needs the same cells saves the displaced ones on the work stack and puts them back, which is what T3 requires.</p>
+  <h2 id="end">End of a run</h2>
+  <ul class="fingers">
+    <li><strong>Success.</strong> The unread suffix is cut: each edge leaves its source's subscriber list, and its own links are cleared. A cut edge that kept pointing into live lists would tie old garbage to newer garbage across collections; that is the retention bug the same invariant exposed in Vue 3.6 (<a href="https://github.com/vuejs/core/issues/16176">vuejs/core#16176</a>). The consumer's <code>gen</code> advances, which commits every edge born in the run. The graph holds live edges only (S4).</li>
+    <li><strong>Failure.</strong> Nothing is committed and the node owes a run. Every edge stays: those the attempt read, and those of the last success it did not reach, since they are still real dependencies and must still wake it. Edges born in the failed attempt are tentative (their <code>gen</code> is one ahead): they wake the node, and since they exist only while a run is owed, a watcher's check never pulls through them. A failed attempt drops the tentative edges an earlier one left beyond its cursor, so repeated failures do not pile up (S5).</li>
+    <li><strong>Disposal</strong> cuts every edge. A computed disposed during its own run keeps its list until that run ends.</li>
+    <li><strong>Untracked reads</strong> (<code>peek</code>, <code>untracked</code>, the function passed to <code>update</code>) bring the value up to date and record nothing.</li>
+    <li><strong>Generations wrap</strong> at 2<sup>30</sup>. Twice a cycle a successful run restamps its edges with its own generation, so no committed edge can ever look tentative.</li>
+  </ul>
 
   <h2>What the counters show</h2>
   <ReorderCallout />
-  <p>Structural work per step, counted, not timed (<code>node bench/structure.mjs</code>, LOG 50; counting, so the same on any machine). Skips, defers and tails are the reads the bounded scans settle; lookups go through the source's subscribers or the index:</p>
+  <p>Structural work per step of the benchmark scenarios, counted, not timed (<code>node bench/structure.mjs</code>; the same on any machine). Skips, defers and tails are settled by the list's own scans; lookups go through the source's subscribers or its slot, and moves are the edges they move.</p>
   <table class="num">
-    <tr><th>scenario</th><th>cursor hits / reads</th><th>skips + tails</th><th>lookups</th><th>moves</th><th>new / removed</th><th>alien-signals new / removed</th></tr>
-    <tr><td>stable.wide-256</td><td>256 / 256</td><td>0</td><td>0</td><td>0</td><td>0 / 0</td><td>0 / 0</td></tr>
-    <tr><td>reorder.rotate-256</td><td>255 / 257</td><td>2</td><td>0</td><td>0</td><td>0 / 0</td><td>255 / 255</td></tr>
-    <tr><td>edit.insert-one-256</td><td>256 / 258</td><td>1</td><td>0</td><td>0</td><td>0.5 / 0.5</td><td>65 / 65</td></tr>
-    <tr><td>shared-chaotic.64x32</td><td>150 / 2,080</td><td>2</td><td>1,952</td><td>1,928</td><td>0 / 0</td><td>2,002 / 2,002</td></tr>
-    <tr><td>long-reorder.256</td><td>6.6 / 257</td><td>0.06</td><td>250</td><td>250</td><td>0 / 0</td><td>255 / 255</td></tr>
-    <tr><td>replace-half.256</td><td>129 / 257</td><td>0</td><td>0</td><td>0</td><td>128 / 128</td><td>128 / 128</td></tr>
+    <tr><th>scenario</th><th>reads</th><th>cursor hits</th><th>skips + defers</th><th>tails</th><th>lookups</th><th>index + mark walks</th><th>moves</th><th>new / removed</th><th>alien-signals new / removed</th></tr>
+    <tr><td>stable.wide-256</td><td>256</td><td>256</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0 / 0</td><td>0 / 0</td></tr>
+    <tr><td>reorder.rotate-256</td><td>257</td><td>255</td><td>2</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0 / 0</td><td>255 / 255</td></tr>
+    <tr><td>reorder.reverse-8</td><td>9</td><td>2</td><td>1</td><td>6</td><td>0</td><td>0</td><td>0</td><td>0 / 0</td><td>7 / 7</td></tr>
+    <tr><td>edit.insert-one-256</td><td>258</td><td>256</td><td>1</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0.5 / 0.5</td><td>65 / 65</td></tr>
+    <tr><td>replace-half.256</td><td>257</td><td>129</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>128 / 128</td><td>128 / 128</td></tr>
+    <tr><td>branch.switch-100</td><td>300</td><td>200</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>100 / 100</td><td>100 / 100</td></tr>
+    <tr><td>value-sort.256x32</td><td>8,224</td><td>8,161</td><td>63</td><td>0.5</td><td>0</td><td>0</td><td>0</td><td>0 / 0</td><td>4,140 / 4,140</td></tr>
+    <tr><td>shared-chaotic.64x32</td><td>2,080</td><td>150</td><td>2</td><td>0</td><td>1,952</td><td>31 + 1</td><td>1,928</td><td>0 / 0</td><td>2,002 / 2,002</td></tr>
+    <tr><td>long-reorder.256</td><td>257</td><td>6.6</td><td>0.06</td><td>0</td><td>250</td><td>0 + 1</td><td>250</td><td>0 / 0</td><td>255 / 255</td></tr>
   </table>
-  <p>Read the last two columns together. Quant allocates a relation only when one is genuinely new: replacing half the sources creates 128, exactly as many as changed. No reorder allocates. A read that skips a relation moves the found one to the cursor and marks the skipped one, which is most likely read next (a swap costs one out-of-place read); skipped a second time, it goes to the end of the list, read later or never, so a rotation or dropping one source mid-list costs two out-of-place reads per pass and every other read is a cursor hit. A uniform random permutation of 256 sources is the hostile case and pays one walk and a move per read.</p>
-
-  <h2>When the run fails</h2>
-  <p>A throw in the middle of a run leaves the list in two parts: relations the attempt reached, and relations from the last success it did not reach. Both matter. The unreached ones are still real dependencies, so they are kept and still wake the node: pruning happens on success only. The ones born in the failed attempt are tentative: they wake it too, but a later validation does not treat them as proof. Repeated failures do not accumulate relations, which is one of the structural bounds.</p>
+  <p>Read the last two columns together. Quant allocates an edge only when one is genuinely new: replacing half the sources creates 128, exactly as many as changed, and no reorder creates any. The other columns are what that costs. Edits and sorts are settled by the list's own scans; only a run whose reads are scattered past every scan pays a walk, one per run, and then one lookup per read. <code>long-reorder.256</code>, a uniform random permutation of 256 sources, is the hostile case: one mark walk and 250 lookups and moves per run, still linear.</p>
 
   <h2>What it costs, honestly</h2>
-  <p>Against a runtime that relinks on every out-of-place read, moving is a large win: Quant takes 0.15 to 0.17 of alien-signals' time on the reorder scenarios. Against Reflex, whose tracking is specialized for permutations, Quant is the slower one there, at 1.20 to 1.21 of its time. The general machinery is cheaper to state and to check; it is not the fastest possible answer to a pure permutation. Numbers and method: <a href={href("/benchmarks/")}>benchmarks</a>. The picture of the same mechanism, step by step: <a href={href("/reactive-runtime-anatomy/")}>anatomy</a>.</p>
-  <EvidenceLinks items={["log", "report", "churn", "bench"]} />
+  <p>Against a runtime that relinks on every out-of-place read, moving is a large win: Quant takes 0.07 to 0.19 of alien-signals' time on the reorder scenarios. Against Reflex, whose tracking is specialized for permutations, it depends on the permutation: a rotation, two out-of-place reads per run, takes Quant 0.53 of Reflex's time, while a reversal and a uniform random permutation take 1.13 and 1.20. The general machinery is cheaper to state and to check; it is not the fastest possible answer to a pure permutation. Numbers and method: <a href={href("/benchmarks/")}>benchmarks</a>. The rest of the runtime, propagation and validation: <a href={href("/reactive-runtime-anatomy/")}>anatomy</a>. The tracking code itself is <code>read</code> and everything from <code>index</code> to <code>take</code> in <a href={`${REPO}/blob/main/src/kernel.ts`}>src/kernel.ts</a>.</p>
+  <EvidenceLinks items={["source", "contract", "log", "churn", "bench"]} />
 </Base>

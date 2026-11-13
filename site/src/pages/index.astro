@@ -44,7 +44,7 @@ import { BLOB, href } from "../site";
 
   <h2>Performance</h2>
   <BenchStrip />
-  <p>Reflex remains faster on reorders and sorts (Quant takes 1.20–1.43× its time there). Against alien-signals, the difference on reorders is structural:</p>
+  <p>On a rotated read order Quant takes 0.53× Reflex's time; Reflex remains faster on reversals, random permutations and sorts (Quant takes 1.13–1.20× its time there). Against alien-signals, the difference on reorders is structural:</p>
   <ReorderCallout />
   <p>More: <a href={href("/benchmarks/")}>benchmarks and methodology</a>, <a href={href("/alien-signals-comparison/")}>alien-signals vs Reflex Quant</a>, <a href={href("/vue-reactivity-comparison/")}>Vue reactivity vs signals</a>.</p>
 

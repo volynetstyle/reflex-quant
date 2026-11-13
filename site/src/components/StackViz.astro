@@ -1,7 +1,7 @@
 ---
 import "../styles/sv.css";
 // Application snippets executed step by step. The Quant recorder (src/scripts/sim.ts) reproduces
-// reflex-quant 1.1.2's callback order and output on every scenario; "naive" is a run-on-read
+// reflex-quant 1.2.0's callback order and output on every scenario; "naive" is a run-on-read
 // runtime with recursive push, for comparison.
 import { SCENARIOS } from "../scripts/sim";
 ---
@@ -36,7 +36,7 @@ import { SCENARIOS } from "../scripts/sim";
     <span class="sv-count"></span>
   </div>
   <figcaption>
-    The Quant run is recorded from a model of the kernel and host that reproduces reflex-quant 1.1.2 on every example:
+    The Quant run is recorded from a model of the kernel and host that reproduces reflex-quant 1.2.0 on every example:
     the same callbacks, in the same order, with the same output. <code>stack[]</code> holds edges: a <em>sibling</em> the
     push will come back to, or the <em>way back</em> up a pull. Edges in the graph are the live dependencies, so a branch
     switch adds and drops them. The naive runtime re-runs whatever is stale when read, nesting closures, and has no cutoff.

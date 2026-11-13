@@ -1,0 +1,48 @@
+---
+// Tracking lab: real reflex-quant runs each scenario in the browser; the lab draws the runtime's own
+// nodes after every read. Engine in scripts/tracking.ts, programs in scripts/tracking-scenarios.ts,
+// both checked against the kernel's counters by scripts/validate-tracking.mjs.
+import "../styles/tracking.css";
+const { start = "branch" } = Astro.props as { start?: string };
+---
+<figure class="tl" id="lab" data-tracking-lab data-start={start} tabindex="-1">
+  <div class="tl-tabs" role="tablist" aria-label="Scenario" data-tl-tabs></div>
+  <div class="tl-head"><p class="tl-blurb" data-tl-blurb></p><span class="tl-tags" data-tl-tags></span></div>
+  <div class="tl-cols">
+    <div class="tl-left">
+      <pre class="tl-code"><code data-tl-code></code></pre>
+      <div class="tl-sh">steps</div>
+      <ol class="tl-steps" data-tl-steps></ol>
+    </div>
+    <div class="tl-right">
+      <div data-tl-lists></div>
+      <div class="tl-sources" data-tl-sources hidden></div>
+    </div>
+  </div>
+  <p class="tl-say" aria-live="polite" data-tl-say></p>
+  <div class="tl-ctl">
+    <button type="button" data-tl="first" aria-label="Back to the start">⏮</button>
+    <button type="button" data-tl="prev">◀ Back</button>
+    <button type="button" data-tl="next" class="tl-go">Next ▶</button>
+    <button type="button" data-tl="play" aria-pressed="false">Play</button>
+    <input type="range" min="0" value="0" aria-label="Frame" data-tl-scrub />
+    <span class="tl-pos" data-tl-pos></span>
+  </div>
+  <p class="tl-tally" data-tl-tally></p>
+  <figcaption>
+    <span class="tl-legend">
+      <span><span class="tl-e read"><b>a</b><sub>#1</sub></span> read in this run</span>
+      <span><span class="tl-e ahead"><b>b</b><sub>#2</sub></span> not read yet</span>
+      <span><span class="tl-e ahead u"><b>c</b><i class="tl-m">u</i></span> marked unread</span>
+      <span><span class="tl-e ahead sk"><b>d</b><i class="tl-m">s</i></span> skipped once</span>
+      <span><span class="tl-e tent"><b>x</b></span> not committed</span>
+      <span><span class="tl-e slot"><b>p</b></span> in its source's slot</span>
+      <span><span class="tl-e gone"><b>y</b></span> removed</span>
+    </span>
+    Every chip is an edge object of the running runtime, numbered by identity: the same number is the same edge, reused. The lab reads the runtime's own fields after each read (<code>firstDep</code>, <code>nextDep</code>, <code>ver</code>, <code>gen</code>, <code>slot</code>, <code>firstSub</code>); the label says which proof of the kernel settled it. Labels and every step's read kinds are checked against the kernel's research counters on these programs and on 160 random ones (<code>site/scripts/validate-tracking.mjs</code>).
+  </figcaption>
+  <noscript><p class="note">The lab runs reflex-quant in the browser and needs JavaScript. The same traces print with <code>node site/scripts/validate-tracking.mjs --print reorder</code>.</p></noscript>
+</figure>
+<script>
+  import "../scripts/tracking-lab";
+</script>

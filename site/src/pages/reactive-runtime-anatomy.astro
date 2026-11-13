@@ -12,7 +12,7 @@ import StackViz from "../components/StackViz.astro";
 import { BLOB, href } from "../site";
 import { AGG } from "../bench";
 
-// Runnable demos. Each output below was checked against the development build of 1.1.2.
+// Runnable demos. Each output below was checked against the development build of 1.1.2 and 1.2.0.
 const SHAPES = `
 interface Node { flags; value; ver; fn; deps; subs; lastSub; slot; gen }  // 9 fields
 interface Edge { from; to; ver; gen; prev; next; prevSub; nextSub }     // 8 fields`;
@@ -163,13 +163,14 @@ console.log("after batch");`;
   <h3>How a read finds its edge, cheapest proof first</h3>
   <ol class="ladder">
     <li><span><strong>Cursor hit.</strong> The next edge in the list is this source: advance.</span><em>O(1), no lookup</em></li>
-    <li><span><strong>Repeat.</strong> Same source as the last read.</span><em>O(1)</em></li>
-    <li><span><strong>Slot.</strong> This pass already indexed the sources: <code>source.slot</code> points at the edge.</span><em>O(1)</em></li>
-    <li><span><strong>No subscribers.</strong> The source has none, so the edge cannot exist: create it.</span><em>O(1)</em></li>
-    <li><span><strong>Bounded scan</strong> of <code>SCAN = 8</code> edges: found, proven absent, or unknown.</span><em>≤ 8 steps</em></li>
-    <li><span><strong>Index once</strong>, then every later miss in the pass is a slot lookup.</span><em>one linear pass</em></li>
+    <li><span><strong>Repeat.</strong> The cursor's own source again.</span><em>O(1)</em></li>
+    <li><span><strong>Indexed run.</strong> <code>source.slot</code> holds the edge, or proves it absent.</span><em>O(1)</em></li>
+    <li><span><strong>Absent from the source's side.</strong> No subscribers, or one or two that are other readers.</span><em>O(1)</em></li>
+    <li><span><strong>Marked run.</strong> The source's first <code>SCAN = 8</code> subscribers.</span><em>≤ 8</em></li>
+    <li><span><strong>The list's own shapes.</strong> One past the cursor, the last two edges, 8 ahead, 8 behind: a skip, a deferred edge, a repeat, or absence when both scans reach the ends.</span><em>≤ 8 each</em></li>
+    <li><span><strong>Mark or index, once per run</strong>, through the source's subscribers; every later miss is rung 3 or 5.</span><em>one linear walk</em></li>
   </ol>
-  <p>"Not found in 8" never means "absent". The scan is a price limit, not a precision limit, so tracking never turns quadratic when hundreds of reads are shuffled.</p>
+  <p>"Not found in 8" never means "absent". The scan is a price limit, not a precision limit, so tracking never turns quadratic when hundreds of reads are shuffled. Every rung, live on the runtime: <a href={href("/dynamic-dependency-tracking/#lab")}>the tracking lab</a>.</p>
 
   <h3>State proven by structure, not stored</h3>
   <Snippet code={PROOFS} />

@@ -6,6 +6,6 @@ import { AGG, RUN } from "../bench";
 <ul>
   <li>On the project's CI suite ({AGG.n} scenarios, run <a href={RUN.url}>{RUN.id}</a>, {RUN.version}): geometric mean <strong>{AGG.best}×</strong> the time of the better of Reflex and alien-signals, <strong>{AGG.reflex}×</strong> Reflex, <strong>{AGG.alien}×</strong> alien-signals. Faster than both on {AGG.faster} of {AGG.n} scenarios, within 25 % of the better one on {AGG.within25}.</li>
   <li>Reorders allocate nothing: with 256 sources rotated every pass, Quant creates and removes no dependency relations, where alien-signals relinks 255.</li>
-  <li>Reflex remains faster on reorders and sorts (Quant takes 1.20–1.43× its time there).</li>
+  <li>Quant is faster than Reflex on a rotation (0.53× its time); Reflex remains faster on reversals, random permutations and sorts (Quant takes 1.13–1.20× its time there).</li>
 </ul>
 <p class="note">The suite is this project's own; lower is better. {RUN.machine}; {RUN.rivals}. Earlier snapshots: <a href={`${BLOB}/research/REPORT.md`}>REPORT.md (Q6)</a>, <a href={`${BLOB}/research/HISTORY.md`}>HISTORY.md</a>.</p>

@@ -2,7 +2,7 @@
 // `import ... from "reflex-quant"` is rewritten to the published development build on jsDelivr
 // (it has no imports of its own, and its development build reports cycles as "Cycle detected").
 
-export const QUANT_URL = "https://cdn.jsdelivr.net/npm/reflex-quant@1.1.2/dist/index.development.js";
+export const QUANT_URL = "https://cdn.jsdelivr.net/npm/reflex-quant@1.2.0/dist/index.development.js";
 const TIMEOUT_MS = 3000;
 
 export type Line = { kind: "log" | "warn" | "error" | "info"; text: string };

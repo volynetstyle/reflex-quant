@@ -1,11 +1,13 @@
-// Scenario medians from CI benchmark run 42794143933 (reflex-quant 1.1.2, 2026-11-10).
+// Scenario medians from CI benchmark run 43479214912 (reflex-quant 1.2.0, commit 85049b4, 2026-11-13).
 // Copied from the run's "scenarios *" job logs; aggregates below are computed, not typed.
+// The logs round to two decimals, so fan-out.effects-1000 (0.998 of the better rival) counts as
+// a tie here; research/HISTORY.md uses unrounded ratios and counts it among the wins.
 export const RUN = {
-  id: "42794143933",
-  url: "https://github.com/volynetstyle/reflex-quant/actions/runs/42794143933",
-  version: "1.1.2",
-  date: "2026-11-10",
-  // Five scenario jobs on four runner CPUs (Xeon 8573C, Xeon 8370C, EPYC 7763, EPYC 9V74);
+  id: "43479214912",
+  url: "https://github.com/volynetstyle/reflex-quant/actions/runs/43479214912",
+  version: "1.2.0",
+  date: "2026-11-13",
+  // Five scenario jobs on four runner CPUs (EPYC 9V45, EPYC 9V74, Xeon 8573C, EPYC 7763);
   // every ratio compares the three libraries inside one job, never across runners.
   machine: "Node 22.23.4, 9 rounds; each ratio measured within one runner",
   rivals: "Reflex bf71877, alien-signals 3.2.1",
@@ -13,24 +15,24 @@ export const RUN = {
 
 /** [scenario, quant/best, quant/reflex, quant/alien] */
 export const ROWS: [string, number, number, number][] = [
-  ["batch.writes-32", 0.55, 0.55, 0.45],
-  ["shared-chaotic.64x32", 0.78, 0.78, 0.22],
-  ["branch.switch-100", 0.87, 0.87, 0.47],
-  ["fan-out.effects-1000", 0.88, 0.84, 0.88],
-  ["replace-half.256", 0.91, 0.91, 0.77],
-  ["diamond.8x8", 0.93, 0.93, 0.75],
-  ["fan-in.1024", 0.99, 0.99, 0.38],
-  ["lifecycle.mount-100", 1.04, 0.66, 1.04],
-  ["edit.insert-one-256", 1.06, 1.06, 0.21],
-  ["static.chain-100", 1.09, 1.09, 0.93],
-  ["stable.wide-256", 1.17, 1.17, 0.47],
+  ["reorder.rotate-256", 0.53, 0.53, 0.07],
+  ["batch.writes-32", 0.61, 0.61, 0.56],
+  ["edit.insert-one-256", 0.7, 0.7, 0.14],
+  ["shared-chaotic.64x32", 0.73, 0.73, 0.24],
+  ["replace-half.256", 0.74, 0.74, 0.63],
+  ["branch.switch-100", 0.82, 0.82, 0.46],
+  ["diamond.8x8", 0.99, 0.99, 0.72],
+  ["fan-out.effects-1000", 1.0, 0.97, 1.0],
+  ["fan-in.1024", 1.06, 1.06, 0.45],
+  ["fan-out.computeds-1000", 1.07, 1.07, 0.73],
+  ["lifecycle.mount-100", 1.1, 0.73, 1.1],
+  ["static.chain-100", 1.11, 1.11, 0.96],
+  ["reorder.reverse-8", 1.13, 1.13, 0.16],
+  ["stable.wide-256", 1.13, 1.13, 0.45],
   ["stable.wide-8", 1.17, 1.17, 0.58],
-  ["fan-out.computeds-1000", 1.18, 1.18, 0.86],
-  ["reorder.rotate-256", 1.2, 1.2, 0.15],
-  ["reorder.reverse-8", 1.2, 1.2, 0.17],
-  ["long-reorder.256", 1.21, 1.21, 0.17],
+  ["value-sort.256x32", 1.19, 1.19, 0.3],
+  ["long-reorder.256", 1.2, 1.2, 0.19],
   ["static.read-clean", 1.22, 1.1, 1.22],
-  ["value-sort.256x32", 1.43, 1.43, 0.3],
 ];
 
 const geo = (i: number) => Math.exp(ROWS.reduce((s, r) => s + Math.log(r[i] as number), 0) / ROWS.length);
