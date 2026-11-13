@@ -36,13 +36,15 @@ import { computed, effect, get, set, signal } from "reflex-quant";
 const full = signal(false);
 const first = signal("Ada");
 const last = signal("Lovelace");
-const name = computed(() => (get(full) ? `${get(first)} ${get(last)}` : get(first)));
+const name = computed(() =>
+  get(full) ? `${get(first)} ${get(last)}` : get(first),
+);
 
 effect(() => console.log(get(name))); // "Ada"        name reads full, first
-set(last, "Byron");                   // nothing runs: last was not read
-set(full, true);                      // "Ada Byron"  name now reads last too
-set(full, false);                     // "Ada"        last is dropped again
-set(last, "King");                    // nothing runs
+set(last, "Byron"); // nothing runs: last was not read
+set(full, true); // "Ada Byron"  name now reads last too
+set(full, false); // "Ada"        last is dropped again
+set(last, "King"); // nothing runs
 ```
 
 When a computation reads the same sources in a different order, its
@@ -51,6 +53,17 @@ pass (`reorder.rotate-256`), quant creates and removes no relations per
 pass, where alien-signals relinks 255 (`node bench/structure.mjs`).
 
 ## Results
+
+- An port of Quant's invariants to Vue 3.6 exposed two regressions 
+  in the Alien-derived reactivity core, both also reproducible in 
+  `alien-signals` 3.2.0: a lost update caused by repeated dependency relations
+  interacting with in-run invalidation ([vuejs/core#16174](https://github.com/vuejs/core/issues/16174)), 
+  and generational-GC retention caused by removed links retaining pointers into 
+  their former lists ([vuejs/core#16176](https://github.com/vuejs/core/issues/16176)). 
+  Both reports resulted in upstream fixes and permanent 
+  regression tests in Vue ([#16210](https://github.com/vuejs/core/pull/16210), 
+  [#16211](https://github.com/vuejs/core/pull/16211)). This is 
+  external evidence for the model as a diagnostic tool, not only as an implementation or benchmark target.
 
 - Equal to Reflex's executable spec, with three documented choices applied,
   on all 27,061 bounded and 18,660 recovery programs and on 100,000
@@ -81,11 +94,11 @@ a field, a flag or a branch on a hot path ([research/LOG.md](research/LOG.md) it
 ```ts
 const a = signal(1);
 const total = computed((prev) => prev + get(a), 0); // prev: last committed value
-get(total);                                         // refresh and observe
-peek(total);                                        // refresh, do not observe
+get(total); // refresh and observe
+peek(total); // refresh, do not observe
 set(a, 2);
-update(a, (v) => v + 1);                            // untracked fn, then set
-dispose(total);                                     // detach; the value stays readable
+update(a, (v) => v + 1); // untracked fn, then set
+dispose(total); // detach; the value stays readable
 ```
 
 - `computed(fn, initial?)`: `prev` is the last **successfully committed** value
