@@ -1408,6 +1408,49 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   fan-out.effects-1000 0.51 (2.14x -> 1.09x), write.same-value 0.43; every
   other mechanism and graph scenario within round-to-round spread.
 
+### 49. Absence from the source's side; the first relation and repeats in `read` (optimization)
+
+- **Classification:** optimization; same answers, no new state or field.
+- **Witnesses (CI run 43417637122, quant/Reflex):**
+  `track.replace-all-256` 1.67 (a computed alternating between two sets of
+  256 sources, each with one other reader), `track.duplicate-64` 1.55,
+  `lifecycle.computed-create` 1.25. On `replace-all-256` every read was
+  absent, yet paid the tail, forward and prefix scans and a subscriber
+  lookup (about 20 comparisons) before the link; Reflex answers from the
+  producer in O(1) (its sole outgoing edge goes to another consumer).
+- **Change:**
+  - `miss` proves a source absent from its own side before any scan: no
+    subscribers (LOG 22), or its first and last subscribers, which the
+    ring gives one load apart (LOG 47), are all it has and neither is the
+    reader (`alien`). Taken from Reflex's producer-side probes.
+  - `read` settles two more reads itself, as Reflex's resolver does: the
+    cursor's own source again (a repeat, P5) and the first read of an
+    empty list (links at once). The repeat check left `miss`, where it was
+    now dead.
+  - The reader-list scans move back out of `miss` into `near`: with absent
+    sources settled before them, only out-of-place reads of existing
+    relations pay the call. `read` 146, `miss` 151, `near` 312 B of
+    bytecode, far under V8's 460 (the single `miss` of LOG 47 was 437 B,
+    and the suspect for `value-sort.256x32` going 1.10 -> 1.43 in CI, bimodal
+    across rounds and not reproduced locally on Node 22 or 25).
+- **Evidence:** the absence structure test now gives half its sources two
+  other readers and requires no subscriber lookup and no sweep; the new
+  ablation `no-source-absence` fails it. `no-fresh-source`,
+  `no-repeat-check` and `repeat-refresh` were re-anchored and are killed.
+  The first-relation tier saves calls, not structural work, so only timing
+  sees it and it has no ablation. The site's reorder model needed no change
+  (4,800 passes match per read kind). Production tests 179 passed, seven
+  skipped; bench checksums equal. ESM bundle 2,601 -> 2,650 B gzip.
+- **Timing (local, against main, 9–15 rounds, not evidence):**
+  replace-all-256 0.52 (Node 22) and 0.54 (Node 25); computed-create 0.95
+  (Node 22), 1.01 (Node 25); duplicate-64 0.97 / 0.98; link-fanout-256
+  +0–10 % (more than two subscribers: three loads that prove nothing);
+  hot read paths within spread. Left: duplicate-64 stays about 1 ns per
+  repeat behind Reflex, whose signal read skips the pull test and whose
+  cursor is a consumer field (LOG 30 and LOG 43 chose otherwise);
+  computed-create about 15 % behind on Node 22, all of it in the first read
+  and link (a first run without reads is level).
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

@@ -192,7 +192,14 @@ export function read(n: Node): unknown {
 
       cursor = next;
       next.ver = n.ver;
-    } else miss(c, n, last, next);
+    } else if (last !== null) {
+      // The cursor's own source again: a repeat keeps its first observation
+      // (P5); anything else is resolved by `miss`.
+      if (last.from !== n) miss(c, n, last, next);
+      else if (__STATS__) stats.repeats++;
+    } else if (next !== null) miss(c, n, last, next);
+    // No relation yet: the first read of a first run links at once.
+    else link(c, n, null, null);
   }
   return value;
 }
@@ -552,38 +559,43 @@ export function link(
 }
 
 // Exact dependency tracking: resolve a read outside the stable cursor path.
-// Proofs come cheapest first: the cursor (in `read`), the previous read, a
-// source nobody reads, bounded scans of this reader's list, then the source's
-// first subscribers. Only a source with more subscribers than the budget needs
-// the slot index. Slot walks and edge creation remain in the kernel because
+// Proofs come cheapest first: in `read`, the edge after the cursor, the
+// cursor's own (a repeat) and an empty list (the first relation); then a
+// source nobody reads or whose at most two subscribers are other readers,
+// bounded scans of this reader's list, and the source's first subscribers.
+// Only a source with more subscribers than the budget needs the slot index. Slot walks and edge creation remain in the kernel because
 // they mutate its shared stack.
 
 /**
- * A read that is not the next edge in read order. Every answer is exact. A
- * repeated read keeps the version of the pass's first observation (P5): a
- * change between the two reads stays visible to the next validation.
+ * A read that is neither the next edge in read order, nor the cursor's, nor
+ * the first relation of an empty list. Every answer is exact. A repeated read
+ * keeps the version of the pass's first observation (P5): a change between
+ * the two reads stays visible to the next validation.
  */
 function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
-  if (last !== null) {
-    const from = last.from;
-
-    if (from === s) {
-      if (__STATS__) stats.repeats++;
-
-      return;
-    }
-    // An indexed pass owns its cursor's source slot. Nested passes restore it.
-    if (from.slot === last) return slot(c, s, last, next);
-  }
+  // An indexed pass owns its cursor's source slot. Nested passes restore it.
+  if (last !== null && last.from.slot === last) return slot(c, s, last, next);
   const first = s.firstSub;
 
-  // A source without subscribers is absent, whatever the unread suffix mode.
-  if (first === null) return link(c, s, last, next);
+  // Absent, whatever the unread suffix mode: a source nobody reads, or one
+  // whose first and last subscribers, all it has, are other readers.
+  if (first === null || alien(first, c)) return link(c, s, last, next);
 
   // Marking, moves and links preserve a continuous UNREAD suffix.
   if (next !== null && next.ver === UNREAD)
     return settle(c, s, last, next, pair(first, c));
 
+  near(c, s, last, next, first);
+}
+
+/** A miss that neither source proves absent nor a marked pass looks up. */
+function near(
+  c: Node,
+  s: Node,
+  last: Edge | null,
+  next: Edge | null,
+  first: Edge,
+): void {
   // Bounded scans of this reader's list: the unread suffix from its end and
   // after `next` (a match is the pair's only edge), the accepted prefix (a
   // match is a repeat). Absence needs one side scanned completely: this
@@ -684,6 +696,21 @@ function slot(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   if (cell !== null && cell.to === c) return take(c, cell, s, last, next);
   link(c, s, last, next);
   claim(s, cursor as Edge);
+}
+
+/**
+ * Whether the source's subscriber list, at most two edges long, holds no edge
+ * to `c`: its first and last subscribers are one load apart (the first one's
+ * prevSub), so this proves absence before the reader's list is scanned.
+ */
+function alien(first: Edge, c: Node): boolean {
+  const tail = first.prevSub!;
+
+  return (
+    first.to !== c &&
+    tail.to !== c &&
+    (tail === first || first.nextSub === tail)
+  );
 }
 
 /**

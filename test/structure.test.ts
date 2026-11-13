@@ -108,7 +108,10 @@ describe("structural bounds", () => {
     const cond = signal(true);
     const a = range(50).map(signal);
     const b = range(50).map(signal);
-    [...a, ...b].forEach((p) => read(computed(() => read(p)))); // one other subscriber each
+    // One other subscriber on each of a, two on each of b: the source's first
+    // and last subscribers are all it has, so neither is the reader (LOG 49).
+    a.forEach((p) => read(computed(() => read(p))));
+    b.forEach((p) => range(2).forEach(() => read(computed(() => read(p)))));
     const tail = range(20).map(signal); // a long list, so neither scan is complete
     const cs = range(50).map((k) =>
       computed(() => {
@@ -125,6 +128,8 @@ describe("structural bounds", () => {
     }
     expect(stats.indexes).toBe(0);
     expect(stats.links).toBe(10 * 50);
+    // Proven absent from the source's side: no subscriber lookup, no sweep.
+    expect([stats.lookups, stats.sweeps]).toEqual([0, 0]);
   });
 
   it("LOG 22: a source nobody reads is linked without a scan's proof or a lookup", () => {
