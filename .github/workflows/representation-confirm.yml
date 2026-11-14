@@ -1,0 +1,115 @@
+name: Confirm direct drain representation
+
+on:
+  push:
+    branches: [experiment/representation-shapes]
+    paths:
+      - ".github/workflows/representation-confirm.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: representation-confirm-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  timing:
+    name: Confirm / ${{ matrix.shard.name }} / repeat ${{ matrix.repeat }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        repeat: [1, 2]
+        shard:
+          - {
+              name: surface,
+              suite: mechanisms,
+              only: "^(read|write|lifecycle)[.]",
+            }
+          - { name: tracking, suite: mechanisms, only: "^track[.]" }
+          - {
+              name: propagation,
+              suite: mechanisms,
+              only: "^(push|pull|effect|batch)[.]",
+            }
+          - {
+              name: graph-static,
+              suite: scenarios,
+              only: "^(static|stable|diamond|fan-in|fan-out)[.]",
+            }
+          - {
+              name: graph-dynamic,
+              suite: scenarios,
+              only: "^(branch|edit|reorder|value-sort|replace-half)[.]",
+            }
+          - {
+              name: graph-churn,
+              suite: scenarios,
+              only: "^(shared-chaotic|long-reorder|batch|lifecycle)[.]",
+            }
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Require the exact runtime bundles already contract-tested in run 43615304300
+        run: |
+          node research/try-sites.mjs --prepare-only --pick baseline,baseline-control,drain-direct
+          node --input-type=module -e 'import fs from "node:fs"; const m=JSON.parse(fs.readFileSync(".cache/try-sites/sites.json","utf8")); const expected={baseline:"2464c3f31ebbd089605d004a3d235b4c86856961fdc34c076ce9d78df4952f7d","baseline-control":"2464c3f31ebbd089605d004a3d235b4c86856961fdc34c076ce9d78df4952f7d","drain-direct":"8df7cc1f2a23b01698ba7e6310bfb7920ca10df4970b3a8cdabb7b337169e6ba"}; for(const v of m.artifacts) if(v.sha256!==expected[v.name]) throw Error(v.name+" changed; repeat correctness checks before timing");'
+      - name: Ten shuffled rounds over every workload with A/A
+        env:
+          SUITE: ${{ matrix.shard.suite }}
+          ONLY: ${{ matrix.shard.only }}
+          REPEAT: ${{ matrix.repeat }}
+        run: |
+          mkdir -p artifacts
+          lscpu > artifacts/cpu.txt
+          cpu=$(awk '/Cpus_allowed_list/ {split($2,a,/[-,]/); print a[1]}' /proc/self/status)
+          taskset -c "$cpu" node research/try-sites.mjs --pick baseline,baseline-control,drain-direct --suite "$SUITE" --all-workloads --only "$ONLY" --rounds 10 --cooldown 0 --require-affinity --seed "$((837421 + REPEAT))" --label result
+          cp .cache/try-sites/result.json artifacts/results.json
+          cp .cache/try-sites/sites.json artifacts/manifest.json
+          node research/try-sites-report.mjs artifacts/results.json | tee artifacts/results.md
+          cat artifacts/results.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: repr-confirm-${{ matrix.shard.name }}-${{ matrix.repeat }}
+          path: artifacts/
+          retention-days: 30
+
+  report:
+    name: All 44 workloads, per-runner ratios
+    needs: timing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: repr-confirm-*
+          path: results
+      - name: Check complete coverage and summarize
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const counts=new Map(); for(const d of fs.readdirSync("results")){const r=JSON.parse(fs.readFileSync("results/"+d+"/results.json","utf8"));for(const id of Object.keys(r.samples))counts.set(id,(counts.get(id)||0)+1);} if(counts.size!==44||[...counts.values()].some(n=>n!==2))throw Error("expected exactly two independent jobs for each of 44 workloads");'
+          node research/representation-report.mjs results | tee report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: repr-confirm-summary
+          path: report.md
+          retention-days: 30

@@ -155,11 +155,11 @@ export const representationWorkloads = {
     ["mechanisms", "lifecycle.effect-mount-dispose"],
   ],
   "miss-tail": [
-    ["mechanisms", "track.swap-32"],
-    ["scenarios", "reorder.reverse-8"],
     ["scenarios", "reorder.rotate-256"],
+    ["scenarios", "reorder.reverse-8"],
+    ["mechanisms", "track.fresh-after-reorder-64"],
     ["mechanisms", "track.stable-64"],
-    ["mechanisms", "track.replace-all-256"],
+    ["mechanisms", "track.swap-32"],
   ],
   "verify-recovery": [
     ["mechanisms", "pull.validate-wide-256"],

@@ -290,10 +290,15 @@ const scenarios =
     : suites[suite]
         .filter((s) =>
           filter === "all"
-            ? suite === "scenarios" || ids.includes(s.id)
+            ? args.includes("--all-workloads") ||
+              suite === "scenarios" ||
+              ids.includes(s.id)
             : s.id === filter,
         )
         .map((s) => ({ ...s, suite }));
+const only = new RegExp(value("--only", "."));
+for (let i = scenarios.length - 1; i >= 0; i--)
+  if (!only.test(scenarios[i].id)) scenarios.splice(i, 1);
 if (!scenarios.length) throw new Error(`unknown scenario ${filter}`);
 if (filter !== "all")
   scenarios.splice(

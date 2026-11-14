@@ -27,6 +27,13 @@ The failure helpers add a constant call depth only on the already failing path.
 The tracking helper retains the original bounded loops. No per-read allocation,
 new field, ownership policy or execution obligation is introduced.
 
+Structural preflight identified `track.swap-32` as alternating disjoint source
+sets (32 links/unlinks per step and no scan hits), so it is an allocation-path
+neighbor rather than the primary reorder probe. The tracking primary is
+`reorder.rotate-256` (scan hits with zero new/removed links), with reverse,
+fresh-after-reorder and stable-read neighbors. Names alone do not identify
+the exercised mechanism.
+
 ## Reproduction and checks
 
 `representation-variants.mjs` defines transformations and target/neighbor sets.
@@ -67,3 +74,65 @@ target improvement beyond its A/A control, avoid unacceptable neighboring
 regressions, and have a machine-code explanation when the measured effect is
 large. Surviving candidates require broader production-bundle validation before
 adoption. Unrepeatable or regressing changes are rejected from the runtime.
+
+## First-pass results
+
+[Run 43615304300](https://github.com/volynetstyle/reflex-quant/actions/runs/43615304300),
+commit `2ae3b85`, completed successfully. All five source variants passed the
+full default suites in both modes, and the six counting builds matched all
+44 programs exactly. Production has 180 passing tests plus seven development-only
+skips; development has 187 passing tests.
+
+Fifteen-round median changes from the runner's baseline:
+
+| Candidate / workload                     | Repeat 1 |  A/A 1 | Repeat 2 |   A/A 2 | First-pass decision                             |
+| ---------------------------------------- | -------: | -----: | -------: | ------: | ----------------------------------------------- |
+| drain-direct / push.effects-1000         |  -11.28% | +0.51% |   -3.30% | +12.12% | Survives screening; broad confirmation needed   |
+| drain-direct / fan-out.effects-1000      |  -10.63% | +0.09% |  -13.24% | -10.36% | Same direction, but A/A instability matters     |
+| exec-recovery / pull.recompute-chain-100 |   -0.83% | -2.27% |   -0.58% |  -0.72% | No material target benefit; reject from runtime |
+| miss-tail / reorder.rotate-256           |   -0.85% | +0.15% |   +2.03% |  -0.11% | Does not repeat; reject from runtime            |
+| verify-recovery / pull.validate-wide-256 |   +1.02% | +4.93% |   -0.71% |  -0.60% | Does not repeat; reject from runtime            |
+
+The miss-tail job's original primary label and trace use `track.swap-32`.
+Rotation and reversal were nevertheless both timed as neighbors. Structural
+inspection corrected the mechanism attribution; the revised configuration
+makes rotation the primary and adds a fresh-after-reorder neighbor for future
+manual runs. No machine-code conclusion about the rotation is drawn from the
+old disjoint-source trace. It is not necessary to repeat a rejected candidate
+merely to obtain a more favorable workload.
+
+Neighbors of drain-direct remained close to their baselines: batching -0.66%
+and +0.02%; computed-to-effect delivery -1.44% and +0.59%; effect mount/dispose
+-0.02% and -0.09%. The direct target still has overlapping and apparently
+multi-modal baseline ranges, so its improvement is not summarized as a fixed tax.
+
+Captured code sizes also separate the hypotheses:
+
+| Changed function | Baseline bytecode | Candidate bytecode |  Baseline optimized instruction bytes | Candidate optimized instruction bytes |
+| ---------------- | ----------------: | -----------------: | ------------------------------------: | ------------------------------------: |
+| drain            |               194 |                237 |                                  3468 |                                  4236 |
+| exec             |               295 |                281 |                                  2544 |                                  2372 |
+| miss             |               290 |                223 | Not compiled standalone in this probe | Not compiled standalone in this probe |
+| verify           |               385 |                288 |                                  3436 |                                  3472 |
+
+Thus a smaller source/bytecode did not make exec or verify materially faster.
+Conversely, the direct drain variant is larger. Its ordinary inlining log
+records `exec -> drain` directly; the baseline records `exec -> deliver -> drain`.
+Those ordinary logs retain concurrent compilation and report no executed deopts
+in the direct-delivery probe. The separate graph-dump process sees baseline drain
+calling deliver and candidate drain inlining exec. Neither capture is asserted
+to be every timed worker's exact compilation history.
+
+## Broad confirmation of the surviving candidate
+
+The confirmation workflow measures all 44 workloads, in six non-overlapping
+shards, with two independent repetitions of ten shuffled rounds and an A/A
+control in every job. It checks complete coverage and compares only ratios
+within each runner. Before timing it requires the exact bundle hashes already
+contract-tested above, so a changed candidate cannot silently reuse that proof:
+
+- baseline and A/A: `2464c3f31ebbd089605d004a3d235b4c86856961fdc34c076ce9d78df4952f7d`;
+- drain-direct: `8df7cc1f2a23b01698ba7e6310bfb7920ca10df4970b3a8cdabb7b337169e6ba`.
+
+The broad first-pass workflow remains manually runnable; confirming one survivor
+does not automatically rerun the other three rejected candidates.
