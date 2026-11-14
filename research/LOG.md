@@ -1537,3 +1537,25 @@ slot cells have been restored (LOG 43, superseding LOG 39's node-field reset).
 Written for V8: one node shape and one edge shape, each built at a single
 site; numeric fields are SMI counters (masked); conditions are explicit
 comparisons, so no ToBoolean runs on mixed values; the graph walks avoid recursion and allocation per stable read.
+
+## Local Collections prototype (2026-11-14)
+
+- **Classification:** separate collection-layer semantic/structural machine,
+  not an addition to Quant's frozen mechanism basis. Its own
+  [contract](collections/CONTRACT.md) defines I1-I8 before measurement.
+- **Witnesses:** owned immutable rows, exact shared indexes, coherent publication,
+  rollback on late maintenance failure, one-row predicate locality, and a Quant
+  graph independent of row count. Generated mutation sequences are checked
+  against full recomputation. Joins and query parameters remain deferred.
+- **Representation:** sparse transactional writes over Maps; pure old/new row
+  projections avoid persistent per-row key/sum caches. Group counts reuse bucket
+  sizes. Only operator construction allocates two Quant scalar nodes.
+- **Local evidence:** 17 prototype tests pass in development and production;
+  type checking passes. At N=10 and 1,000 a group-changing patch has predicate=1,
+  key projections=3, bigint projections=2, index probes=6, store reads=21,
+  staged writes=7. There are 11 actual Quant node creations including an explicit
+  effect, with no new nodes on mutation. No timing claim is made.
+- **CI:** the isolated `experiment/local-collections` branch runs both frozen
+  core contracts and this prototype, then checks the same work counters at
+  N=1,000 / 10,000 / 100,000 / 1,000,000. See `collections/RESULTS.md` once that
+  evidence is available. The production runtime and its contract are unchanged.

@@ -1,0 +1,89 @@
+name: Local Collections contract prototype
+
+on:
+  push:
+    branches: [experiment/local-collections]
+    paths:
+      - "research/collections/**/*.ts"
+      - "research/collections/**/*.mjs"
+      - "research/collections/**/*.json"
+      - ".github/workflows/collections.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: collections-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  contract:
+    name: Collection and core contracts / ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [development, production]
+    env:
+      NODE_OPTIONS: --max-old-space-size=2048
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node node_modules/typescript/bin/tsc -p research/collections/tsconfig.json
+      - name: Collection invariants and recomputation oracle
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          mkdir -p artifacts
+          node node_modules/vitest/vitest.mjs run --config research/collections/vitest.config.ts --mode "$MODE" --reporter=json --outputFile=artifacts/collections.json
+      - name: Frozen Quant contract remains valid
+        env:
+          MODE: ${{ matrix.mode }}
+        run: node node_modules/vitest/vitest.mjs run --config vitest.config.ts --mode "$MODE" --maxWorkers=1 --reporter=json --outputFile=artifacts/core.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: collections-tests-${{ matrix.mode }}
+          path: artifacts/
+          retention-days: 30
+
+  structural-witness:
+    name: One-row locality from 1,000 to 1,000,000 rows
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node research/collections/build-witness.mjs
+      - name: Count real nodes, probes and evaluations; no timing benchmark
+        run: |
+          mkdir -p artifacts
+          lscpu > artifacts/cpu.txt
+          cpu=$(awk '/Cpus_allowed_list/ {split($2,a,/[-,]/); print a[1]}' /proc/self/status)
+          taskset -c "$cpu" node --expose-gc --max-old-space-size=2048 .cache/collections/witness.mjs 1000,10000,100000,1000000 | tee artifacts/witness.json
+          { echo '## Locality witness'; echo; echo '```json'; cat artifacts/witness.json; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: collections-locality-witness
+          path: artifacts/
+          retention-days: 30
