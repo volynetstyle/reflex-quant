@@ -1557,5 +1557,8 @@ comparisons, so no ToBoolean runs on mixed values; the graph walks avoid recursi
   effect, with no new nodes on mutation. No timing claim is made.
 - **CI:** the isolated `experiment/local-collections` branch runs both frozen
   core contracts and this prototype, then checks the same work counters at
-  N=1,000 / 10,000 / 100,000 / 1,000,000. See `collections/RESULTS.md` once that
-  evidence is available. The production runtime and its contract are unchanged.
+  N=1,000 / 10,000 / 100,000 / 1,000,000. Run 43626132260 passed all three jobs:
+  17 collection tests in both modes, core 187 development / 180 production
+  (seven skipped), and identical work counters through one million rows. See
+  [results](collections/RESULTS.md). The production runtime and its contract
+  are unchanged.

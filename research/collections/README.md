@@ -5,6 +5,9 @@ over Quant's public API. It is not part of the published package. Quant's source
 contract and mechanism basis are unchanged. Read [CONTRACT.md](CONTRACT.md) for
 the exact supported semantics, preconditions and costs.
 
+[First CI results](RESULTS.md): all contracts pass, and the one-row work
+counters are identical from 1,000 through 1,000,000 rows.
+
 ```ts
 import { get, effect } from "../../src/index";
 import { createCollections } from "./index";
