@@ -1,0 +1,212 @@
+name: Quant representation experiments
+
+on:
+  push:
+    branches: [experiment/representation-shapes]
+    paths:
+      - "research/representation-*.mjs"
+      - "research/try-sites.mjs"
+      - "research/try-symbols.mjs"
+      - ".github/workflows/representation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: representation-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  contract:
+    name: Contract / ${{ matrix.variant }} / ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        variant:
+          [baseline, drain-direct, exec-recovery, miss-tail, verify-recovery]
+        mode: [development, production]
+    env:
+      NODE_OPTIONS: --max-old-space-size=2048
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Build independent candidate
+        env:
+          VARIANT: ${{ matrix.variant }}
+        run: |
+          mkdir -p artifacts
+          pick=baseline
+          if [ "$VARIANT" != baseline ]; then pick="baseline,$VARIANT"; fi
+          node research/try-sites.mjs --prepare-only --pick "$pick"
+          node node_modules/typescript/bin/tsc -p ".cache/try-sites/$VARIANT/tsconfig.json"
+      - name: All default semantic and structural tests
+        env:
+          VARIANT: ${{ matrix.variant }}
+          MODE: ${{ matrix.mode }}
+        run: QUANT_SRC=".cache/try-sites/$VARIANT/src" node node_modules/vitest/vitest.mjs run --config vitest.config.ts --mode "$MODE" --maxWorkers=1 --reporter=json --outputFile=artifacts/tests.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: repr-tests-${{ matrix.variant }}-${{ matrix.mode }}
+          path: artifacts/
+          retention-days: 30
+
+  structure:
+    name: Exact work and allocation counters
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: |
+          mkdir -p artifacts
+          node research/try-sites.mjs --structure-only --pick baseline,baseline-control,drain-direct,exec-recovery,miss-tail,verify-recovery
+          cp .cache/try-sites/structure.json .cache/try-sites/sites.json artifacts/
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: repr-structure
+          path: artifacts/
+          retention-days: 30
+
+  timing:
+    name: Timing / ${{ matrix.variant }} / repeat ${{ matrix.repeat }}
+    needs: [contract, structure]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [drain-direct, exec-recovery, miss-tail, verify-recovery]
+        repeat: [1, 2]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Target and neighboring workloads on the same pinned runner
+        env:
+          VARIANT: ${{ matrix.variant }}
+          REPEAT: ${{ matrix.repeat }}
+        run: |
+          mkdir -p artifacts
+          lscpu > artifacts/cpu.txt
+          grep -E 'Cpus_allowed|Mems_allowed' /proc/self/status >> artifacts/cpu.txt
+          cpu=$(awk '/Cpus_allowed_list/ {split($2,a,/[-,]/); print a[1]}' /proc/self/status)
+          taskset -c "$cpu" node research/try-sites.mjs --pick "baseline,baseline-control,$VARIANT" --area "$VARIANT" --rounds 15 --cooldown 0 --require-affinity --seed "$((625341585 + REPEAT))" --label result
+          cp .cache/try-sites/result.json artifacts/results.json
+          cp .cache/try-sites/sites.json artifacts/manifest.json
+          node research/try-sites-report.mjs artifacts/results.json | tee artifacts/results.md
+          cat artifacts/results.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: repr-timing-${{ matrix.variant }}-${{ matrix.repeat }}
+          path: artifacts/
+          retention-days: 30
+
+  traces:
+    name: Machine code / ${{ matrix.target.variant }}
+    needs: [contract, structure]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - variant: drain-direct
+            scenario: push.effects-1000
+            functions: drain,exec
+          - variant: exec-recovery
+            scenario: pull.recompute-chain-100
+            functions: exec,pull
+          - variant: miss-tail
+            scenario: track.swap-32
+            functions: miss,near
+          - variant: verify-recovery
+            scenario: pull.validate-wide-256
+            functions: verify,pull
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Capture ordinary inlining logs before separate graph dumps
+        env:
+          VARIANT: ${{ matrix.target.variant }}
+          SCENARIO: ${{ matrix.target.scenario }}
+          FUNCTIONS: ${{ matrix.target.functions }}
+        run: |
+          mkdir -p artifacts
+          node research/try-sites.mjs --prepare-only --pick "baseline,$VARIANT"
+          node research/try-symbols.mjs "$FUNCTIONS" > artifacts/symbols.json
+          cp .cache/try-sites/sites.json artifacts/manifest.json
+          node --v8-options > artifacts/v8-options.txt
+          lscpu > artifacts/cpu.txt
+          cpu=$(awk '/Cpus_allowed_list/ {split($2,a,/[-,]/); print a[1]}' /proc/self/status)
+          for variant in baseline "$VARIANT"; do
+            mkdir -p "artifacts/$variant"
+            cp ".cache/try-sites/$variant/index.mjs" ".cache/try-sites/$variant/index.mjs.map" "artifacts/$variant/"
+            taskset -c "$cpu" node --expose-gc --trace-turbo-inlining --trace-opt --trace-deopt bench/worker.mjs ".cache/try-sites/$variant" "$SCENARIO" --suite mechanisms > "artifacts/$variant/normal-inlining.log" 2>&1
+            for target in ${FUNCTIONS//,/ }; do
+              symbol=$(node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(".cache/try-sites/symbols.json","utf8")); console.log(s[process.argv[1]][process.argv[2]].name)' "$variant" "$target")
+              mkdir -p "artifacts/$variant/$target"
+              taskset -c "$cpu" node --expose-gc --trace-turbo-inlining --trace-opt --trace-deopt --print-bytecode --print-bytecode-filter="$symbol" --print-opt-code --print-opt-code-filter="$symbol" --trace-turbo --trace-turbo-filter="$symbol" --trace-turbo-path="artifacts/$variant/$target" bench/worker.mjs ".cache/try-sites/$variant" "$SCENARIO" --suite mechanisms > "artifacts/$variant/$target/log.txt" 2>&1
+            done
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: repr-traces-${{ matrix.target.variant }}
+          path: artifacts/
+          retention-days: 30
+
+  report:
+    name: Per-runner comparison
+    needs: timing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: repr-timing-*
+          path: results
+      - run: node research/representation-report.mjs results | tee report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: repr-summary
+          path: report.md
+          retention-days: 30

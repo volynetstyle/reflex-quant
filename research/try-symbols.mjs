@@ -11,6 +11,7 @@ const { variants } = JSON.parse(
   readFileSync(path.join(dir, "sites.json"), "utf8"),
 );
 const symbols = {};
+const required = process.argv[2]?.split(",") ?? ["deliver", "drain"];
 for (const variant of variants) {
   const file = path.join(dir, variant.name, "index.mjs");
   const source = ts.createSourceFile(
@@ -33,7 +34,7 @@ for (const variant of variants) {
       line: pos.line + 1,
       column: pos.character,
     });
-    if (original.name && /\/host\.ts$/.test(original.source ?? "")) {
+    if (original.name && /\/(host|kernel)\.ts$/.test(original.source ?? "")) {
       functions[original.name] = {
         name: node.name.text,
         source: original.source,
@@ -42,7 +43,7 @@ for (const variant of variants) {
       };
     }
   }
-  for (const name of ["deliver", "drain"])
+  for (const name of required)
     if (!functions[name])
       throw new Error(`${variant.name}: no mapping for ${name}`);
   symbols[variant.name] = functions;

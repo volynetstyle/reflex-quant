@@ -8,7 +8,13 @@ import { arch, cpus, platform, release } from "node:os";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import ts from "typescript";
+import { format } from "prettier";
 import { suites } from "../bench/suites.mjs";
+import {
+  representationVariants,
+  representationWorkloads,
+} from "./representation-variants.mjs";
+import { pathToFileURL } from "node:url";
 
 const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, ".cache/try-sites");
@@ -66,15 +72,16 @@ for (let n = 1; n <= 10; n++)
   });
 variants.push({ name: "baseline-control", ids: [] });
 variants.push({ name: "check-safe", ids: [] });
+variants.push(...representationVariants);
 const pick = value("--pick", "all");
 if (pick !== "all") {
   const names = pick.split(",");
   if (
     new Set(names).size !== names.length ||
-    !names.includes("baseline") ||
+    names[0] !== "baseline" ||
     names.some((name) => !variants.some((v) => v.name === name))
   )
-    throw new Error("invalid --pick (include baseline)");
+    throw new Error("invalid --pick (put baseline first)");
   variants = names.map((name) => variants.find((v) => v.name === name));
 }
 const artifacts = [];
@@ -113,6 +120,16 @@ for (const variant of variants) {
       return result + text.slice(cursor, node.end);
     };
     let result = render(source);
+    if (variant.transform) {
+      const transformed = variant.transform(file, result);
+      if (transformed !== result)
+        result = await format(transformed, {
+          ...JSON.parse(
+            readFileSync(path.join(root, ".prettierrc.json"), "utf8"),
+          ),
+          parser: "typescript",
+        });
+    }
     if (file === "host.ts" && variant.name === "check-safe") {
       const site = sites.find((s) => s.id === 4);
       if (site.function !== "deliver" || site.file !== "host.ts")
@@ -154,30 +171,41 @@ for (const variant of variants) {
       2,
     ) + "\n",
   );
-  await esbuild.build({
-    entryPoints: [path.join(root, "bench/adapters/quant.mjs")],
-    bundle: true,
-    format: "esm",
-    platform: "neutral",
-    minifySyntax: true,
-    minifyWhitespace: true,
-    minifyIdentifiers: true,
-    target: "es2022",
-    define: { __STATS__: "false", __DEV__: "false" },
-    plugins: [
-      {
-        name: "runtime",
-        setup(build) {
-          build.onResolve({ filter: /^\.\.\/\.\.\/src\/index\.ts$/ }, () => ({
-            path: path.join(src, "index.ts"),
-          }));
+  const buildBundle = async (stats) =>
+    esbuild.build({
+      entryPoints: [
+        path.join(
+          root,
+          stats ? "bench/adapters/quant-stats.mjs" : "bench/adapters/quant.mjs",
+        ),
+      ],
+      bundle: true,
+      format: "esm",
+      platform: "neutral",
+      minifySyntax: true,
+      minifyWhitespace: true,
+      minifyIdentifiers: true,
+      target: "es2022",
+      define: { __STATS__: String(stats), __DEV__: "false" },
+      plugins: [
+        {
+          name: "runtime",
+          setup(build) {
+            build.onResolve(
+              { filter: /^\.\.\/\.\.\/src\/[^/]+\.ts$/ },
+              (args) => ({
+                path: path.join(src, path.basename(args.path)),
+              }),
+            );
+          },
         },
-      },
-    ],
-    outfile: path.join(out, variant.name, "index.mjs"),
-    sourcemap: "external",
-    logLevel: "warning",
-  });
+      ],
+      outfile: path.join(out, variant.name, stats ? "stats.mjs" : "index.mjs"),
+      sourcemap: "external",
+      logLevel: "warning",
+    });
+  await buildBundle(false);
+  if (args.includes("--structure-only")) await buildBundle(true);
   const bundle = readFileSync(path.join(out, variant.name, "index.mjs"));
   artifacts.push({
     name: variant.name,
@@ -197,6 +225,49 @@ writeFileSync(
 );
 console.log(JSON.stringify(sites));
 if (args.includes("--prepare-only")) process.exit();
+if (args.includes("--structure-only")) {
+  const structure = {};
+  for (const variant of variants) {
+    const api = await import(
+      pathToFileURL(path.join(out, variant.name, "stats.mjs")).href
+    );
+    structure[variant.name] = [];
+    for (const suite of ["mechanisms", "scenarios"])
+      for (const scenario of suites[suite]) {
+        const step = scenario.setup(api);
+        for (let i = 1; i <= 64; i++) step(i);
+        const before = { ...api.stats };
+        let checksum = 7;
+        for (let i = 65; i <= 320; i++)
+          checksum = (Math.imul(checksum, 31) + (Number(step(i)) | 0)) | 0;
+        structure[variant.name].push({
+          suite,
+          id: scenario.id,
+          checksum,
+          counters: Object.fromEntries(
+            Object.keys(api.stats).map((key) => [
+              key,
+              api.stats[key] - before[key],
+            ]),
+          ),
+          stackHighWater: api.stackHighWater(),
+        });
+      }
+    if (
+      JSON.stringify(structure[variant.name]) !==
+      JSON.stringify(structure.baseline)
+    )
+      throw new Error(`${variant.name}: structural work differs from baseline`);
+  }
+  writeFileSync(
+    path.join(out, "structure.json"),
+    JSON.stringify(structure, null, 2) + "\n",
+  );
+  console.log(
+    `Exact structural counters and answers match across ${variants.length} variants and 44 scenarios.`,
+  );
+  process.exit();
+}
 const ids = [
   "push.chain-cutoff-100",
   "push.effects-1000",
@@ -207,11 +278,22 @@ const filter = value("--scenario", "all");
 const suite = value("--suite", "mechanisms");
 if (!["mechanisms", "scenarios"].includes(suite))
   throw new Error("invalid --suite");
-const scenarios = suites[suite].filter((s) =>
-  filter === "all"
-    ? suite === "scenarios" || ids.includes(s.id)
-    : s.id === filter,
-);
+const area = value("--area", "none");
+if (area !== "none" && !representationWorkloads[area])
+  throw new Error("invalid --area");
+const scenarios =
+  area !== "none"
+    ? representationWorkloads[area].map(([suite, id]) => ({
+        ...suites[suite].find((s) => s.id === id),
+        suite,
+      }))
+    : suites[suite]
+        .filter((s) =>
+          filter === "all"
+            ? suite === "scenarios" || ids.includes(s.id)
+            : s.id === filter,
+        )
+        .map((s) => ({ ...s, suite }));
 if (!scenarios.length) throw new Error(`unknown scenario ${filter}`);
 if (filter !== "all")
   scenarios.splice(
@@ -230,7 +312,7 @@ const measure = (variant, scenario, verify = false) =>
         path.join(out, variant.name),
         scenario.id,
         "--suite",
-        suite,
+        scenario.suite,
         ...(verify ? ["--verify"] : []),
       ],
       { encoding: "utf8", timeout: 120000 },
@@ -287,6 +369,8 @@ const env = {
   workerAffinity,
   seed: seedInput,
   suite,
+  area,
+  primary: area === "none" ? null : representationWorkloads[area][0][1],
 };
 for (let round = 0; round < rounds; round++) {
   const pairs = scenarios.flatMap((scenario) =>
