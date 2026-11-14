@@ -136,3 +136,42 @@ contract-tested above, so a changed candidate cannot silently reuse that proof:
 
 The broad first-pass workflow remains manually runnable; confirming one survivor
 does not automatically rerun the other three rejected candidates.
+
+## Broad confirmation result and final decision
+
+[Run 43616317020](https://github.com/volynetstyle/reflex-quant/actions/runs/43616317020),
+commit `33100ce`, completed successfully and verified two independent jobs for
+each of the 44 workloads. The bundle identities matched the contract-tested
+versions. Ten-round median changes from baseline included:
+
+| Workload                | Repeat 1 |   A/A 1 | Repeat 2 |  A/A 2 |
+| ----------------------- | -------: | ------: | -------: | -----: |
+| push.effects-1000       |   -2.42% | +12.51% |   -2.17% | +2.96% |
+| fan-out.effects-1000    |   -8.85% |  -3.75% |   -1.11% | +1.03% |
+| effect.rerun-1          |   +6.50% |  +0.02% |   +5.85% | -2.92% |
+| effect.through-computed |   +0.33% |  -2.43% |   -0.12% | -0.59% |
+| lifecycle.mount-100     |   +2.43% |  -0.06% |   +0.50% | -0.01% |
+
+Bulk direct fan-out still has lower median time, but the isolated one-effect
+rerun has higher median time in both repetitions. On EPYC 9V74 that changes
+30.080 ns to 32.036 ns, while the A/A median is 30.084 ns. On EPYC 9V45 it
+changes 19.320 ns to 20.449 ns, while the A/A median is 18.756 ns. Ranges still
+overlap and these are not formal significance claims; the repeated adverse
+neighbor result is sufficient to withhold a general runtime optimization.
+
+The candidate exposes a workload tradeoff, not a free improvement. The first
+five-neighbor selection omitted `effect.rerun-1`; testing all workloads caught
+the missing case. This is the reason for broad confirmation before adoption.
+
+No candidate from this first four-area pass is adopted into `src`:
+
+- drain-direct: reject as a general optimization because of the repeated
+  single-effect tradeoff, despite its bulk fan-out results;
+- exec-recovery: reject for lack of material repeatable target improvement;
+- miss-tail: reject for non-repeating improvements and reorder regressions;
+- verify-recovery: reject for lack of material repeatable target improvement.
+
+The transformations and raw CI artifacts remain as reproducible research
+evidence. The production runtime, contract and mechanism basis are unchanged.
+This decision concerns these four exact representations and this measured
+engine/profile, not every possible transformation in those four areas.
