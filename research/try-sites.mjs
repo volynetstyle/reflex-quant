@@ -1,7 +1,10 @@
-// Local, intentionally contract-breaking try-site ablations.
-// Single worker, shuffled variants, cooldown between workers.
+// Isolated try-site ablations and the semantics-preserving check-safe candidate.
+// Single worker, shuffled variants, cooldown between workers. --pick narrows
+// the variants; --verify-only checks results without collecting timings.
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { arch, cpus, platform, release } from "node:os";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import ts from "typescript";
@@ -15,12 +18,14 @@ const value = (name, fallback) =>
 const rounds = Number(value("--rounds", "2"));
 const cooldown = Number(value("--cooldown", "2000"));
 const label = value("--label", "local");
+const seedInput = Number(value("--seed", "625341585"));
 if (
   !Number.isInteger(rounds) ||
   rounds < 1 ||
   !Number.isFinite(cooldown) ||
   cooldown < 0 ||
-  !/^[a-z0-9-]+$/.test(label)
+  !/^[a-z0-9-]+$/.test(label) ||
+  !Number.isInteger(seedInput)
 )
   throw new Error("invalid options");
 const files = ["kernel.ts", "host.ts", "index.ts"];
@@ -51,7 +56,7 @@ for (const file of files) {
 }
 if (sites.length !== 10)
   throw new Error(`expected 10 sites, got ${sites.length}`);
-const variants = [{ name: "baseline", ids: [] }];
+let variants = [{ name: "baseline", ids: [] }];
 for (const site of sites)
   variants.push({ name: `single-${site.id}`, ids: [site.id] });
 for (let n = 1; n <= 10; n++)
@@ -59,6 +64,20 @@ for (let n = 1; n <= 10; n++)
     name: `cumulative-${n}`,
     ids: sites.slice(0, n).map((s) => s.id),
   });
+variants.push({ name: "baseline-control", ids: [] });
+variants.push({ name: "check-safe", ids: [] });
+const pick = value("--pick", "all");
+if (pick !== "all") {
+  const names = pick.split(",");
+  if (
+    new Set(names).size !== names.length ||
+    !names.includes("baseline") ||
+    names.some((name) => !variants.some((v) => v.name === name))
+  )
+    throw new Error("invalid --pick (include baseline)");
+  variants = names.map((name) => variants.find((v) => v.name === name));
+}
+const artifacts = [];
 for (const variant of variants) {
   const src = path.join(out, variant.name, "src");
   mkdirSync(src, { recursive: true });
@@ -85,7 +104,7 @@ for (const variant of variants) {
         return render(node.tryBlock);
       }
       let result = "",
-        cursor = node.getStart(source);
+        cursor = ts.isSourceFile(node) ? 0 : node.getStart(source);
       ts.forEachChild(node, (child) => {
         const start = child.getStart(source);
         result += text.slice(cursor, start) + render(child);
@@ -93,7 +112,33 @@ for (const variant of variants) {
       });
       return result + text.slice(cursor, node.end);
     };
-    const result = render(source);
+    let result = render(source);
+    if (file === "host.ts" && variant.name === "check-safe") {
+      const site = sites.find((s) => s.id === 4);
+      if (site.function !== "deliver" || site.file !== "host.ts")
+        throw new Error("site 4 moved");
+      let boundary;
+      const find = (node) => {
+        if (ts.isTryStatement(node) && node.getStart(source) === site.start)
+          boundary = node;
+        ts.forEachChild(node, find);
+      };
+      find(source);
+      const original = boundary.getText(source);
+      if (result.split(original).length !== 2)
+        throw new Error("non-unique deliver boundary");
+      result = result.replace(original, "checkSafe(w);");
+      const anchor = "function deliver(w: Node, flags: Flags): void {";
+      if (result.split(anchor).length !== 2)
+        throw new Error("non-unique deliver declaration");
+      const deliver = source.statements.find(
+        (node) =>
+          ts.isFunctionDeclaration(node) && node.name?.text === "deliver",
+      );
+      const insert = deliver.getFullStart();
+      const helper = `\n\nfunction checkSafe(w: Node): void {\n${original.replace(/\r?\n {4}/g, "\n").replace(/^/gm, "  ")}\n}`;
+      result = result.slice(0, insert) + helper + result.slice(insert);
+    }
     if (
       ts.createSourceFile(file, result, ts.ScriptTarget.Latest, true)
         .parseDiagnostics.length
@@ -101,6 +146,14 @@ for (const variant of variants) {
       throw new Error(`invalid ${variant.name}/${file}`);
     writeFileSync(path.join(src, file), result);
   }
+  writeFileSync(
+    path.join(out, variant.name, "tsconfig.json"),
+    JSON.stringify(
+      { extends: "../../../tsconfig.json", include: ["src"] },
+      null,
+      2,
+    ) + "\n",
+  );
   await esbuild.build({
     entryPoints: [path.join(root, "bench/adapters/quant.mjs")],
     bundle: true,
@@ -122,12 +175,25 @@ for (const variant of variants) {
       },
     ],
     outfile: path.join(out, variant.name, "index.mjs"),
+    sourcemap: "external",
     logLevel: "warning",
   });
+  const bundle = readFileSync(path.join(out, variant.name, "index.mjs"));
+  artifacts.push({
+    name: variant.name,
+    sha256: createHash("sha256").update(bundle).digest("hex"),
+    bytes: bundle.length,
+  });
 }
+if (
+  variants.some((v) => v.name === "baseline-control") &&
+  artifacts.find((v) => v.name === "baseline").sha256 !==
+    artifacts.find((v) => v.name === "baseline-control").sha256
+)
+  throw new Error("A/A control differs from baseline");
 writeFileSync(
   path.join(out, "sites.json"),
-  JSON.stringify({ sites, variants }, null, 2),
+  JSON.stringify({ sites, variants, artifacts }, null, 2),
 );
 console.log(JSON.stringify(sites));
 if (args.includes("--prepare-only")) process.exit();
@@ -138,9 +204,15 @@ const ids = [
   "pull.diamond-1000",
 ];
 const filter = value("--scenario", "all");
-if (filter !== "all" && !ids.includes(filter))
-  throw new Error(`unknown scenario ${filter}`);
-const scenarios = suites.mechanisms.filter((s) => ids.includes(s.id));
+const suite = value("--suite", "mechanisms");
+if (!["mechanisms", "scenarios"].includes(suite))
+  throw new Error("invalid --suite");
+const scenarios = suites[suite].filter((s) =>
+  filter === "all"
+    ? suite === "scenarios" || ids.includes(s.id)
+    : s.id === filter,
+);
+if (!scenarios.length) throw new Error(`unknown scenario ${filter}`);
 if (filter !== "all")
   scenarios.splice(
     0,
@@ -158,7 +230,7 @@ const measure = (variant, scenario, verify = false) =>
         path.join(out, variant.name),
         scenario.id,
         "--suite",
-        "mechanisms",
+        suite,
         ...(verify ? ["--verify"] : []),
       ],
       { encoding: "utf8", timeout: 120000 },
@@ -174,11 +246,48 @@ for (const scenario of scenarios) {
       throw new Error(`checksum ${scenario.id} ${v.name}`);
 }
 console.log("Verified all checksums");
-let seed = 0x2545f491;
+if (args.includes("--verify-only")) process.exit();
+let seed = seedInput >>> 0;
 const random = () =>
   (seed = (Math.imul(seed ^ (seed >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0) /
   2 ** 32;
 const samples = {};
+const measurements = [];
+const affinity =
+  platform() === "linux"
+    ? readFileSync("/proc/self/status", "utf8").match(
+        /^Cpus_allowed_list:\s*(.*)$/m,
+      )?.[1]
+    : null;
+let workerAffinity = null;
+if (args.includes("--require-affinity")) {
+  if (!/^\d+$/.test(affinity ?? ""))
+    throw new Error(`expected single-CPU affinity, got ${affinity}`);
+  workerAffinity = execFileSync(
+    process.execPath,
+    [
+      "-e",
+      "console.log(require('node:fs').readFileSync('/proc/self/status','utf8').split('\\n').find(l=>l.startsWith('Cpus_allowed_list:')).split(':')[1].trim())",
+    ],
+    { encoding: "utf8" },
+  ).trim();
+  if (workerAffinity !== affinity)
+    throw new Error(
+      `worker affinity mismatch: ${workerAffinity} vs ${affinity}`,
+    );
+}
+const env = {
+  node: process.version,
+  v8: process.versions.v8,
+  esbuild: esbuild.version,
+  commit: process.env.GITHUB_SHA ?? null,
+  cpu: cpus()[0]?.model,
+  os: `${platform()} ${release()} ${arch()}`,
+  affinity,
+  workerAffinity,
+  seed: seedInput,
+  suite,
+};
 for (let round = 0; round < rounds; round++) {
   const pairs = scenarios.flatMap((scenario) =>
     variants.map((variant) => ({ scenario, variant })),
@@ -188,9 +297,17 @@ for (let round = 0; round < rounds; round++) {
     [pairs[i], pairs[j]] = [pairs[j], pairs[i]];
   }
   for (const [i, { scenario, variant }] of pairs.entries()) {
-    ((samples[scenario.id] ??= {})[variant.name] ??= []).push(
-      measure(variant, scenario).nsPerStep,
-    );
+    const started = new Date().toISOString();
+    const result = measure(variant, scenario);
+    ((samples[scenario.id] ??= {})[variant.name] ??= []).push(result.nsPerStep);
+    measurements.push({
+      round,
+      order: i,
+      scenario: scenario.id,
+      variant: variant.name,
+      started,
+      ...result,
+    });
     if ((i + 1) % 10 === 0)
       console.log(`round ${round + 1}/${rounds}: ${i + 1}/${pairs.length}`);
     await new Promise((resolve) => setTimeout(resolve, cooldown));
@@ -198,7 +315,17 @@ for (let round = 0; round < rounds; round++) {
   writeFileSync(
     path.join(out, `${label}.json`),
     JSON.stringify(
-      { node: process.version, rounds, cooldown, sites, variants, samples },
+      {
+        env,
+        node: process.version,
+        rounds,
+        cooldown,
+        sites,
+        variants,
+        artifacts,
+        samples,
+        measurements,
+      },
       null,
       2,
     ),

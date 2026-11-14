@@ -1,0 +1,181 @@
+name: Deliver recovery boundary
+
+on:
+  push:
+    branches: [experiment/try-handler-ablation]
+    paths:
+      - "research/try-*.mjs"
+      - ".github/workflows/try-deliver.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: try-deliver-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  correctness:
+    name: Contract / ${{ matrix.variant }} / ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [baseline, check-safe]
+        mode: [development, production]
+    env:
+      NODE_OPTIONS: --max-old-space-size=2048
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Build isolated sources and verify paths
+        run: |
+          mkdir -p artifacts
+          node research/try-sites.mjs --prepare-only --pick baseline,check-safe
+          node research/try-path-probe.mjs | tee artifacts/path-probe.txt
+      - name: Typecheck and execute every semantic and structural test
+        env:
+          VARIANT: ${{ matrix.variant }}
+          MODE: ${{ matrix.mode }}
+        run: |
+          node node_modules/typescript/bin/tsc -p ".cache/try-sites/$VARIANT/tsconfig.json"
+          QUANT_SRC=".cache/try-sites/$VARIANT/src" node node_modules/vitest/vitest.mjs run --config vitest.config.ts --mode "$MODE" --maxWorkers=1 --reporter=json --outputFile=artifacts/tests.json
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: deliver-tests-${{ matrix.variant }}-${{ matrix.mode }}
+          path: artifacts/
+          retention-days: 30
+
+  timing:
+    name: Timing / ${{ matrix.target.name }} / repeat ${{ matrix.repeat }}
+    needs: correctness
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        repeat: [1, 2]
+        target:
+          - name: direct
+            suite: mechanisms
+            scenario: push.effects-1000
+            pick: baseline,baseline-control,single-4,cumulative-3,cumulative-4,check-safe
+          - name: graph
+            suite: scenarios
+            scenario: fan-out.effects-1000
+            pick: baseline,baseline-control,single-4,cumulative-3,cumulative-4,check-safe
+          - name: stale
+            suite: mechanisms
+            scenario: effect.through-computed
+            pick: baseline,baseline-control,check-safe
+          - name: negative
+            suite: mechanisms
+            scenario: pull.recompute-chain-100
+            pick: baseline,baseline-control,check-safe
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Pin and measure fifteen shuffled rounds
+        env:
+          SUITE: ${{ matrix.target.suite }}
+          SCENARIO: ${{ matrix.target.scenario }}
+          PICK: ${{ matrix.target.pick }}
+          REPEAT: ${{ matrix.repeat }}
+        run: |
+          mkdir -p artifacts
+          lscpu > artifacts/cpu.txt
+          grep -E 'Cpus_allowed|Mems_allowed' /proc/self/status >> artifacts/cpu.txt
+          cpu=$(awk '/Cpus_allowed_list/ {split($2,a,/[-,]/); print a[1]}' /proc/self/status)
+          echo "Pinned logical CPU: $cpu" >> artifacts/cpu.txt
+          taskset -c "$cpu" node research/try-sites.mjs --rounds 15 --cooldown 0 --require-affinity --suite "$SUITE" --scenario "$SCENARIO" --pick "$PICK" --seed "$((625341585 + REPEAT))" --label result
+          cp .cache/try-sites/result.json artifacts/results.json
+          cp .cache/try-sites/sites.json artifacts/manifest.json
+          node research/try-sites-report.mjs artifacts/results.json | tee artifacts/results.md
+          cat artifacts/results.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: deliver-timing-${{ matrix.target.name }}-${{ matrix.repeat }}
+          path: artifacts/
+          retention-days: 30
+
+  traces:
+    name: Bytecode, optimized code and TurboFan graphs
+    needs: correctness
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Trace the actual minified bundles, separately from timings
+        run: |
+          mkdir -p artifacts
+          node research/try-sites.mjs --prepare-only --pick baseline,single-4,cumulative-3,cumulative-4,check-safe
+          node research/try-symbols.mjs > artifacts/symbols.json
+          cp .cache/try-sites/sites.json artifacts/manifest.json
+          node --v8-options > artifacts/v8-options.txt
+          lscpu > artifacts/cpu.txt
+          cpu=$(awk '/Cpus_allowed_list/ {split($2,a,/[-,]/); print a[1]}' /proc/self/status)
+          for variant in baseline single-4 cumulative-3 cumulative-4 check-safe; do
+            mkdir -p "artifacts/$variant"
+            cp ".cache/try-sites/$variant/index.mjs" ".cache/try-sites/$variant/index.mjs.map" "artifacts/$variant/"
+            for target in deliver drain; do
+              symbol=$(node --input-type=module -e 'import fs from "node:fs"; const s=JSON.parse(fs.readFileSync(".cache/try-sites/symbols.json","utf8")); console.log(s[process.argv[1]][process.argv[2]].name)' "$variant" "$target")
+              mkdir -p "artifacts/$variant/$target"
+              taskset -c "$cpu" node --expose-gc --trace-turbo-inlining --trace-opt --trace-deopt --print-bytecode --print-bytecode-filter="$symbol" --print-opt-code --print-opt-code-filter="$symbol" --trace-turbo --trace-turbo-filter="$symbol" --trace-turbo-path="artifacts/$variant/$target" bench/worker.mjs ".cache/try-sites/$variant" push.effects-1000 --suite mechanisms > "artifacts/$variant/$target/log.txt" 2>&1
+            done
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: always()
+        with:
+          name: deliver-v8-traces
+          path: artifacts/
+          retention-days: 30
+
+  report:
+    name: Compare per-runner ratios and A/A controls
+    needs: timing
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: deliver-timing-*
+          path: results
+      - run: node research/try-focus-report.mjs results | tee report.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: deliver-summary
+          path: report.md
+          retention-days: 30

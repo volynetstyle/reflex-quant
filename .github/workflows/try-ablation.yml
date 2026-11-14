@@ -1,8 +1,6 @@
 name: Try ablation experiment
 
 on:
-  push:
-    branches: [experiment/try-handler-ablation]
   workflow_dispatch:
 
 permissions:
