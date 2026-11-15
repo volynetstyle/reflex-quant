@@ -1,6 +1,6 @@
-import { BASE, SITE, UPDATED } from "./config.mjs";
+import { BASE, SITE } from "./config.mjs";
 
-export { UPDATED };
+export { pageUpdated } from "./config.mjs";
 export const ORIGIN = SITE + BASE;
 export const REPO = "https://github.com/volynetstyle/reflex-quant";
 export const BLOB = `${REPO}/blob/main`;
@@ -34,7 +34,7 @@ export const SOFTWARE = {
   name: "Reflex Quant",
   alternateName: "reflex-quant",
   description:
-    "A 2.2 KB JavaScript signals runtime: signals, computeds and effects with exact dynamic dependency tracking, glitch-free propagation and no recursion.",
+    "A tiny, high-performance JavaScript and TypeScript signals library with exact dynamic dependency tracking, glitch-free propagation, stack-safe execution and defined failure semantics.",
   codeRepository: REPO,
   programmingLanguage: ["TypeScript", "JavaScript"],
   runtimePlatform: "JavaScript",

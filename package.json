@@ -1,7 +1,7 @@
 {
   "name": "reflex-quant",
   "version": "1.2.0",
-  "description": "The smallest reactive runtime the invariants of Reflex imply: signals, computeds, effects; exact dependency tracking, no recursion, ~2 KB gzip.",
+  "description": "A tiny, high-performance signals library for JavaScript and TypeScript with exact dynamic dependency tracking, glitch-free propagation, stack-safe execution, and defined failure semantics.",
   "keywords": [
     "signals",
     "reactivity",

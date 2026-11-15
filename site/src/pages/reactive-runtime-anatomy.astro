@@ -87,9 +87,9 @@ console.log("after batch");`;
 ---
 <Base
   path="/reactive-runtime-anatomy/"
-  title="Inside a Signals Runtime: Anatomy of a 2 KB Reactive Engine"
+  title="Inside a Signals Runtime: Anatomy of a Reactive Engine Under 3 KB"
   headline="Anatomy of a Reactive Engine: How Reflex Quant Is Built"
-  description="How a 2 KB JavaScript signals runtime works inside: one edge in two lists, exact dependency tracking, push-pull with cutoff, error recovery and one shared work stack."
+  description="How a JavaScript signals runtime under 3 KB gzip works inside: one edge in two lists, exact tracking, push-pull with cutoff, error recovery and one shared work stack."
   faq={[
     ["How is a signals library implemented?", "As a graph of nodes (signals, computeds, effects) and edges (dependencies). Writes push invalidation down the graph; reads pull fresh values up, re-running a computation only when a source it read has actually changed."],
     ["Why not just store dependencies in a Set?", "A Set rebuilt on every run allocates on every execution and loses read order. Reusing the previous run's edges, in read order, makes stable and reordered reads allocation-free."],
@@ -100,7 +100,7 @@ console.log("after batch");`;
   <p>Reflex Quant asks the opposite question: <strong>fix the semantics first, then keep only the machinery they force.</strong> This is what was left.</p>
 
   <div class="stats">
-    <div class="stat"><b>~2.2 KB</b><span>gzip, whole runtime</span></div>
+    <div class="stat"><b>~2.7 KB</b><span>gzip, whole runtime</span></div>
     <div class="stat"><b>10</b><span>public operations</span></div>
     <div class="stat"><b>2</b><span>object types: Node, Edge</span></div>
     <div class="stat"><b>0</b><span>call-stack recursion</span></div>

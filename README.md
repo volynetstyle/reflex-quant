@@ -2,8 +2,7 @@
 
 # ⚛ reflex-quant
 
-**Reactive state in under 3 KB.**
-Signals, computeds and effects that update exactly what changed, nothing more.
+**A tiny, high-performance JavaScript signals library built for exact reactive semantics.**
 
 [![npm](https://img.shields.io/npm/v/reflex-quant?color=cb3837&label=npm)](https://www.npmjs.com/package/reflex-quant)
 [![CI](https://github.com/volynetstyle/reflex-quant/actions/workflows/ci.yml/badge.svg)](https://github.com/volynetstyle/reflex-quant/actions/workflows/ci.yml)
@@ -15,6 +14,18 @@ Signals, computeds and effects that update exactly what changed, nothing more.
 [Benchmarks](https://volynetstyle.github.io/reflex-quant/benchmarks/)
 
 </div>
+
+Reflex Quant is a framework-agnostic fine-grained reactivity library for JavaScript
+and TypeScript, with signals, computeds and effects in under 3 KB gzip. It combines
+exact dynamic dependency tracking, glitch-free propagation, stack-safe execution
+and defined failure semantics. Its implementation was derived from a written
+reactive contract and validated through differential testing.
+
+In the [published JS Reactivity Benchmark snapshot](https://github.com/volynetstyle/js-reactivity-benchmark/blob/9a26a3bee200fe9610e19cc21e0b8e02730b5459/index.html)
+from November 10, 2026, Quant 1.1.2 ranked first on the family-balanced core
+score: 1.07× versus 1.20× for alien-signals 3.2.1. This is a result for that
+workload set, not a claim that Quant wins every benchmark. The separate
+[project CI suite](#performance) measures Quant 1.2.0.
 
 ```ts
 import { signal, computed, effect, get, set } from "reflex-quant";
@@ -426,6 +437,17 @@ full framework (Vue, Solid, Preact Signals, MobX) is a better fit.
 
 ## Performance
 
+The broader [JS Reactivity Benchmark](https://volynetstyle.github.io/js-reactivity-benchmark/),
+maintained by Quant's author, compares 30 reactivity implementations. Its
+[November 10, 2026 snapshot](https://github.com/volynetstyle/js-reactivity-benchmark/blob/9a26a3bee200fe9610e19cc21e0b8e02730b5459/index.html)
+ranked Quant 1.1.2 first with a **1.07×** family-balanced core score, versus
+**1.20×** for alien-signals 3.2.1. The score covers 33 shared core scenarios;
+stress and lifecycle capability tests are reported separately. Lower is better,
+and the scores are not the same as the pairwise time ratios below. No benchmark
+establishes a universally fastest library.
+
+The following is a separate, targeted snapshot of the newer Quant 1.2.0:
+
 Measured on CI against [Reflex](https://github.com/volynetstyle/Reflex) and
 [alien-signals](https://github.com/stackblitz/alien-signals), with all three
 runtimes on the same runner
@@ -451,12 +473,14 @@ trajectory over CI runs is in [research/HISTORY.md](research/HISTORY.md).
 
 ## Correctness
 
-Quant is also a research project. It asks: what is the **smallest** reactive
-runtime that satisfies a fixed contract? The contract is a set of semantic invariants and structural bounds in
+Quant is a research-driven library. Its design asks: what is the smallest known
+reactive runtime that satisfies a fixed contract? The contract is a set of semantic invariants and structural bounds in
 [CONTRACT.md](CONTRACT.md). It was extracted from the executable spec of
 [Reflex](https://github.com/volynetstyle/Reflex)
 (provenance in [research/REPORT.md](research/REPORT.md)). A mechanism is added
-only if dropping it would break the contract or the asymptotics.
+only if dropping it would break the contract or the asymptotics. The ablations
+justify the mechanisms in this implementation; they do not prove a universal
+lower bound for every possible design.
 
 - **It found real bugs in Vue.** A port of quant's invariants to Vue 3.6 exposed
   two regressions in its Alien-derived reactivity core, both also reproducible

@@ -4,16 +4,28 @@ import BenchmarkSummary from "../components/BenchmarkSummary.astro";
 import ScenarioChart from "../components/ScenarioChart.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
 import { BLOB, href } from "../site";
+import { BROAD, RUN } from "../bench";
 ---
 <Base
   path="/benchmarks/"
   title="JavaScript Signals Benchmark: Reflex Quant vs alien-signals vs Reflex"
   headline="JavaScript Signals Benchmark"
-  description="Reactivity benchmark results for Reflex Quant against alien-signals and Reflex on 18 scenarios, with methodology, structure counters and CI history."
+  description="Published JavaScript signals benchmarks for Reflex Quant, alien-signals and other libraries: broader leaderboard, targeted CI results, methodology and limitations."
 >
-  <p class="lede">Eighteen scenarios, three runtimes, one runner per comparison. Where Quant wins, where it loses, and why each of those is the expected result of how it is built.</p>
+  <p class="lede">Two complementary views of Reflex Quant performance: a broader JavaScript reactivity leaderboard and this project's targeted CI suite. Each has its own workloads, versions and scoring method.</p>
 
-  <h2>Results</h2>
+  <h2>Broader JS Reactivity Benchmark</h2>
+  <p>In the <a href={BROAD.snapshot}>published {BROAD.date} snapshot</a>, Reflex Quant {BROAD.quantVersion} ranked first on the family-balanced core score among the eligible implementations. This benchmark is maintained by Quant's author.</p>
+  <table>
+    <tr><th>Library</th><th>Version</th><th>Core score</th></tr>
+    <tr><td>Reflex Quant</td><td>{BROAD.quantVersion}</td><td>{BROAD.quant}×</td></tr>
+    <tr><td>alien-signals</td><td>{BROAD.alienVersion}</td><td>{BROAD.alien}×</td></tr>
+  </table>
+  <p class="note">Snapshot: {BROAD.date} · benchmark commit <a href={`https://github.com/volynetstyle/js-reactivity-benchmark/commit/${BROAD.commit}`}><code>{BROAD.commit.slice(0, 7)}</code></a> · {BROAD.total} total scenarios, {BROAD.core} shared core scenarios scored · three machine sets. Times are expressed relative to the per-scenario best; ratios are combined by geometric mean within each family, then across families with equal weight. The displayed score is the median of the three machine-set scores; lower is better. Three core scenarios with incomplete evidence are excluded for every participant. Stress and lifecycle capabilities are reported separately. <a href={BROAD.latest}>Latest results and full methodology</a>.</p>
+  <p>This is a defined workload set, not a universal ranking. Quant does not win every scenario, and these results measure reactive primitives rather than complete application or rendering performance. Quant {BROAD.quantVersion} is the version in this broader snapshot; it should not be mistaken for a measurement of {RUN.version}.</p>
+
+  <h2>Quant {RUN.version} targeted CI suite</h2>
+  <p>Snapshot: {RUN.date} · Quant {RUN.version} · alien-signals 3.2.1 · Reflex bf71877 · Quant commit <code>{RUN.commit}</code> · <a href={RUN.url}>CI run {RUN.id}</a>. Eighteen scenarios and three runtimes are measured on the same runner for each comparison. Its pairwise time ratios use a different method from the broader leaderboard above.</p>
   <BenchmarkSummary />
   <ScenarioChart />
 

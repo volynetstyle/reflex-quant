@@ -5,20 +5,25 @@ import BenchmarkSummary from "../components/BenchmarkSummary.astro";
 import ReorderCallout from "../components/ReorderCallout.astro";
 import EvidenceLinks from "../components/EvidenceLinks.astro";
 import { BLOB, href, REPO } from "../site";
-import { AGG, RUN } from "../bench";
+import { AGG, BROAD, RUN } from "../bench";
 import "../styles/incident.css";
 ---
 <Base
   path="/alien-signals-comparison/"
   title="alien-signals vs Reflex Quant: Benchmark, Performance and Design"
   headline="alien-signals vs Reflex Quant: Benchmark and Design"
-  description="alien-signals 3.2.1 vs Reflex Quant: CI benchmark on 18 scenarios, dependency reordering counters, API, failure semantics and size. An alternative, measured."
+  description="Reflex Quant vs alien-signals: published benchmark results, dynamic dependency tracking, stack safety, API differences and failure semantics."
   faq={[
     ["Is Reflex Quant an alternative to alien-signals?", "Yes: both provide framework-agnostic signal, computed and effect. Quant is smaller in surface, reuses dependency relations on reorder, and is specified by a written contract."],
-    ["Is Reflex Quant faster than alien-signals?", `On the project's own ${AGG.n}-scenario CI suite its geometric-mean time is ${AGG.alien} of alien-signals' (CI run ${RUN.id}, ${RUN.version}). The suite is the project's own; per-scenario numbers are on the benchmarks page of this site.`],
+    ["Is Reflex Quant faster than alien-signals?", `In the ${BROAD.date} JS Reactivity Benchmark snapshot, Quant ${BROAD.quantVersion} ranked first on the family-balanced core score at ${BROAD.quant}×, versus ${BROAD.alien}× for alien-signals ${BROAD.alienVersion}. In the separate ${AGG.n}-scenario project CI run, Quant ${RUN.version} took ${AGG.alien}× alien-signals' time by geometric mean. Neither result means Quant wins every workload.`],
   ]}
 >
-  <p class="lede">Two small, framework-agnostic signals runtimes. One is known for raw speed. The other was derived from a written contract and then measured. They agree on the API and differ in what they consider part of the job.</p>
+  <p class="lede">Two fast, small, framework-agnostic JavaScript signals libraries, with different choices about what the runtime must guarantee. Both provide signals, computeds and effects; Quant adds a written contract for exact tracking, stack safety and failure semantics.</p>
+
+  <h2>Is Reflex Quant the fastest JavaScript signals library?</h2>
+  <p>In the <a href={BROAD.snapshot}>published JS Reactivity Benchmark snapshot from {BROAD.date}</a>, Reflex Quant {BROAD.quantVersion} ranks first overall on the family-balanced core score: <strong>{BROAD.quant}×</strong>, versus <strong>{BROAD.alien}×</strong> for alien-signals {BROAD.alienVersion}. Lower is better. Quant does not win every individual workload, and no benchmark establishes a universally fastest signals library.</p>
+  <p>The snapshot covers {BROAD.total} scenarios, with {BROAD.core} shared core scenarios in the score; stress and lifecycle capability tests are reported separately. Scores are medians across three machine sets. The benchmark is maintained by Quant's author. See the <a href={BROAD.latest}>latest published results</a> and this site's <a href={href("/benchmarks/")}>benchmark methodology and newer Quant {RUN.version} CI snapshot</a>.</p>
+
   <p><a href="https://github.com/stackblitz/alien-signals">alien-signals</a> is a fast, widely used signals library. Reflex Quant treats it the way its <a href={`${BLOB}/ARCHITECTURE.md`}>architecture rules</a> treat every other runtime: as a source of counterexamples and workloads, not of obligations. It is benchmarked against alien-signals 3.2.1 on every CI run, and before any timing both must produce the same answers on every scenario.</p>
 
   <h2>At a glance</h2>
@@ -31,7 +36,7 @@ import "../styles/incident.css";
     <tr><td>Reordered reads (256 sources)</td><td>0 relations created or removed per pass</td><td>255 relinked per pass</td></tr>
     <tr><td>Depth of a chain</td><td>bounded by memory: one explicit work stack, no recursion</td><td>see its documentation</td></tr>
     <tr><td>Specified by</td><td>a written contract, an executable spec, differential tests</td><td>its test suite</td></tr>
-    <tr><td>Size (ESM, gzip)</td><td>about 2.2 KB</td><td>see <a href="https://bundlephobia.com/package/alien-signals">bundlephobia</a></td></tr>
+    <tr><td>Size (ESM, gzip)</td><td>about 2.7 KB</td><td>see <a href="https://bundlephobia.com/package/alien-signals">bundlephobia</a></td></tr>
   </table>
 
   <h2>The structural difference: a reorder</h2>
@@ -104,7 +109,7 @@ import "../styles/incident.css";
   <p>What a computed depends on after it throws. Whether A → B → A is a change. What happens to a computation whose source is written while it runs. Whether an obligation to run survives a failure. Quant answers each of these in its <a href={`${BLOB}/CONTRACT.md`}>contract</a>, executes the answers against a specification on over 140,000 programs, and removes each mechanism in turn to check that a test notices. This page makes no claim about how alien-signals behaves in those cases; only that Quant's behaviour is specified and tested there.</p>
 
   <h2>When to choose which</h2>
-  <p>Choose alien-signals if you want effect scopes in the library, a large user base, and the fastest possible read of a clean value. Choose Reflex Quant if your graphs reorder and share, if you want behaviour under failure written down, or if you want a runtime small enough to read in an afternoon and argue with.</p>
+  <p>Choose alien-signals if you want effect scopes in the library, a large user base, or the faster clean-value read in this CI snapshot. Choose Reflex Quant if your graphs reorder and share, if you want behaviour under failure written down, or if you want a runtime small enough to read in an afternoon and argue with.</p>
 
   <h2>Try Quant</h2>
   <Install />

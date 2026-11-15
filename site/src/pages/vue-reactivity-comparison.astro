@@ -1,5 +1,5 @@
 ---
-// Model/API/semantics comparison only: @vue/reactivity has not been benchmarked.
+// Model/API/semantics comparison; the broader benchmark is linked separately.
 import Base from "../layouts/Base.astro";
 import Install from "../components/Install.astro";
 import Example from "../components/Example.astro";
@@ -15,7 +15,7 @@ import { BLOB, href } from "../site";
   ]}
 >
   <p class="lede">Vue reactivity and signal runtimes share a dependency-graph core; Vue additionally tracks object properties through proxies. Underneath the different spelling it is the same idea. The differences are in what each one decides for you.</p>
-  <p>This page compares models, not speed: Quant has not been benchmarked against <code>@vue/reactivity</code>, and it is not a drop-in replacement for it. Vue's reactivity is one part of a framework with a renderer and a component model. Quant is the graph alone.</p>
+  <p>This page compares models and APIs. Quant is not a drop-in replacement for <code>@vue/reactivity</code>: Vue's reactivity is one part of a framework with a renderer and a component model, while Quant is the graph alone. The author's broader <a href={href("/benchmarks/")}>benchmark overview</a> links to a separate comparison of their reactive primitives.</p>
 
   <h2>Concept map</h2>
   <table>
@@ -50,7 +50,7 @@ import { BLOB, href } from "../site";
   <p>All of it is in <a href={`${BLOB}/CONTRACT.md`}>CONTRACT.md</a> and tested differentially against an executable specification. This page does not claim Vue behaves differently in these cases; only that in Quant they are specified.</p>
 
   <h2>Which one</h2>
-  <p>Inside a Vue application, Vue's reactivity: the renderer tracks Vue's refs, and nothing else will re-render a template. Outside one, for plain state in a library, a worker or another framework, a signals runtime of about 2.2 KB with no rendering assumptions is the smaller dependency and the more explicit one.</p>
+  <p>Inside a Vue application, Vue's reactivity: the renderer tracks Vue's refs, and nothing else will re-render a template. Outside one, for plain state in a library, a worker or another framework, a signals runtime under 3 KB gzip with no rendering assumptions is a small, explicit dependency.</p>
 
   <h2>Try it</h2>
   <Install />

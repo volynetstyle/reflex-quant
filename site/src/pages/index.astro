@@ -8,22 +8,24 @@ import Example from "../components/Example.astro";
 import BenchStrip from "../components/BenchStrip.astro";
 import ReorderCallout from "../components/ReorderCallout.astro";
 import { BLOB, href } from "../site";
+import { BROAD } from "../bench";
 ---
 <Base
   path="/"
   title="Reflex Quant: Lightweight, High-Performance JavaScript Signals Library"
   headline="Reflex Quant"
-  description="Reflex Quant is a 2.2 KB fine-grained reactivity library for JavaScript and TypeScript: signal, computed, effect, with a written contract and published benchmarks. MIT."
+  description="Reflex Quant is a tiny, high-performance JavaScript and TypeScript signals library with exact dynamic dependencies, glitch-free updates and stack-safe execution."
   faq={[
-    ["What is Reflex Quant?", "A JavaScript and TypeScript signals library (signal, computed, effect) of about 2.2 KB gzip, derived from a fixed reactive contract, with every retained mechanism justified by a counterexample."],
-    ["Is Reflex Quant production ready?", "Quant is usable as a library, but it is a research-driven runtime, not a mature dependency with years of production deployment. It is published on npm under MIT, tested differentially against an executable specification on over 140,000 programs, and benchmarked on every CI build. Read the contract before relying on edge-case behaviour."],
+    ["What is Reflex Quant?", "Reflex Quant is a tiny, high-performance, framework-agnostic JavaScript and TypeScript signals library. It provides signals, computeds and effects with exact dynamic dependencies, glitch-free propagation, stack-safe execution and defined failure semantics."],
+    ["Is Reflex Quant production ready?", "Reflex Quant is an MIT-licensed library published on npm. Its contract is differentially tested on over 140,000 programs and its performance is benchmarked in CI. It is a young library without a long public history of production deployment; evaluate its API and contract against your own requirements."],
     ["Does Reflex Quant work with React, Vue or Solid?", "Quant is framework-agnostic: it has no rendering layer. It can back state in any framework through an adapter that subscribes with effect()."],
   ]}
 >
   <Hero slot="hero" />
-  <p class="lede">A JavaScript signals runtime of about 2.2 KB gzip: signals, computeds and effects, with exact dynamic dependency tracking, glitch-free propagation, and no recursion on any path.</p>
+  <p class="lede">Reflex Quant is a high-performance, framework-agnostic JavaScript and TypeScript signals library. Signals, computeds and effects fit in under 3 KB gzip, with exact dynamic dependency tracking, glitch-free propagation, stack-safe execution and defined failure semantics.</p>
+  <p>In the <a href={BROAD.snapshot}>published {BROAD.date} JS Reactivity Benchmark snapshot</a>, Quant {BROAD.quantVersion} ranked first on the family-balanced core score: {BROAD.quant}× versus {BROAD.alien}× for alien-signals {BROAD.alienVersion}. This is a result for those measured workloads, not a universal speed ranking. See the <a href={href("/benchmarks/")}>benchmarks</a> and <a href={href("/alien-signals-comparison/")}>comparison</a> for scope and newer version-specific CI results.</p>
   <div id="install"><Install /></div>
-  <p>Quant is a research project as much as a library. It asks one question: what is the smallest reactive machine we can derive from a fixed semantic contract, with every retained mechanism justified by a counterexample? Each mechanism has one showing that this implementation breaks the contract, or a structural bound, without it. That makes it the smallest known set, not a proven lower bound. Nothing is in it because another framework has it.</p>
+  <p>Quant is a research-driven library: its runtime was derived from a fixed semantic contract and validated through differential testing. Each retained mechanism has a counterexample showing that this implementation breaks the contract or a structural bound without it. This is the smallest known set for the design, not a proven lower bound for all possible implementations.</p>
 
   <h2>Fine-grained reactivity in one example</h2>
   <p>A computation depends on exactly what its last run read, so dependencies change from run to run:</p>

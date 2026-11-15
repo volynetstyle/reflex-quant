@@ -1,6 +1,6 @@
 ---
 // All head metadata in one place: title, description, canonical, Open Graph, JSON-LD.
-import { abs, AUTHOR, ORIGIN, SOFTWARE, UPDATED, type Faq } from "../site";
+import { abs, AUTHOR, ORIGIN, SOFTWARE, pageUpdated, type Faq } from "../site";
 
 interface Props {
   path: string;
@@ -13,6 +13,7 @@ interface Props {
 const { path, title, description, headline, kind, faq } = Astro.props;
 const url = abs(path);
 const home = path === "/";
+const updated = pageUpdated(path);
 
 const graph: object[] = [
   SOFTWARE,
@@ -25,8 +26,7 @@ const graph: object[] = [
         url,
         mainEntityOfPage: url,
         author: AUTHOR,
-        datePublished: UPDATED,
-        dateModified: UPDATED,
+        ...(updated ? { dateModified: updated } : {}),
         about: { "@id": `${ORIGIN}/#software` },
         inLanguage: "en",
       },
@@ -58,13 +58,13 @@ const ld = JSON.stringify({ "@context": "https://schema.org", "@graph": graph })
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:url" content={url} />
-<meta property="og:image" content={abs("/og.jpg")} />
-<meta property="og:image:type" content="image/jpeg" />
-<meta property="og:image:width" content="1200" />
-<meta property="og:image:height" content="630" />
+<meta property="og:image" content={abs("/og-v2.png")} />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1731" />
+<meta property="og:image:height" content="909" />
 <meta property="og:image:alt" content="Reflex Quant: lightweight, high-performance JavaScript signals runtime" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:image" content={abs("/og.jpg")} />
+<meta name="twitter:image" content={abs("/og-v2.png")} />
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />
 <meta name="google-site-verification" content="38rxDnCITiskyTKc-wEw2_MglRHqPka9ZKtkO38y9Lo" />

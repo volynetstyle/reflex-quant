@@ -1,11 +1,17 @@
 import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
-import { BASE, SITE, UPDATED } from "./src/config.mjs";
+import { BASE, SITE, pageUpdated } from "./src/config.mjs";
 
 export default defineConfig({
   site: SITE,
   base: BASE,
   trailingSlash: "always",
   build: { format: "directory", inlineStylesheets: "always" },
-  integrations: [sitemap({ lastmod: new Date(UPDATED) })],
+  integrations: [sitemap({
+    serialize(item) {
+      const path = new URL(item.url).pathname.slice(BASE.length) || "/";
+      const updated = pageUpdated(path);
+      return updated ? { ...item, lastmod: new Date(updated) } : item;
+    },
+  })],
 });

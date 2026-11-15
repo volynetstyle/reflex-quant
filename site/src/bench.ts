@@ -1,3 +1,17 @@
+// Published broader benchmark, pinned so its scores remain attributable if the leaderboard changes.
+export const BROAD = {
+  date: "2026-11-10",
+  commit: "9a26a3bee200fe9610e19cc21e0b8e02730b5459",
+  snapshot: "https://github.com/volynetstyle/js-reactivity-benchmark/blob/9a26a3bee200fe9610e19cc21e0b8e02730b5459/index.html",
+  latest: "https://volynetstyle.github.io/js-reactivity-benchmark/",
+  quantVersion: "1.1.2",
+  alienVersion: "3.2.1",
+  quant: "1.07",
+  alien: "1.20",
+  core: 33,
+  total: 51,
+};
+
 // Scenario medians from CI benchmark run 43479214912 (reflex-quant 1.2.0, commit 85049b4, 2026-11-13).
 // Copied from the run's "scenarios *" job logs; aggregates below are computed, not typed.
 // The logs round to two decimals, so fan-out.effects-1000 (0.998 of the better rival) counts as
@@ -5,6 +19,7 @@
 export const RUN = {
   id: "43479214912",
   url: "https://github.com/volynetstyle/reflex-quant/actions/runs/43479214912",
+  commit: "85049b4",
   version: "1.2.0",
   date: "2026-11-13",
   // Five scenario jobs on four runner CPUs (EPYC 9V45, EPYC 9V74, Xeon 8573C, EPYC 7763);

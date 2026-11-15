@@ -1,5 +1,12 @@
 # The smallest known runtime implied by the Quant contract
 
+> **Research record.** Reflex Quant is a high-performance JavaScript signals
+> library developed from a written reactive contract. This report preserves
+> historical experiments and explicitly dated implementation updates; its older
+> measurements are not the current performance ranking. See the
+> [product README](../README.md), [benchmark snapshots](https://volynetstyle.github.io/reflex-quant/benchmarks/)
+> and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien-signals-comparison/).
+
 Experiment: derive a reactive runtime from a frozen contract (invariants
 T1–W5, bounds S1–S8, decisions D1, D2 and D6, precondition C1 in
 [CONTRACT.md](../CONTRACT.md)) that

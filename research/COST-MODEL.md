@@ -1,5 +1,12 @@
 # Physical cost model: probes
 
+> **Research record.** Reflex Quant is a high-performance JavaScript signals
+> library developed from a written reactive contract. The probes below examine
+> specific implementations and workloads; they are not a current overall
+> performance ranking. See the [product README](../README.md),
+> [benchmark snapshots](https://volynetstyle.github.io/reflex-quant/benchmarks/)
+> and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien-signals-comparison/).
+
 The semantic model is settled by the contract and the ablations. This file
 asks the next question: where the CPU bills for the architecture. Each probe
 isolates one physical hypothesis, keeps the program fixed, and separates

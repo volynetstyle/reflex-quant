@@ -21,7 +21,11 @@ function visit(dir) {
       if (value.startsWith("#")) continue;
       const url = new URL(value.replaceAll("&amp;", "&"), origin);
       if (url.origin !== origin.origin || !["http:", "https:"].includes(url.protocol)) continue;
-      assert.ok(url.pathname.startsWith(`${BASE}/`) || url.pathname === BASE, `${route}: URL outside base: ${value}`);
+      if (!url.pathname.startsWith(`${BASE}/`) && url.pathname !== BASE) {
+        // Another GitHub Pages project can share the origin but is not a local asset.
+        assert.match(value, /^https?:\/\//i, `${route}: URL outside base: ${value}`);
+        continue;
+      }
       const target = path.join(dist, decodeURIComponent(url.pathname.slice(BASE.length)));
       assert.ok(existsSync(target), `${route}: missing target: ${value}`);
       if (statSync(target).isDirectory()) assert.ok(existsSync(path.join(target, "index.html")), `${route}: missing page: ${value}`);

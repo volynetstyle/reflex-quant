@@ -1,5 +1,11 @@
 # Research
 
+Reflex Quant is a high-performance, framework-agnostic JavaScript signals
+library. These documents explain the contract-driven research behind its
+implementation. For current product information and benchmark snapshots, see
+the [README](../README.md), [benchmarks](https://volynetstyle.github.io/reflex-quant/benchmarks/)
+and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien-signals-comparison/).
+
 - [REPORT.md](REPORT.md) records the mechanism basis, evidence and provenance.
 - [LOG.md](LOG.md) records witnesses, design decisions and implementation rationale.
 - [COST-MODEL.md](COST-MODEL.md) and [EDGE-CHURN.md](EDGE-CHURN.md) examine costs.
