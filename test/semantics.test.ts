@@ -13,6 +13,28 @@ const effect = (fn: () => void | (() => void)): (() => void) => {
   return () => dispose(e);
 };
 
+it("a cleanup write before a failed body does not hot-retry the cold watcher (F3)", () => {
+  const source = signal(0);
+  let step = 0, runs = 0, cleanups = 0;
+  const watcher = watch(() => {
+    runs++;
+    get(source);
+    if (step === 1) { step = 2; throw new Error("body"); }
+    return () => {
+      cleanups++;
+      if (step === 0) { step = 1; set(source, 2); }
+    };
+  });
+  expect(() => set(source, 1)).toThrow("body");
+  expect([runs, cleanups]).toEqual([2, 1]);
+  set(source, 2);
+  expect(runs).toBe(2);
+  set(source, 3);
+  expect([runs, cleanups]).toEqual([3, 1]);
+  dispose(watcher);
+  expect(cleanups).toBe(2);
+});
+
 describe("propagation", () => {
   it("diamond: one execution per node, no glitch", () => {
     const a = signal(1);

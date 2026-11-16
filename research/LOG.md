@@ -1508,6 +1508,21 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   replace-all-256 0.59, replace-half 0.87, push.effects-1000 0.49,
   computed-create 0.92; the rest within spread.
 
+## Main backport: F3 body-attempt boundary (2026-11-16)
+
+- **Witness:** a cleanup writes an observed source before the next body begins;
+  that body reads it and throws. Production retained the pre-body WOKEN and
+  executed the failed watcher again in the same drain, without a subsequent
+  causal change. The public API regression observes three runs instead of two.
+- **Classification/repair:** semantic F3 correction. Clear the existing
+  PendingMarked mask at exec entry in both builds. The current attempt consumes
+  earlier wakes; writes during its body still create fresh W2/F4 evidence. No
+  field, bit, object shape or mechanism is added; the contract is unchanged.
+- **Scope:** only this repair, its public API regression and this evidence are
+  backported from the history research. The history-testing infrastructure stays
+  on research/history-independence. The regression fails on the previous
+  production code, then passes in both builds after the repair.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
