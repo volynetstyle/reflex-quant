@@ -6,7 +6,13 @@ export type IExpr =
 export type IBody = readonly Instruction[];
 export type Instruction =
   | { type: "signal"; id: string; value: IExpr }
-  | { type: "computed" | "effect"; id: string; body: IBody; cleanup?: IBody }
+  | {
+      type: "computed" | "effect";
+      id: string;
+      body: IBody;
+      cleanup?: IBody;
+      epochs?: boolean;
+    }
   | { type: "set" | "assign" | "log"; id: string; value: IExpr }
   | { type: "read" | "dispose" | "run"; id: string; into?: string }
   | { type: "if"; condition: IExpr; then: IBody; else: IBody }
@@ -41,6 +47,13 @@ export const ins = {
     id,
     body,
     ...(cleanup === undefined ? {} : { cleanup }),
+  }),
+  epochEffect: (id: string, body: IBody, cleanup: IBody = []): Instruction => ({
+    type: "effect",
+    id,
+    body,
+    cleanup,
+    epochs: true,
   }),
   set: (id: string, value: IExpr): Instruction => ({ type: "set", id, value }),
   assign: (id: string, value: IExpr): Instruction => ({
@@ -111,9 +124,11 @@ export class ImperativeMachine<N> {
       node: N;
       body?: IBody;
       cleanup?: IBody;
+      epochs?: boolean;
     }
   >();
   readonly registers = new Map<string, Scalar>();
+  private readonly lifecycleEpochs = new Map<string, number>();
   private events: unknown[] = [];
   private fuel = 0;
   constructor(
@@ -153,8 +168,13 @@ export class ImperativeMachine<N> {
         );
     }
   }
-  private callback(id: string, body: IBody, phase: string): Scalar {
-    this.events.push({ id, phase });
+  private callback(
+    id: string,
+    body: IBody,
+    phase: string,
+    epoch?: number,
+  ): Scalar {
+    this.events.push({ id, phase, ...(epoch === undefined ? {} : { epoch }) });
     try {
       this.block(body);
       return undefined;
@@ -186,11 +206,15 @@ export class ImperativeMachine<N> {
           op.type === "computed"
             ? this.port.computed(body)
             : this.port.effect(() => {
-                body();
+                const epoch = op.epochs
+                  ? (this.lifecycleEpochs.get(op.id) ?? 0) + 1
+                  : undefined;
+                if (epoch !== undefined) this.lifecycleEpochs.set(op.id, epoch);
+                this.callback(op.id, op.body, "run", epoch);
                 return op.cleanup === undefined
                   ? undefined
                   : () => {
-                      this.callback(op.id, op.cleanup!, "cleanup");
+                      this.callback(op.id, op.cleanup!, "cleanup", epoch);
                     };
               });
         this.handles.set(op.id, {
@@ -198,6 +222,7 @@ export class ImperativeMachine<N> {
           node,
           body: op.body,
           ...(op.cleanup === undefined ? {} : { cleanup: op.cleanup }),
+          ...(op.epochs ? { epochs: true } : {}),
         });
         return;
       }
@@ -276,11 +301,19 @@ export class ImperativeMachine<N> {
   programState() {
     return {
       registers: [...this.registers].sort(([a], [b]) => a.localeCompare(b)),
+      ...(this.lifecycleEpochs.size
+        ? {
+            lifecycleEpochs: [...this.lifecycleEpochs].sort(([a], [b]) =>
+              a.localeCompare(b),
+            ),
+          }
+        : {}),
       definitions: [...this.handles].map(([id, handle]) => ({
         id,
         kind: handle.kind,
         body: handle.body,
         cleanup: handle.cleanup,
+        ...(handle.epochs ? { epochs: true } : {}),
       })),
     };
   }

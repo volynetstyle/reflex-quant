@@ -1,0 +1,5714 @@
+{
+  "domain": "finite coupled ownership handoffs with closure epochs, relation identity and alias-role witnesses",
+  "node": "v25.2.0",
+  "v8": "14.1.146.11-node.13",
+  "generated": "2026-11-16T23:00:29.301Z",
+  "sourceSha256": "981905f77d8d9fa4f47a4bbf1884507a3b31af17540a0468f75e75fe373498d2",
+  "baselines": [
+    {
+      "variant": "dev-full",
+      "kind": "pass",
+      "checked": 60,
+      "excluded": [],
+      "coverage": [
+        {
+          "id": "handoff-attempt-manual-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-success-body",
+          "family": "handoff-attempt",
+          "phase": "manual/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-body",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-success",
+          "family": "handoff-queue",
+          "phase": "success",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-failure",
+          "family": "handoff-queue",
+          "phase": "failure",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-sibling",
+          "family": "handoff-queue",
+          "phase": "dispose-sibling",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-self",
+          "family": "handoff-queue",
+          "phase": "dispose-self",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-body",
+          "family": "handoff-cleanup",
+          "phase": "body",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-cleanup",
+          "family": "handoff-cleanup",
+          "phase": "cleanup",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-success",
+          "family": "handoff-alias",
+          "phase": "success",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 1,
+            "checking": 1,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-failure",
+          "family": "handoff-alias",
+          "phase": "failure",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 1,
+            "checking": 1,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-dispose-root",
+          "family": "handoff-alias",
+          "phase": "dispose-root",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 1,
+            "checking": 1,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-relation-false",
+          "family": "handoff-relation",
+          "phase": "false",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-relation-true",
+          "family": "handoff-relation",
+          "phase": "true",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-boundary-index-2-none-false",
+          "family": "handoff-nested-index",
+          "phase": "2/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-none-true",
+          "family": "handoff-nested-index",
+          "phase": "2/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-false",
+          "family": "handoff-nested-index",
+          "phase": "3/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-true",
+          "family": "handoff-nested-index",
+          "phase": "3/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-first-error-chain",
+          "family": "handoff-first-error",
+          "phase": "batch-drain-rollback",
+          "facts": [
+            "first-error",
+            "cleanup",
+            "Queued",
+            "host",
+            "terminal"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-epoch-recovery",
+          "family": "handoff-epochs",
+          "phase": "failure-commit-neighbour",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "Stale",
+            "retirement"
+          ],
+          "operations": 288,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-failed-frontier-replacement",
+          "family": "handoff-epochs",
+          "phase": "failed-attempt-replacement",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "retirement"
+          ],
+          "operations": 17,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-committed-new-frontier",
+          "family": "handoff-epochs",
+          "phase": "new-committed-computed-relation",
+          "facts": [
+            "tentative-gen",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-debt-cutoff",
+          "family": "handoff-debt",
+          "phase": "failed-debt-versus-new-clean",
+          "facts": [
+            "Dirty",
+            "Stale",
+            "Busy"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-cold-manual-reentry",
+          "family": "handoff-alias-reentry",
+          "phase": "cutoff-then-manual-demand",
+          "facts": [
+            "Woken",
+            "Checking",
+            "Stale"
+          ],
+          "operations": 9,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-32",
+          "family": "handoff-slot-work",
+          "phase": "32",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 150,
+          "indexes": 70,
+          "indexedWork": 1198,
+          "workBound": {
+            "width": 32,
+            "indexed": 1664
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 62,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-64",
+          "family": "handoff-slot-work",
+          "phase": "64",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 246,
+          "indexes": 134,
+          "indexedWork": 2350,
+          "workBound": {
+            "width": 64,
+            "indexed": 3200
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 126,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-128",
+          "family": "handoff-slot-work",
+          "phase": "128",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 438,
+          "indexes": 262,
+          "indexedWork": 4654,
+          "workBound": {
+            "width": 128,
+            "indexed": 6272
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 254,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        }
+      ],
+      "traceSha256": "0e3094529f126bf1f9f9cad2a921af03f05b40116f66456ab3f6624d1110c8d9",
+      "runtimeSha256": "29fc5b02d00e087a8f3751115aa037a5c1a5b6089e52ff986db94b03340a4a3b",
+      "artifacts": ".cache\\temporal-ownership\\1794870019767-Izi3mV\\baseline\\dev-full\\observations.json"
+    },
+    {
+      "variant": "prod-full",
+      "kind": "pass",
+      "checked": 60,
+      "excluded": [],
+      "coverage": [
+        {
+          "id": "handoff-attempt-manual-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-success-body",
+          "family": "handoff-attempt",
+          "phase": "manual/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-body",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-success",
+          "family": "handoff-queue",
+          "phase": "success",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-failure",
+          "family": "handoff-queue",
+          "phase": "failure",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-sibling",
+          "family": "handoff-queue",
+          "phase": "dispose-sibling",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-self",
+          "family": "handoff-queue",
+          "phase": "dispose-self",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-body",
+          "family": "handoff-cleanup",
+          "phase": "body",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-cleanup",
+          "family": "handoff-cleanup",
+          "phase": "cleanup",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-success",
+          "family": "handoff-alias",
+          "phase": "success",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-failure",
+          "family": "handoff-alias",
+          "phase": "failure",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-dispose-root",
+          "family": "handoff-alias",
+          "phase": "dispose-root",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-relation-false",
+          "family": "handoff-relation",
+          "phase": "false",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-relation-true",
+          "family": "handoff-relation",
+          "phase": "true",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-boundary-index-2-none-false",
+          "family": "handoff-nested-index",
+          "phase": "2/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-none-true",
+          "family": "handoff-nested-index",
+          "phase": "2/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-false",
+          "family": "handoff-nested-index",
+          "phase": "3/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-true",
+          "family": "handoff-nested-index",
+          "phase": "3/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-first-error-chain",
+          "family": "handoff-first-error",
+          "phase": "batch-drain-rollback",
+          "facts": [
+            "first-error",
+            "cleanup",
+            "Queued",
+            "host",
+            "terminal"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-epoch-recovery",
+          "family": "handoff-epochs",
+          "phase": "failure-commit-neighbour",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "Stale",
+            "retirement"
+          ],
+          "operations": 288,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-failed-frontier-replacement",
+          "family": "handoff-epochs",
+          "phase": "failed-attempt-replacement",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "retirement"
+          ],
+          "operations": 17,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-committed-new-frontier",
+          "family": "handoff-epochs",
+          "phase": "new-committed-computed-relation",
+          "facts": [
+            "tentative-gen",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-debt-cutoff",
+          "family": "handoff-debt",
+          "phase": "failed-debt-versus-new-clean",
+          "facts": [
+            "Dirty",
+            "Stale",
+            "Busy"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-cold-manual-reentry",
+          "family": "handoff-alias-reentry",
+          "phase": "cutoff-then-manual-demand",
+          "facts": [
+            "Woken",
+            "Checking",
+            "Stale"
+          ],
+          "operations": 9,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-32",
+          "family": "handoff-slot-work",
+          "phase": "32",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 150,
+          "indexes": 70,
+          "indexedWork": 1198,
+          "workBound": {
+            "width": 32,
+            "indexed": 1664
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 62,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-64",
+          "family": "handoff-slot-work",
+          "phase": "64",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 246,
+          "indexes": 134,
+          "indexedWork": 2350,
+          "workBound": {
+            "width": 64,
+            "indexed": 3200
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 126,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-128",
+          "family": "handoff-slot-work",
+          "phase": "128",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 438,
+          "indexes": 262,
+          "indexedWork": 4654,
+          "workBound": {
+            "width": 128,
+            "indexed": 6272
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 254,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        }
+      ],
+      "traceSha256": "0e3094529f126bf1f9f9cad2a921af03f05b40116f66456ab3f6624d1110c8d9",
+      "runtimeSha256": "9ff3ff0c101925095ebc9479707d9002fd48c1fe0739861305a491fd032af66f",
+      "artifacts": ".cache\\temporal-ownership\\1794870019767-Izi3mV\\baseline\\prod-full\\observations.json"
+    },
+    {
+      "variant": "dev-7",
+      "kind": "pass",
+      "checked": 60,
+      "excluded": [],
+      "coverage": [
+        {
+          "id": "handoff-attempt-manual-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-success-body",
+          "family": "handoff-attempt",
+          "phase": "manual/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-body",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-success",
+          "family": "handoff-queue",
+          "phase": "success",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-failure",
+          "family": "handoff-queue",
+          "phase": "failure",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-sibling",
+          "family": "handoff-queue",
+          "phase": "dispose-sibling",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-self",
+          "family": "handoff-queue",
+          "phase": "dispose-self",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-body",
+          "family": "handoff-cleanup",
+          "phase": "body",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-cleanup",
+          "family": "handoff-cleanup",
+          "phase": "cleanup",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-success",
+          "family": "handoff-alias",
+          "phase": "success",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 1,
+            "checking": 1,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-failure",
+          "family": "handoff-alias",
+          "phase": "failure",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 1,
+            "checking": 1,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-dispose-root",
+          "family": "handoff-alias",
+          "phase": "dispose-root",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 1,
+            "checking": 1,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-relation-false",
+          "family": "handoff-relation",
+          "phase": "false",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-relation-true",
+          "family": "handoff-relation",
+          "phase": "true",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-boundary-index-2-none-false",
+          "family": "handoff-nested-index",
+          "phase": "2/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-none-true",
+          "family": "handoff-nested-index",
+          "phase": "2/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-false",
+          "family": "handoff-nested-index",
+          "phase": "3/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-true",
+          "family": "handoff-nested-index",
+          "phase": "3/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-first-error-chain",
+          "family": "handoff-first-error",
+          "phase": "batch-drain-rollback",
+          "facts": [
+            "first-error",
+            "cleanup",
+            "Queued",
+            "host",
+            "terminal"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-epoch-recovery",
+          "family": "handoff-epochs",
+          "phase": "failure-commit-neighbour",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "Stale",
+            "retirement"
+          ],
+          "operations": 288,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-failed-frontier-replacement",
+          "family": "handoff-epochs",
+          "phase": "failed-attempt-replacement",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "retirement"
+          ],
+          "operations": 17,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-committed-new-frontier",
+          "family": "handoff-epochs",
+          "phase": "new-committed-computed-relation",
+          "facts": [
+            "tentative-gen",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-debt-cutoff",
+          "family": "handoff-debt",
+          "phase": "failed-debt-versus-new-clean",
+          "facts": [
+            "Dirty",
+            "Stale",
+            "Busy"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-cold-manual-reentry",
+          "family": "handoff-alias-reentry",
+          "phase": "cutoff-then-manual-demand",
+          "facts": [
+            "Woken",
+            "Checking",
+            "Stale"
+          ],
+          "operations": 9,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-32",
+          "family": "handoff-slot-work",
+          "phase": "32",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 150,
+          "indexes": 70,
+          "indexedWork": 1198,
+          "workBound": {
+            "width": 32,
+            "indexed": 1664
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 62,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-64",
+          "family": "handoff-slot-work",
+          "phase": "64",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 246,
+          "indexes": 134,
+          "indexedWork": 2350,
+          "workBound": {
+            "width": 64,
+            "indexed": 3200
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 126,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-128",
+          "family": "handoff-slot-work",
+          "phase": "128",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 438,
+          "indexes": 262,
+          "indexedWork": 4654,
+          "workBound": {
+            "width": 128,
+            "indexed": 6272
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 254,
+          "aliasRoles": {
+            "dev": true,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        }
+      ],
+      "traceSha256": "0e3094529f126bf1f9f9cad2a921af03f05b40116f66456ab3f6624d1110c8d9",
+      "runtimeSha256": "905890fdc7659d41f59affaaa9b9d8cfa2ddda0b1b8ea72df4ebf68323e58b5b",
+      "artifacts": ".cache\\temporal-ownership\\1794870019767-Izi3mV\\baseline\\dev-7\\observations.json"
+    },
+    {
+      "variant": "prod-7",
+      "kind": "pass",
+      "checked": 60,
+      "excluded": [],
+      "coverage": [
+        {
+          "id": "handoff-attempt-manual-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-success-body",
+          "family": "handoff-attempt",
+          "phase": "manual/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-failure-body",
+          "family": "handoff-attempt",
+          "phase": "manual/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-manual-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "manual/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-success-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-failure-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-scheduled-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "scheduled/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-success-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-failure-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-nested-start-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "nested-start/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 15,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-success-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/success/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-failure-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/failure/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-cleanup",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/cleanup",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-attempt-failure-recovery-dispose-body",
+          "family": "handoff-attempt",
+          "phase": "failure-recovery/dispose/body",
+          "facts": [
+            "Woken",
+            "Stale",
+            "Dirty",
+            "Busy",
+            "Queued",
+            "cleanup"
+          ],
+          "operations": 16,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-success",
+          "family": "handoff-queue",
+          "phase": "success",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-failure",
+          "family": "handoff-queue",
+          "phase": "failure",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-sibling",
+          "family": "handoff-queue",
+          "phase": "dispose-sibling",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-queue-dispose-self",
+          "family": "handoff-queue",
+          "phase": "dispose-self",
+          "facts": [
+            "Queued",
+            "Busy",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 12,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-body",
+          "family": "handoff-cleanup",
+          "phase": "body",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-cleanup-epochs-cleanup",
+          "family": "handoff-cleanup",
+          "phase": "cleanup",
+          "facts": [
+            "cleanup",
+            "Dirty",
+            "Woken"
+          ],
+          "operations": 8,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-success",
+          "family": "handoff-alias",
+          "phase": "success",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-failure",
+          "family": "handoff-alias",
+          "phase": "failure",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-alias-dispose-root",
+          "family": "handoff-alias",
+          "phase": "dispose-root",
+          "facts": [
+            "Woken",
+            "Checking",
+            "cleanup",
+            "scope"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 1
+          }
+        },
+        {
+          "id": "handoff-relation-false",
+          "family": "handoff-relation",
+          "phase": "false",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-relation-true",
+          "family": "handoff-relation",
+          "phase": "true",
+          "facts": [
+            "tentative-gen",
+            "Dirty"
+          ],
+          "operations": 52,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          },
+          "relationIdentityPreserved": true
+        },
+        {
+          "id": "handoff-boundary-index-2-none-false",
+          "family": "handoff-nested-index",
+          "phase": "2/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-none-true",
+          "family": "handoff-nested-index",
+          "phase": "2/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "2/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "2/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 10,
+          "peakIndexOwners": 2,
+          "displacedSlots": 99,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-2-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "2/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 9,
+          "peakIndexOwners": 2,
+          "displacedSlots": 57,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-false",
+          "family": "handoff-nested-index",
+          "phase": "3/none/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-none-true",
+          "family": "handoff-nested-index",
+          "phase": "3/none/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 13,
+          "peakIndexOwners": 3,
+          "displacedSlots": 198,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-false",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-outer-true",
+          "family": "handoff-nested-index",
+          "phase": "3/outer/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 11,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-false",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-middle-true",
+          "family": "handoff-nested-index",
+          "phase": "3/middle/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 114,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-false",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/false",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-index-3-inner-true",
+          "family": "handoff-nested-index",
+          "phase": "3/inner/true",
+          "facts": [
+            "slot",
+            "stack",
+            "Busy",
+            "UNREAD",
+            "tentative-gen",
+            "retirement",
+            "terminal"
+          ],
+          "operations": 83,
+          "indexes": 12,
+          "peakIndexOwners": 3,
+          "displacedSlots": 156,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-first-error-chain",
+          "family": "handoff-first-error",
+          "phase": "batch-drain-rollback",
+          "facts": [
+            "first-error",
+            "cleanup",
+            "Queued",
+            "host",
+            "terminal"
+          ],
+          "operations": 14,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-epoch-recovery",
+          "family": "handoff-epochs",
+          "phase": "failure-commit-neighbour",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "Stale",
+            "retirement"
+          ],
+          "operations": 288,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-failed-frontier-replacement",
+          "family": "handoff-epochs",
+          "phase": "failed-attempt-replacement",
+          "facts": [
+            "tentative-gen",
+            "Dirty",
+            "retirement"
+          ],
+          "operations": 17,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-boundary-committed-new-frontier",
+          "family": "handoff-epochs",
+          "phase": "new-committed-computed-relation",
+          "facts": [
+            "tentative-gen",
+            "Stale",
+            "Dirty"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-debt-cutoff",
+          "family": "handoff-debt",
+          "phase": "failed-debt-versus-new-clean",
+          "facts": [
+            "Dirty",
+            "Stale",
+            "Busy"
+          ],
+          "operations": 11,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-alias-cold-manual-reentry",
+          "family": "handoff-alias-reentry",
+          "phase": "cutoff-then-manual-demand",
+          "facts": [
+            "Woken",
+            "Checking",
+            "Stale"
+          ],
+          "operations": 9,
+          "indexes": 0,
+          "peakIndexOwners": 0,
+          "displacedSlots": 0,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-32",
+          "family": "handoff-slot-work",
+          "phase": "32",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 150,
+          "indexes": 70,
+          "indexedWork": 1198,
+          "workBound": {
+            "width": 32,
+            "indexed": 1664
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 62,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-64",
+          "family": "handoff-slot-work",
+          "phase": "64",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 246,
+          "indexes": 134,
+          "indexedWork": 2350,
+          "workBound": {
+            "width": 64,
+            "indexed": 3200
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 126,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        },
+        {
+          "id": "handoff-slot-work-128",
+          "family": "handoff-slot-work",
+          "phase": "128",
+          "facts": [
+            "slot",
+            "stack"
+          ],
+          "operations": 438,
+          "indexes": 262,
+          "indexedWork": 4654,
+          "workBound": {
+            "width": 128,
+            "indexed": 6272
+          },
+          "peakIndexOwners": 2,
+          "displacedSlots": 254,
+          "aliasRoles": {
+            "dev": false,
+            "simultaneous": 0,
+            "checking": 0,
+            "woken": 0
+          }
+        }
+      ],
+      "traceSha256": "0e3094529f126bf1f9f9cad2a921af03f05b40116f66456ab3f6624d1110c8d9",
+      "runtimeSha256": "e23aa706d52a0a20698737a24d8396cf6027a1a2e6951cdc20a84326fe16419c",
+      "artifacts": ".cache\\temporal-ownership\\1794870019767-Izi3mV\\baseline\\prod-7\\observations.json"
+    }
+  ],
+  "direct": [
+    {
+      "mask": "full",
+      "programs": 60,
+      "observations": 3076,
+      "equal": true,
+      "traceSha256": "0e3094529f126bf1f9f9cad2a921af03f05b40116f66456ab3f6624d1110c8d9"
+    },
+    {
+      "mask": 7,
+      "programs": 60,
+      "observations": 3076,
+      "equal": true,
+      "traceSha256": "0e3094529f126bf1f9f9cad2a921af03f05b40116f66456ab3f6624d1110c8d9"
+    }
+  ],
+  "artifacts": ".cache\\temporal-ownership\\1794870019767-Izi3mV",
+  "factMatrix": [
+    {
+      "fact": "Stale",
+      "birth": "write/mark below a changed source",
+      "owner": "pending source validation",
+      "extinction": "validation descent or exec entry consumes old mark",
+      "residue": "a new mark during the current validation/callback"
+    },
+    {
+      "fact": "Dirty",
+      "birth": "direct change, first run or failure",
+      "owner": "execution debt",
+      "extinction": "exec entry consumes old debt",
+      "residue": "new in-pass invalidation or failed execution debt"
+    },
+    {
+      "fact": "Woken",
+      "birth": "signal change reaches non-Busy watcher",
+      "owner": "one delivery/body-attempt interval",
+      "extinction": "body entry consumes pre-body wake",
+      "residue": "in-body wake uses Stale plus queue delivery, not Woken"
+    },
+    {
+      "fact": "Queued",
+      "birth": "host wake appends watcher",
+      "owner": "one physical queue entry",
+      "extinction": "dequeue transfers ownership to delivery",
+      "residue": "new entry created by a callback"
+    },
+    {
+      "fact": "Busy",
+      "birth": "exec entry",
+      "owner": "one dynamic callback invocation",
+      "extinction": "success/failure unwind",
+      "residue": "none at rest"
+    },
+    {
+      "fact": "Checking",
+      "birth": "DEV validation descent",
+      "owner": "one validation frame; aliases watcher Woken",
+      "extinction": "clean return, exec entry or failure unwind",
+      "residue": "none on computed at rest"
+    },
+    {
+      "fact": "cleanup",
+      "birth": "successful watcher body returns function",
+      "owner": "one watcher lifecycle epoch",
+      "extinction": "before calling cleanup on rerun/dispose",
+      "residue": "only cleanup returned by a later successful body"
+    },
+    {
+      "fact": "scope",
+      "birth": "exec/untracked saves active and cursor",
+      "owner": "one dynamic execution frame",
+      "extinction": "matching return/throw restores caller",
+      "residue": "caller's exact saved execution context"
+    },
+    {
+      "fact": "UNREAD",
+      "birth": "mark/index of old suffix",
+      "owner": "one tracking pass or failed dirty frontier",
+      "extinction": "successful read/commit/cut; failure remains dirty",
+      "residue": "unread old frontier while execution debt exists"
+    },
+    {
+      "fact": "SKIPPED",
+      "birth": "one skipped edge in near tracking",
+      "owner": "unread suffix in a pass/failed frontier",
+      "extinction": "successful observation or retirement",
+      "residue": "marker may remain on a dirty failed frontier"
+    },
+    {
+      "fact": "slot",
+      "birth": "index claim",
+      "owner": "innermost indexed owner of a source",
+      "extinction": "matching unindex",
+      "residue": "displaced outer owner's exact cell"
+    },
+    {
+      "fact": "stack",
+      "birth": "traversal push/displaced slot claim",
+      "owner": "one push-to-pop interval",
+      "extinction": "matching pop/unwind nulls physical cell",
+      "residue": "other still-owned cells only; capacity policy is separate"
+    },
+    {
+      "fact": "tentative-gen",
+      "birth": "edge birth at next execution epoch",
+      "owner": "failed/current tentative frontier",
+      "extinction": "successful commit or retirement; SETTLE bounds counter age",
+      "residue": "committed identity, not tentative classification"
+    },
+    {
+      "fact": "retirement",
+      "birth": "unlink/cut removes relation identity",
+      "owner": "operation-scoped retirement witness",
+      "extinction": "removal severs live neighbour pointers",
+      "residue": "interior pointers within one retired cut run; immutable endpoints"
+    },
+    {
+      "fact": "host",
+      "birth": "batch/drain opens hold and queue registers",
+      "owner": "nested batch/drain interval",
+      "extinction": "outer drain/batch closes hold and empties slots",
+      "residue": "bounded capacity plus spare/calm hysteresis"
+    },
+    {
+      "fact": "first-error",
+      "birth": "first error in an operation",
+      "owner": "operation plus remaining drain/rollback",
+      "extinction": "rethrow then next operation starts fresh",
+      "residue": "no prior error in next operation"
+    },
+    {
+      "fact": "terminal",
+      "birth": "dispose sets fn null",
+      "owner": "remainder of object lifetime",
+      "extinction": "terminal state has no resurrection boundary",
+      "residue": "cached computed value; no live deps or watcher cleanup"
+    }
+  ],
+  "explanationCoverage": {
+    "survived": 0,
+    "assessed": 0,
+    "unexplainedSurvivors": 0,
+    "meaning": "Post-campaign classification coverage; all source seeds stay in the kill-score denominator."
+  },
+  "handoffProtocols": [
+    {
+      "id": "queue",
+      "from": "Queued + physical cell",
+      "to": "local delivery + possible new queue entry",
+      "boundary": "dequeue/first callback",
+      "facts": [
+        "Queued",
+        "Busy",
+        "host"
+      ]
+    },
+    {
+      "id": "wake",
+      "from": "Woken before body",
+      "to": "Busy then fresh Stale/delivery",
+      "boundary": "exec entry",
+      "facts": [
+        "Woken",
+        "Busy",
+        "Stale"
+      ]
+    },
+    {
+      "id": "debt",
+      "from": "old Dirty",
+      "to": "Busy then new failed Dirty",
+      "boundary": "exec entry/failure unwind",
+      "facts": [
+        "Dirty",
+        "Busy"
+      ]
+    },
+    {
+      "id": "slots",
+      "from": "source.slot",
+      "to": "displaced stack cell then restored slot",
+      "boundary": "nested claim/unindex",
+      "facts": [
+        "slot",
+        "stack"
+      ]
+    },
+    {
+      "id": "relation",
+      "from": "tentative relation",
+      "to": "same committed relation",
+      "boundary": "successful commit",
+      "facts": [
+        "tentative-gen",
+        "retirement"
+      ]
+    },
+    {
+      "id": "cleanup",
+      "from": "old cleanup",
+      "to": "consumed callback then replacement epoch",
+      "boundary": "consume/body/commit",
+      "facts": [
+        "cleanup",
+        "terminal"
+      ]
+    },
+    {
+      "id": "error",
+      "from": "callback error",
+      "to": "drain first error then caller",
+      "boundary": "catch/drain/rollback",
+      "facts": [
+        "first-error",
+        "host"
+      ]
+    },
+    {
+      "id": "alias",
+      "from": "Checking on computed / Woken on watcher",
+      "to": "same node role, properly expired bit",
+      "boundary": "validation/body entry",
+      "facts": [
+        "Checking",
+        "Woken",
+        "Busy"
+      ]
+    }
+  ]
+}

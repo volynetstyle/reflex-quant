@@ -1,6 +1,9 @@
 # Temporal ownership: extinction boundaries and boundary twins
 
 This is the LOG 56 bounded sweep, following [HISTORY-ADVANCED.md](./HISTORY-ADVANCED.md).
+The next [handoff sweep](./TEMPORAL-HANDOFFS.md) (LOG 57) transfers obligations
+between these same 17 facts and adds classification-coverage metrics alongside
+the original scores. It does not retroactively expand this domain.
 The known F3 correction was first backported to main as `5c847db`: only the
 existing entry mask, its public API regression and a research-log record. Its
 regression failed on the old production machine (three runs instead of two),

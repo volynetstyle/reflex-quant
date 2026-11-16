@@ -14355,5 +14355,11 @@
       "extinction": "terminal state has no resurrection boundary",
       "residue": "cached computed value; no live deps or watcher cleanup"
     }
-  ]
+  ],
+  "explanationCoverage": {
+    "survived": 16,
+    "assessed": 16,
+    "unexplainedSurvivors": 0,
+    "meaning": "Post-campaign classification coverage, not a proof of equivalence or a second kill score."
+  }
 }

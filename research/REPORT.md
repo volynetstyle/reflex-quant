@@ -72,6 +72,19 @@ ancestor validation defect was in the independent model, not Quant. No additiona
 Quant defect or production mechanism follows from the sweep. Tests: 374 DEV,
 367 PROD with seven diagnostic skips. Earlier scores retain their own domains.
 
+**Coupled ownership update (LOG 57, 2026-11-17).** The same 17 facts now form
+eight handoff/alias protocols. Sixty valid programs / 3,076 total operations
+agree with the independent model and directly between DEV/PROD, at full/mask-7
+counters. The 40-seed handoff catalogue kills 39, with one protected delayed
+queue-release policy variant surviving. A repaired constant-degree child/wide
+parent witness detects missing displaced-slot saving through real retained
+slots and repeated full index work; application closure epochs and actual edge
+identity make lifecycle/commit transfer observable. Classification coverage is
+1/1 assessed, zero unexplained, separately from the kill score; the older 16/16
+classification is also retained without asserting equivalence. No new Quant
+defect or production mechanism was found. Tests: 434 DEV, 427 PROD plus seven
+diagnostic skips. [TEMPORAL-HANDOFFS.md](./TEMPORAL-HANDOFFS.md) records the limits.
+
 **Result.** The invariants admit a substantially different architecture of
 about the same per-object size: versions instead of change bits, bounded
 exact searches backed by an on-demand mark or source-side index instead of

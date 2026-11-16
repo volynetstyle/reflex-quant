@@ -33,6 +33,7 @@ const files = [
   "test/history-greybox.test.ts",
   "test/history-temporal-witnesses.test.ts",
   "test/history-boundaries.test.ts",
+  "test/history-handoffs.test.ts",
 ].map((file) => path.join(root, file));
 const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(files, options));
 if (diagnostics.length)

@@ -2,7 +2,7 @@
   "domain": "finite temporal boundary callbacks; model admission and vertical checks, direct DEV/PROD observations, operation-scoped graph/retirement/root audits",
   "node": "v25.2.0",
   "v8": "14.1.146.11-node.13",
-  "generated": "2026-11-16T22:27:21.878Z",
+  "generated": "2026-11-16T23:00:33.185Z",
   "sourceSha256": "981905f77d8d9fa4f47a4bbf1884507a3b31af17540a0468f75e75fe373498d2",
   "baselines": [
     {
@@ -2417,7 +2417,7 @@
       ],
       "traceSha256": "1238c48fdb4974adb6653c0c4d5be83b1b34b1f652d6a8ff0762d5e82cdced86",
       "runtimeSha256": "51d976a7f2f73445933de183d3d83171774caba33605d915f7d42fccc64776bb",
-      "artifacts": ".cache\\temporal-ownership\\1794868038009-wMD0gV\\baseline\\dev-full\\observations.json"
+      "artifacts": ".cache\\temporal-ownership\\1794870029643-Kc9iAM\\baseline\\dev-full\\observations.json"
     },
     {
       "variant": "prod-full",
@@ -4831,7 +4831,7 @@
       ],
       "traceSha256": "1238c48fdb4974adb6653c0c4d5be83b1b34b1f652d6a8ff0762d5e82cdced86",
       "runtimeSha256": "69ad93d420fd0726bf80a134003e736d338f5535b9466726984975c00307bf41",
-      "artifacts": ".cache\\temporal-ownership\\1794868038009-wMD0gV\\baseline\\prod-full\\observations.json"
+      "artifacts": ".cache\\temporal-ownership\\1794870029643-Kc9iAM\\baseline\\prod-full\\observations.json"
     },
     {
       "variant": "dev-7",
@@ -7245,7 +7245,7 @@
       ],
       "traceSha256": "1238c48fdb4974adb6653c0c4d5be83b1b34b1f652d6a8ff0762d5e82cdced86",
       "runtimeSha256": "c9a3c6b363d387adb371a8583054e6f518f7ddf2067c04298c8a382d647ace93",
-      "artifacts": ".cache\\temporal-ownership\\1794868038009-wMD0gV\\baseline\\dev-7\\observations.json"
+      "artifacts": ".cache\\temporal-ownership\\1794870029643-Kc9iAM\\baseline\\dev-7\\observations.json"
     },
     {
       "variant": "prod-7",
@@ -9659,7 +9659,7 @@
       ],
       "traceSha256": "1238c48fdb4974adb6653c0c4d5be83b1b34b1f652d6a8ff0762d5e82cdced86",
       "runtimeSha256": "e773469b69a52c1be7dde82d00430a5144dd9b68fa127f940de3b69b31d11535",
-      "artifacts": ".cache\\temporal-ownership\\1794868038009-wMD0gV\\baseline\\prod-7\\observations.json"
+      "artifacts": ".cache\\temporal-ownership\\1794870029643-Kc9iAM\\baseline\\prod-7\\observations.json"
     }
   ],
   "direct": [
@@ -9678,7 +9678,7 @@
       "traceSha256": "1238c48fdb4974adb6653c0c4d5be83b1b34b1f652d6a8ff0762d5e82cdced86"
     }
   ],
-  "artifacts": ".cache\\temporal-ownership\\1794868038009-wMD0gV",
+  "artifacts": ".cache\\temporal-ownership\\1794870029643-Kc9iAM",
   "factMatrix": [
     {
       "fact": "Stale",
@@ -9799,5 +9799,11 @@
       "extinction": "terminal state has no resurrection boundary",
       "residue": "cached computed value; no live deps or watcher cleanup"
     }
-  ]
+  ],
+  "explanationCoverage": {
+    "survived": 0,
+    "assessed": 0,
+    "unexplainedSurvivors": 0,
+    "meaning": "Post-campaign classification coverage, not a proof of equivalence or a second kill score."
+  }
 }

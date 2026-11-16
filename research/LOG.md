@@ -1814,6 +1814,58 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   was found after F3 in these finite domains. This is not a causal-provenance or
   DEV/PROD equivalence theorem, and it adds no physical-GC/JIT conclusion.
 
+## 57. Fact handoffs, alias roles and coupled ownership
+
+- **Scope/classification:** keep the existing 17 facts; add eight handoff/alias
+  protocols and a separate five-operator, 40-seed catalogue. Research tools and
+  test-language observations only; no production mechanism or source change.
+  Main remains at the isolated F3 backport `5c847db`.
+- **Witness domain:** 60 valid programs / 3,076 total operations per native
+  variant, including manual/scheduled/nested-start/recovery entry, dequeue and
+  new queue entries, old/new cleanup epochs, failed debt and cutoff, same-edge
+  tentative commit, overlapping indexes, four-error precedence and alias roles.
+  DEV/PROD each match the independent model at full/mask-7 counters; direct
+  actual observation arrays agree. The old domain retains its 176-program /
+  4,465-operation hash.
+- **Observability:** optional interpreter epochEffect captures an application's
+  attempt ordinal in the returned cleanup closure. Cleanup epoch sequences are
+  pinned as [1,3] after body failure and [1,2] after cleanup failure. This is
+  application state, included in projection, not a new Quant fact. Identity
+  witnesses compare actual failed-read and committed Edge objects (S2).
+- **Alias coverage:** birth Watch roles are immutable. In three DEV witnesses,
+  a watcher's Woken coexists with a computed's Checking during nested cleanup
+  validation. No legitimate conversion between those node roles is invented.
+  Physical register/slot audits decide correctness; shadow index counters are
+  coverage probes and cannot alone establish a retained runtime root.
+- **Coverage repairs:** a forged alias wake needed an explicit manual demand
+  after clean cutoff. Missing displaced-slot saving initially survived too:
+  a nine-source child fit the bounded scan, yielding no nested index overlap.
+  The repaired family uses constant-degree (26) children untracked by a wide
+  parent, so the preserved parent cursor exposes the missing transfer. It
+  requires actual overlap/displacement and a linear 48*width+128 work envelope.
+- **Measured slot evidence:** widths 32/64/128 give Quant indexed work
+  1,198/2,350/4,654. The missing-save mutant does 1,924/5,990/19,876 and retains
+  30/60/120 real source slots. Its first verdict is structural, not a timing
+  verdict; indexed work is captured at the same failure. Constant-degree child
+  calls repeatedly trigger a full parent walk, explaining the quadratic-work
+  mechanism. The finite measurements corroborate that family, not all programs.
+- **Mutation result:** 39/40 killed; one survived; no invalid, timeout or
+  coverage-gap outcomes. The survivor clears Queued before delivery and frees
+  its old physical cell in finally after the callback. A naive earlier edit
+  also removed drain exception protection and was replaced so the experiment
+  isolates ownership-transfer timing. The protected variant is undistinguished
+  in the stated domain; no universal policy equivalence or timing claim follows.
+- **Classification coverage:** handoff survivor 1/1 assessed, zero unexplained;
+  older fact catalogue 16/16 assessed, zero unexplained. These are post-campaign
+  explanations, not extra kills or equivalence proofs; the old SKIPPED work and
+  every-commit SETTLE questions remain bounded. All seeds stay in denominators.
+- **Artifacts/validation:** [TEMPORAL-HANDOFFS.md](./TEMPORAL-HANDOFFS.md),
+  [HANDOFF-MUTANTS.json](./HANDOFF-MUTANTS.json) and
+  [HANDOFF-PARITY.json](./HANDOFF-PARITY.json) contain protocols, edits, variants,
+  coverage and raw-observation paths. Full suite: 434 DEV / 427 PROD plus seven
+  diagnostic skips. Source and strict oracle typechecks pass. No additional
+  Quant defect was found; physical-GC/JIT conclusions are unchanged.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

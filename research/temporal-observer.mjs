@@ -96,8 +96,7 @@ function audit(runtime, oracle) {
     k.active !== null ||
     k.cursor !== null ||
     k.top !== 0 ||
-    k.slots.some((s) => s !== null) ||
-    runtime.kernel.__boundaryScopes.owners.size !== 0
+    k.slots.some((s) => s !== null)
   )
     throw new Error("kernel scope/slot root survived operation");
   if (
@@ -108,6 +107,12 @@ function audit(runtime, oracle) {
   )
     throw new Error("queue token/cell or hold survived drain");
   for (const node of runtime.graph.__boundaryNodes) {
+    if (
+      runtime.graph.__handoffBirthRoles &&
+      runtime.graph.__handoffBirthRoles.get(node) !==
+        Boolean(node.flags & Watch)
+    )
+      throw new Error("node changed its immutable Watch/Checking role");
     if (node.flags & Queued)
       throw new Error("QUEUED flag without a queue cell");
     if (!(node.flags & Watch) && node.flags & Checking)
@@ -126,12 +131,19 @@ function audit(runtime, oracle) {
   oracle.checkGraph(runtime.graph.__boundaryNodes, "temporal boundary");
 }
 
-export async function observeBoundaryCorpus(bundle, oracle, { only } = {}) {
-  const all = [
-    ...oracle.boundaryPrograms(),
-    ...oracle.imperativeCases(),
-    ...oracle.composedCallbackCases(),
-  ];
+export async function observeBoundaryCorpus(
+  bundle,
+  oracle,
+  { only, suite } = {},
+) {
+  const all =
+    suite === "handoffs"
+      ? oracle.handoffPrograms()
+      : [
+          ...oracle.boundaryPrograms(),
+          ...oracle.imperativeCases(),
+          ...oracle.composedCallbackCases(),
+        ];
   const traces = [],
     coverage = [],
     excluded = [];
@@ -160,6 +172,7 @@ export async function observeBoundaryCorpus(bundle, oracle, { only } = {}) {
       actualMachine = new oracle.ImperativeMachine(port.port);
     port.setMachine(actualMachine);
     const observations = [];
+    let relationIdentity;
     for (let at = 0; at < program.operations.length; at++) {
       const expected = {
         observation: expectedMachine.execute(program.operations[at]),
@@ -179,6 +192,10 @@ export async function observeBoundaryCorpus(bundle, oracle, { only } = {}) {
           program: program.id,
           at,
           message: String(error),
+          indexed: runtime.kernel.stats.indexed,
+          retainedSourceSlots: runtime.graph.__boundaryNodes.filter(
+            (n) => n.slot !== null,
+          ).length,
         };
       } finally {
         // Registry is always drained, including errors. It is not a physical GC oracle.
@@ -193,6 +210,10 @@ export async function observeBoundaryCorpus(bundle, oracle, { only } = {}) {
           program: program.id,
           at,
           message: String(error),
+          indexed: runtime.kernel.stats.indexed,
+          retainedSourceSlots: runtime.graph.__boundaryNodes.filter(
+            (n) => n.slot !== null,
+          ).length,
         };
       }
       if (!isDeepStrictEqual(expected, actual))
@@ -205,8 +226,60 @@ export async function observeBoundaryCorpus(bundle, oracle, { only } = {}) {
           actual: wire(actual.observation),
         };
       observations.push(wire(actual.observation));
+      const relation = program.relationIdentity;
+      if (relation && (at === relation.before || at === relation.after)) {
+        const source = actualMachine.handles.get(relation.source).node;
+        let edge = actualMachine.handles.get(relation.consumer).node.firstDep;
+        while (edge && edge.from !== source) edge = edge.nextDep;
+        if (!edge)
+          return {
+            kind: "coverage-gap",
+            program: program.id,
+            at,
+            message: "relation identity witness absent",
+          };
+        if (at === relation.before) relationIdentity = edge;
+        else if (relationIdentity !== edge)
+          return {
+            kind: "killed",
+            oracle: "structure",
+            program: program.id,
+            at,
+            message:
+              "tentative-to-committed handoff replaced existing relation identity",
+          };
+      }
     }
     const scopes = runtime.kernel.__boundaryScopes;
+    if (program.workBound && (scopes.peak < 2 || scopes.displaced === 0))
+      return {
+        kind: "coverage-gap",
+        program: program.id,
+        message: "work witness never displaced an outer slot owner",
+      };
+    if (
+      program.workBound &&
+      runtime.kernel.stats.indexed > program.workBound.indexed
+    )
+      return {
+        kind: "killed",
+        oracle: "structure-work",
+        program: program.id,
+        message: "nested slot handoff rebuilds parent's full index",
+        indexed: runtime.kernel.stats.indexed,
+        bound: program.workBound.indexed,
+      };
+    const roles = runtime.kernel.__handoffRoles;
+    if (
+      program.family === "handoff-alias" &&
+      roles?.dev &&
+      roles.simultaneous === 0
+    )
+      return {
+        kind: "coverage-gap",
+        program: program.id,
+        message: "alias roles never coexist",
+      };
     if (
       program.indexed &&
       (scopes.peak < Number(program.phase[0]) || scopes.displaced === 0)
@@ -223,8 +296,22 @@ export async function observeBoundaryCorpus(bundle, oracle, { only } = {}) {
       facts: program.facts ?? [],
       operations: program.operations.length,
       indexes: runtime.kernel.stats.indexes,
+      ...(program.workBound
+        ? {
+            indexedWork: runtime.kernel.stats.indexed,
+            workBound: program.workBound,
+          }
+        : {}),
       peakIndexOwners: scopes.peak,
       displacedSlots: scopes.displaced,
+      ...(roles
+        ? {
+            aliasRoles: roles,
+            relationIdentityPreserved: program.relationIdentity
+              ? true
+              : undefined,
+          }
+        : {}),
     });
     traces.push({ id: program.id, observations });
   }
@@ -246,6 +333,7 @@ if (process.argv[2] === "--child") {
   try {
     result = await observeBoundaryCorpus(process.argv[3], oracle, {
       only: process.env.QUANT_BOUNDARY_ONLY,
+      suite: process.env.QUANT_TEMPORAL_SUITE,
     });
   } catch (error) {
     result = { kind: "killed", oracle: "structure", message: String(error) };

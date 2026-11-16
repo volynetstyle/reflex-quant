@@ -601,5 +601,16 @@ export function annotateTemporalReport(report) {
     }
     result.assessment = { category, basis, limit };
   }
+  const survivors =
+    report.mutations?.results.filter((r) => r.verdict === "survived") ?? [];
+  report.explanationCoverage = {
+    survived: survivors.length,
+    assessed: survivors.filter((r) => r.assessment).length,
+    unexplainedSurvivors: survivors.filter(
+      (r) => !r.assessment || r.assessment.category === "unresolved-coverage",
+    ).length,
+    meaning:
+      "Post-campaign classification coverage, not a proof of equivalence or a second kill score.",
+  };
   return report;
 }

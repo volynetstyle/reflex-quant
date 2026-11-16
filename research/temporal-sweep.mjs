@@ -15,6 +15,7 @@ import {
   buildBoundaryRuntime,
 } from "./temporal-runtime.mjs";
 import { annotateTemporalReport } from "./temporal-facts.mjs";
+const handoffs = process.argv.includes("--handoffs");
 
 const campaignRoot = path.join(root, ".cache", "temporal-ownership");
 mkdirSync(campaignRoot, { recursive: true });
@@ -30,7 +31,7 @@ const variants = [
 ];
 const label = (options) =>
   `${options.dev ? "dev" : "prod"}-${options.mask ?? "full"}`;
-async function run(id, options, edits = []) {
+async function run(id, options, edits = [], only) {
   const directory = path.join(artifacts, id, label(options)),
     resultFile = path.join(directory, "observations.json");
   let bundle;
@@ -38,6 +39,7 @@ async function run(id, options, edits = []) {
     bundle = await buildBoundaryRuntime(directory, reference.oracle, {
       ...options,
       edits,
+      handoffs,
     });
   } catch (error) {
     return { kind: "invalid", message: String(error) };
@@ -53,6 +55,11 @@ async function run(id, options, edits = []) {
     ],
     {
       cwd: root,
+      env: {
+        ...process.env,
+        QUANT_TEMPORAL_SUITE: handoffs ? "handoffs" : "boundaries",
+        ...(only ? { QUANT_BOUNDARY_ONLY: only } : {}),
+      },
       encoding: "utf8",
       timeout: edits.length ? 8000 : 30000,
       windowsHide: true,
@@ -105,8 +112,9 @@ const compact = baselines.map(({ variant, result: { traces, ...result } }) => ({
   ...result,
 }));
 const report = {
-  domain:
-    "finite temporal boundary callbacks; model admission and vertical checks, direct DEV/PROD observations, operation-scoped graph/retirement/root audits",
+  domain: handoffs
+    ? "finite coupled ownership handoffs with closure epochs, relation identity and alias-role witnesses"
+    : "finite temporal boundary callbacks; model admission and vertical checks, direct DEV/PROD observations, operation-scoped graph/retirement/root audits",
   node: process.version,
   v8: process.versions.v8,
   generated: new Date().toISOString(),
@@ -125,7 +133,9 @@ const report = {
 if (process.argv.includes("--mutants")) {
   const { temporalMutants, discoverDevMutants } =
     await import("./temporal-facts.mjs");
-  const catalogue = [...temporalMutants(), ...discoverDevMutants(root)];
+  const catalogue = handoffs
+    ? (await import("./handoff-mutants.mjs")).handoffMutants()
+    : [...temporalMutants(), ...discoverDevMutants(root)];
   const results = [];
   for (const mutant of catalogue) {
     let verdict = "survived";
@@ -157,13 +167,44 @@ if (process.argv.includes("--mutants")) {
     score: summary.killed / catalogue.length,
     results,
   };
+  if (handoffs) {
+    const missingSlot = catalogue.find(
+      (m) => m.id === "handoff-slots-destination-missing",
+    );
+    report.slotWork = [];
+    for (const width of [32, 64, 128]) {
+      const id = `handoff-slot-work-${width}`;
+      const { traces, coverage, ...result } = await run(
+        `work-evidence-${width}`,
+        { dev: false },
+        missingSlot.edits,
+        id,
+      );
+      const pristine = baselines
+        .find((b) => b.variant === "prod-full")
+        .result.coverage.find((c) => c.id === id);
+      report.slotWork.push({
+        width,
+        pristine: pristine.indexedWork,
+        measured: result.indexed ?? coverage?.[0]?.indexedWork,
+        result,
+      });
+    }
+  }
 }
 annotateTemporalReport(report);
+if (handoffs) (await import("./handoff-mutants.mjs")).annotateHandoffs(report);
 writeFileSync(
   path.join(
     root,
     "research",
-    report.mutations ? "TEMPORAL-BOUNDARIES.json" : "BOUNDARY-PARITY.json",
+    handoffs
+      ? report.mutations
+        ? "HANDOFF-MUTANTS.json"
+        : "HANDOFF-PARITY.json"
+      : report.mutations
+        ? "TEMPORAL-BOUNDARIES.json"
+        : "BOUNDARY-PARITY.json",
   ),
   JSON.stringify(report, null, 2) + "\n",
 );

@@ -16,6 +16,7 @@ export async function buildBoundaryOracle(referenceDirectory) {
       "composedCallbackCases",
     ],
     "test/support/temporal-boundaries.ts": ["boundaryPrograms"],
+    "test/support/temporal-handoffs.ts": ["handoffPrograms"],
     "test/support/history-retirement.ts": [
       "auditRetiredEdges",
       "instrumentRetirement",
@@ -52,7 +53,7 @@ export async function buildBoundaryOracle(referenceDirectory) {
 export async function buildBoundaryRuntime(
   directory,
   oracle,
-  { dev, mask, edits = [] },
+  { dev, mask, edits = [], handoffs = false },
 ) {
   mkdirSync(directory, { recursive: true });
   const entry = path.join(directory, "entry.ts"),
@@ -127,6 +128,14 @@ export async function buildBoundaryRuntime(
                     "function __boundaryCreateNode(",
                   );
                 code += `\nexport const __boundaryNodes: Node[] = [];\nexport function createNode(...args: Parameters<typeof __boundaryCreateNode>) { const n = __boundaryCreateNode(...args); __boundaryNodes.push(n); return n; }\n`;
+                if (handoffs) {
+                  code +=
+                    "\nexport const __handoffBirthRoles = new WeakMap<Node, boolean>();\n";
+                  code = code.replace(
+                    "__boundaryNodes.push(n);",
+                    "__boundaryNodes.push(n); __handoffBirthRoles.set(n, (args[2] & Flag.Watch) !== 0);",
+                  );
+                }
               } else if (name === "kernel.ts") {
                 code = code.replace(
                   "export function index(c: Node, next: Edge | null): void {",
@@ -141,6 +150,17 @@ export async function buildBoundaryRuntime(
                   "const cell = s.slot;\n  if (cell !== null) __boundaryScopes.displaced++;",
                 );
                 code += `\nexport const __boundaryScopes = { owners: new Set<Node>(), peak: 0, displaced: 0 };\nexport function __boundaryRoots() { return { active, cursor, top, slots: stack.slice() }; }\n`;
+                if (handoffs) {
+                  code += `\nimport { __boundaryNodes } from './graph';\nexport const __handoffRoles = { dev: __DEV__, simultaneous: 0, checking: 0, woken: 0 };\nfunction __handoffSample() { let c = 0, w = 0; for (const n of __boundaryNodes) if ((n.flags & Flag.Checking) !== 0) { if ((n.flags & Flag.Watch) !== 0) w++; else c++; } __handoffRoles.checking = Math.max(__handoffRoles.checking, c); __handoffRoles.woken = Math.max(__handoffRoles.woken, w); if (c && w) __handoffRoles.simultaneous++; }\n`;
+                  code = code.replace(
+                    "  const base = top;\n  let n = root;",
+                    "  __handoffSample();\n  const base = top;\n  let n = root;",
+                  );
+                  code = code.replace(
+                    "              stack[top++] = e;",
+                    "              __handoffSample();\n              stack[top++] = e;",
+                  );
+                }
               } else {
                 code += `\nexport function __boundaryRoots() { return { head, size, hold, mask, spare, calm, slots: queue.slice() }; }\n`;
               }
