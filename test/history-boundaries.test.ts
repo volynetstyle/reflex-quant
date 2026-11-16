@@ -10,15 +10,17 @@ describe("temporal ownership boundaries", () => {
       if (result.kind === "pass" && program.indexed)
         expect(result.fingerprint.work.indexes).toBeGreaterThanOrEqual(2);
       if (result.kind === "pass" && program.family === "first-error") {
-        const constructor = program.operations.findIndex(op => op.type === "effect" && op.id === "rollback");
+        const constructor = program.operations.findIndex(
+          (op) => op.type === "effect" && op.id === "rollback",
+        );
         const observation = result.observations[constructor]!;
         expect(observation.error?.message).toBe("body-A");
         expect(observation.events).toEqual([
-          {id: "rollback", phase: "run"},
-          {id: "bodyError", phase: "run"},
-          {id: "cleanupOwner", phase: "cleanup"},
-          {id: "siblingError", phase: "run"},
-          {id: "rollback", phase: "cleanup"},
+          { id: "rollback", phase: "run" },
+          { id: "bodyError", phase: "run" },
+          { id: "cleanupOwner", phase: "cleanup" },
+          { id: "siblingError", phase: "run" },
+          { id: "rollback", phase: "cleanup" },
         ]);
       }
     });

@@ -89,6 +89,7 @@ function nativePort(runtime, auto) {
   };
 }
 function audit(runtime, oracle) {
+  const { Queued, Watch, Checking } = oracle.boundaryFlags;
   const k = runtime.kernel.__boundaryRoots(),
     h = runtime.host.__boundaryRoots();
   if (
@@ -107,11 +108,20 @@ function audit(runtime, oracle) {
   )
     throw new Error("queue token/cell or hold survived drain");
   for (const node of runtime.graph.__boundaryNodes) {
-    if (node.flags & 128) throw new Error("QUEUED flag without a queue cell");
-    if (!(node.flags & 16) && node.flags & 32)
+    if (node.flags & Queued)
+      throw new Error("QUEUED flag without a queue cell");
+    if (!(node.flags & Watch) && node.flags & Checking)
       throw new Error("CHECKING survived validation interval");
-    if (node.flags & 16 && node.fn === null && typeof node.value === "function")
-      throw new Error("disposed watcher retained cleanup");
+    if (
+      node.flags & Watch &&
+      node.fn === null &&
+      (node.firstDep !== null ||
+        node.slot !== null ||
+        typeof node.value === "function")
+    )
+      throw new Error(
+        "disposed/unpublished watcher retained dependencies, slot or cleanup",
+      );
   }
   oracle.checkGraph(runtime.graph.__boundaryNodes, "temporal boundary");
 }

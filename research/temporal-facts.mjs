@@ -508,7 +508,7 @@ export function temporalMutants() {
   return out;
 }
 
-/** Each __DEV__ conditional expression is mutated at its own exact AST range. */
+/** Conditional masks/stores and guarded flag stores, at their exact AST ranges. */
 export function discoverDevMutants(root) {
   const require = createRequire(path.join(root, "package.json")),
     ts = require("typescript");
@@ -543,6 +543,26 @@ export function discoverDevMutants(root) {
             ],
           });
       }
+      if (
+        ts.isIfStatement(node) &&
+        node.expression.getText(source) === "__DEV__" &&
+        node.thenStatement.getText(source).includes(".flags")
+      ) {
+        const offset = node.getStart(source),
+          needle = node.getText(source),
+          line = source.getLineAndCharacterOfPosition(offset).line + 1;
+        for (const [branch, replacement] of [
+          ["then", `{ ${node.thenStatement.getText(source)} }`],
+          ["else", node.elseStatement?.getText(source) ?? ";"],
+        ])
+          out.push({
+            id: `dev-${file}-${line}-if-${branch}`,
+            fact: "DEV/PROD",
+            operator: "force-conditional-branch",
+            line,
+            edits: [{ file, offset, needle, replacement }],
+          });
+      }
       ts.forEachChild(node, visit);
     };
     visit(source);
@@ -555,24 +575,31 @@ export function annotateTemporalReport(report) {
   report.factMatrix = temporalFacts;
   for (const result of report.mutations?.results ?? []) {
     for (const witness of result.witnesses)
-      if (witness.at !== undefined) witness.firstDivergenceStep = witness.at + 1;
+      if (witness.at !== undefined)
+        witness.firstDivergenceStep = witness.at + 1;
     if (result.verdict !== "survived") continue;
-    const limit = "Survived the recorded finite corpus; no universal equivalence or necessity conclusion.";
-    let category = "unresolved-coverage", basis = limit;
+    const limit =
+      "Survived the recorded finite corpus; no universal equivalence or necessity conclusion.";
+    let category = "unresolved-coverage",
+      basis = limit;
     if (result.fact === "DEV/PROD" || result.id === "Checking-early") {
       category = "valid-domain-diagnostic-path";
-      basis = "These branch choices were not distinguished with C1-invalid demands excluded. This does not test preservation of C1 diagnostics.";
+      basis =
+        "These branch choices were not distinguished with C1-invalid demands excluded. This does not test preservation of C1 diagnostics.";
     } else if (["Dirty-early", "Woken-early"].includes(result.id)) {
       category = "inert-success-store-by-inspection";
-      basis = "Busy writes create Stale, not Dirty/Woken. This edit clears its named bit only after a successful body; failure debt is installed on a separate path.";
+      basis =
+        "Busy writes create Stale, not Dirty/Woken. This edit clears its named bit only after a successful body; failure debt is installed on a separate path.";
     } else if (result.id === "SKIPPED-early") {
       category = "work-bound-not-measured";
-      basis = "This corpus checks semantic traces, graph, retirement and root ownership, not the tracking edit-work envelope. Survival is not an asymptotic result.";
+      basis =
+        "This corpus checks semantic traces, graph, retirement and root ownership, not the tracking edit-work envelope. Survival is not an asymptotic result.";
     } else if (result.id === "tentative-gen-restore") {
       category = "alternative-restamping-path";
-      basis = "Keeping gen at zero makes the existing SETTLE condition true on every successful commit, restamping the full frontier each time. The corpus does not establish the cost or general correctness of that alternative.";
+      basis =
+        "Keeping gen at zero makes the existing SETTLE condition true on every successful commit, restamping the full frontier each time. The corpus does not establish the cost or general correctness of that alternative.";
     }
-    result.assessment = {category, basis, limit};
+    result.assessment = { category, basis, limit };
   }
   return report;
 }

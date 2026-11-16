@@ -5,9 +5,7 @@ import { createHash } from "node:crypto";
 import { esbuild, root } from "./experiment-runtime.mjs";
 
 const sourcePath = (file) => path.join(root, file).replaceAll("\\", "/");
-const referenceDirectory = path.join(root, ".cache", "temporal-ownership");
-
-export async function buildBoundaryOracle() {
+export async function buildBoundaryOracle(referenceDirectory) {
   mkdirSync(referenceDirectory, { recursive: true });
   const entry = path.join(referenceDirectory, "oracle.ts");
   const exports = {
@@ -26,12 +24,13 @@ export async function buildBoundaryOracle() {
   };
   writeFileSync(
     entry,
-    Object.entries(exports)
-      .map(
-        ([file, names]) =>
-          `export { ${names.join(", ")} } from ${JSON.stringify(sourcePath(file))};`,
-      )
-      .join("\n"),
+    `import { Flag } from ${JSON.stringify(sourcePath("src/graph.ts"))};\nexport const boundaryFlags = { Queued: Flag.Queued, Watch: Flag.Watch, Checking: Flag.Checking };\n` +
+      Object.entries(exports)
+        .map(
+          ([file, names]) =>
+            `export { ${names.join(", ")} } from ${JSON.stringify(sourcePath(file))};`,
+        )
+        .join("\n"),
   );
   const outfile = path.join(referenceDirectory, "oracle.mjs");
   await esbuild().build({

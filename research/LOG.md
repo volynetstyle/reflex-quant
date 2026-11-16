@@ -1753,6 +1753,67 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   on research/history-independence. The regression fails on the previous
   production code, then passes in both builds after the repair.
 
+## 56. Temporal ownership: fact boundaries, direct DEV/PROD and systematic mutations
+
+- **Main first:** backport `5c847db` contains only the known F3 entry-mask
+  correction, public regression and evidence. The old production regression
+  produced three runs instead of two; the repaired main passes 43 DEV semantic
+  tests, 37 PROD plus six diagnostic skips, typecheck and the release check
+  (5,400 minified/unminified steps, ESM/CJS/declarations, 2,717 B gzip). Research
+  merges that main repair; it is not counted as a newly discovered defect here.
+- **Classification:** research infrastructure and one independent-model W3
+  repair. No new production state, flag, field or mechanism. The frozen contract
+  is unchanged. [TEMPORAL-OWNERSHIP.md](./TEMPORAL-OWNERSHIP.md) records the full
+  birth/owner/extinction/allowed-residue matrix and domain limits.
+- **Boundary twins:** 104 generated programs: 42 delivery phases, 20 validation
+  lifecycle mutations, 16 cleanup compositions, 16 overlapping indexed passes
+  at depth two/three, six marker/reorder cases, one first-error chain and three
+  epoch cases. The latter include failed-frontier replacement without commit and
+  a newly committed computed relation. Two extra mask-3/7 epoch replays bring the
+  new Vitest domain to 106 tests. These twins do not assert equivalent meanings
+  across an extinction boundary; the independent model decides each side.
+- **Actual phase coverage:** perturbations are real callback/public-operation
+  actions, not arbitrary injected callbacks inside atomic plain-field loops.
+  Native instrumentation proves simultaneous index owners and displaced cells;
+  the ordinary depth-two example has peak two, 99 displacements and ten indexes.
+  The constructor witness emits body A, old cleanup B, sibling C and rollback D
+  within one operation; its public error is A and its callback sequence is pinned.
+- **Model finding:** a child could dispose a validating ancestor, after which
+  the model still attempted to invoke its removed callback. Quant already
+  respected W3. The model now rechecks terminality after validation and avoids
+  installing failure metadata on disposed nodes. This is not a Quant defect.
+- **Direct differential:** 176 C1-valid programs / 4,465 top-level operations
+  pass vertically against the independent model in DEV/PROD and full/mask-7
+  builds. Actual DEV and PROD observation arrays agree exactly at each counter
+  domain. One intentional C1 case is excluded by model preflight. Wire encoding
+  preserves undefined, NaN and negative zero. Hashes summarize, not decide,
+  equality. [BOUNDARY-PARITY.json](./BOUNDARY-PARITY.json) stores the pristine
+  snapshot; raw observations are listed as cache artifacts.
+- **Systematic source seeds:** 17 fact rows × four operators = 68; exact AST
+  discovery of eight DEV sites (seven conditional expressions and one guarded
+  flag store) × both branch choices = 16.
+  Each seed compiles fresh actual source and runs valid-domain semantic plus
+  graph/retirement/root audits. Invalid builds, timeouts, and coverage gaps are
+  separate outcomes. No original source file is mutated by a campaign.
+- **Result:** 68/84 killed, 16 survived, zero invalid/timeout/coverage-gap. The
+  first 65/82 result exposed two missing frontier witnesses; adding them killed
+  the tentative-birth and version/generation-confusion seeds (67/82). The guarded
+  flag-store axis adds two seeds and kills one more expiry fault. All seeds stay in
+  the denominator. [TEMPORAL-BOUNDARIES.json](./TEMPORAL-BOUNDARIES.json) retains
+  edits, source/runtime hashes, fixed-witness first divergence steps and survivor
+  assessments; those assessments do not influence the oracle.
+- **Survivors:** twelve are undistinguished diagnostic paths in the C1-valid
+  domain. Two early success-store clears target Dirty/Woken, while Busy writes
+  actually create Stale and failure debt is installed elsewhere. SKIPPED needs
+  a tracking-work bound domain not measured here. Restoring gen to zero also
+  causes full-frontier SETTLE on every commit; its survival is no general
+  correctness/cost justification for that alternative. No removal follows.
+- **Validation:** full suite 374 DEV / 367 PROD plus seven diagnostic skips;
+  the strengthened first-error chain also passes its focused rerun in both
+  builds. Source and strict oracle typechecks pass. No additional Quant defect
+  was found after F3 in these finite domains. This is not a causal-provenance or
+  DEV/PROD equivalence theorem, and it adds no physical-GC/JIT conclusion.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

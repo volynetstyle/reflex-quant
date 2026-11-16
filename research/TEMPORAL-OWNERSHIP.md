@@ -116,9 +116,10 @@ Each of the 17 fact rows has four seeded operator families: retain an expired
 fact, clear evidence early, change a sibling role/field, and restore earlier
 state across the wrong return boundary. Concrete edits account for each
 representation; the operator names do not assume every edit must violate the
-contract. AST discovery additionally finds **all seven `__DEV__` conditional
-expressions** in the current kernel and forces each branch independently,
-yielding 14 more seeds. Exact source ranges and edits are recorded.
+contract. AST discovery additionally finds **all eight `__DEV__` mask/store
+sites** in the current kernel: seven conditional expressions and one guarded
+flag store. Forcing both branches independently yields 16 more seeds. Exact
+source ranges and edits are recorded.
 
 Source transforms are applied to in-memory build inputs. Every seed gets fresh
 DEV/PROD full/mask-7 executions until a discrepancy is found. No production file
@@ -128,15 +129,17 @@ semantic discrepancies or explicit ownership/graph/retirement audits kill a seed
 First differing operation positions describe fixed witnesses, not globally
 minimal continuation depths.
 
-The final result is **67 killed / 82 seeded**, 15 survived, zero invalid,
-timeout or coverage-gap results. The first pass was 65/82. Its surviving
+The final result is **68 killed / 84 seeded**, 16 survived, zero invalid,
+timeout or coverage-gap results. The initial expression-only pass was 65/82. Its surviving
 tentative-birth and generation/version-confusion seeds prompted the two extra
-frontier witnesses; both are now killed. This is a measured coverage improvement.
+frontier witnesses; both are now killed (67/82). Including the guarded flag store
+adds two seeds and exposes one additional expiry fault. These are measured
+coverage improvements, not newly discovered Quant defects.
 
-The remaining 15 survive the finite observation domain; they are not hidden or
+The remaining 16 survive the finite observation domain; they are not hidden or
 counted as successes:
 
-- Eleven concern diagnostic paths: ten forced DEV choices and Checking's early
+- Twelve concern diagnostic paths: eleven forced DEV choices and Checking's early
   clear. The admitted domain excludes C1-invalid demands, so survival does not
   test preservation of the cycle diagnostic.
 - Dirty/Woken early clears act only at the successful body exit. Busy writes
@@ -149,8 +152,8 @@ counted as successes:
   time. Survival does not justify removing generation machinery or establish
   that alternative's general correctness/cost.
 
-The denominator retains all 82 seeds, including observationally inert controls;
-81.7% is not a universal bug-detection probability. Assessments in
+The denominator retains all 84 seeds, including observationally inert controls;
+81.0% is not a universal bug-detection probability. Assessments in
 [TEMPORAL-BOUNDARIES.json](./TEMPORAL-BOUNDARIES.json) are post-campaign inspection
 notes, never inputs to the oracle. The older 12/12 temporal score remains a
 different catalogue/domain.

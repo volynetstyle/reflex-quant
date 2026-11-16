@@ -64,8 +64,8 @@ native regression and evidence were backported separately to main (`5c847db`).
 Research adds a 17-fact birth/owner/extinction/residue matrix and 104 boundary
 programs, including actual overlapping indexed owners at depth two/three.
 Direct DEV/PROD traces agree for 176 valid programs / 4,465 operations on both
-full counters and mask 7. A 68-seed fact/operator matrix plus 14 AST-discovered
-conditional-branch seeds yields 67 killed, 15 surviving, zero invalid/timeout.
+full counters and mask 7. A 68-seed fact/operator matrix plus 16 AST-discovered
+conditional mask/store branch seeds yields 68 killed, 16 surviving, zero invalid/timeout.
 [TEMPORAL-OWNERSHIP.md](./TEMPORAL-OWNERSHIP.md) records the surviving controls,
 work-bound exclusion and alternative every-commit restamping path. A disposed
 ancestor validation defect was in the independent model, not Quant. No additional

@@ -1,5 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync, writeFileSync, readdirSync, mkdirSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  mkdirSync,
+  mkdtempSync,
+} from "node:fs";
 import { createHash } from "node:crypto";
 import { isDeepStrictEqual } from "node:util";
 import path from "node:path";
@@ -10,14 +16,12 @@ import {
 } from "./temporal-runtime.mjs";
 import { annotateTemporalReport } from "./temporal-facts.mjs";
 
-const artifacts = path.join(
-  root,
-  ".cache",
-  "temporal-ownership",
-  String(Date.now()),
+const campaignRoot = path.join(root, ".cache", "temporal-ownership");
+mkdirSync(campaignRoot, { recursive: true });
+const artifacts = mkdtempSync(
+  path.join(campaignRoot, String(Date.now()) + "-"),
 );
-mkdirSync(artifacts, { recursive: true });
-const reference = await buildBoundaryOracle();
+const reference = await buildBoundaryOracle(path.join(artifacts, "oracle"));
 const variants = [
   { dev: true, mask: undefined },
   { dev: false, mask: undefined },
@@ -71,7 +75,7 @@ async function run(id, options, edits = []) {
 const baselines = [];
 for (const options of variants) {
   const result = await run("baseline", options);
-  if (result.kind !== "pass")
+  if (result.kind !== "pass" || result.checked === 0)
     throw new Error(
       `invalid pristine boundary domain ${label(options)}: ${JSON.stringify(result)}`,
     );
@@ -156,7 +160,11 @@ if (process.argv.includes("--mutants")) {
 }
 annotateTemporalReport(report);
 writeFileSync(
-  path.join(root, "research", report.mutations ? "TEMPORAL-BOUNDARIES.json" : "BOUNDARY-PARITY.json"),
+  path.join(
+    root,
+    "research",
+    report.mutations ? "TEMPORAL-BOUNDARIES.json" : "BOUNDARY-PARITY.json",
+  ),
   JSON.stringify(report, null, 2) + "\n",
 );
 process.stdout.write(
