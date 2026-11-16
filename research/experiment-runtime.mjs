@@ -15,7 +15,7 @@ export const root = path.resolve(
   "..",
 );
 const require = createRequire(path.join(root, "package.json"));
-function esbuild() {
+export function esbuild() {
   try {
     return require("esbuild");
   } catch {

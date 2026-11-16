@@ -181,10 +181,14 @@ export class ImperativeSpec implements ImperativePort<ModelNode> {
       } catch (error) {
         // F1: a failed demand commits nothing and owes execution next time,
         // including when the demand failed while validating the old frontier.
-        node.failed = true;
-        node.retry = this.retrySnapshot(node);
+        if (!node.disposed) {
+          node.failed = true;
+          node.retry = this.retrySnapshot(node);
+        }
         throw error;
       }
+      // A child may dispose this validating ancestor (W3).
+      if (node.disposed) return;
       if (!changed) {
         node.retry = undefined;
         return;
