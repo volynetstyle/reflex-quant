@@ -43,6 +43,22 @@ records source access budgets, compiler feedback, rejected hot-path reshapes
 and validation (172 development tests, 165 production tests with seven
 diagnosis tests skipped).
 
+**Imperative history update (LOG 55, 2026-11-16).** Stages 2–8 now have bounded
+implementations: an independent imperative callback/automatic-host model, actual
+small-counter builds, feedback-guided scar search, source temporal mutants,
+physical collection cohorts and isolated engine-history measurements.
+[HISTORY-ADVANCED.md](./HISTORY-ADVANCED.md) records the domains and reports.
+The imperative oracle found a production F3 defect: a cleanup's pre-body write
+left WOKEN set across entry, permitting a failed body to hot-retry in the same
+drain. Clearing the existing `PendingMarked` mask in both builds repairs it
+without adding a mechanism, field or flag. The source mutant restoring the old
+expression is killed. Tests: 268 development, 261 production with seven
+diagnostic skips; ESM release 2,717 B gzip. Counter and greybox negative results
+are finite; GC minor-retention attribution remains inconclusive because bare
+WeakRef controls also survive minors. The timing experiment is separate from
+semantic correctness. Earlier corpus and measurement claims below retain their
+original domains; the old expression corpus still cannot express in-pass writes.
+
 **Result.** The invariants admit a substantially different architecture of
 about the same per-object size: versions instead of change bits, bounded
 exact searches backed by an on-demand mark or source-side index instead of

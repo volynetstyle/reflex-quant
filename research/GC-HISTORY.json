@@ -1,0 +1,6396 @@
+{
+  "domain": "neighbour-clean retired endpoints, matched age schedules and ordinary-node carrier controls",
+  "node": "v25.2.0",
+  "v8": "14.1.146.11-node.13",
+  "platform": "win32",
+  "trials": 2,
+  "runtimeSha256": "c9594843a25e94abfea0c4a09b8a2d2376c07674226f1d5916ce0288952940ae",
+  "minorOracleDiscriminates": false,
+  "interpretation": "Even bare WeakRef targets survive all minor requests: minor endpoint-retention attribution is inconclusive. Major reclamation and positive-root controls remain measurable.",
+  "sources": [
+    "https://chromium.googlesource.com/v8/v8/+/refs/heads/main/src/extensions/gc-extension.h",
+    "https://nodejs.org/api/perf_hooks.html"
+  ],
+  "results": [
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "fresh",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 631376,
+        "old_space": 3441840,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073392,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3712008,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070552,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "fresh",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 609464,
+        "old_space": 3441720,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073160,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3711920,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070344,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "fresh",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 617856,
+        "old_space": 3439328,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1070248,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3710184,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1067696,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 41024,
+        "old_space": 3708896,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713624,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 42232,
+        "old_space": 3708792,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064176,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713464,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070504,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10144,
+        "old_space": 3705992,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1061264,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3711728,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1067856,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "edge-conditioned",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10592,
+        "old_space": 3716000,
+        "code_space": 125824,
+        "shared_space": 0,
+        "trusted_space": 1087600,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725712,
+        "code_space": 134080,
+        "shared_space": 0,
+        "trusted_space": 1089464,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "edge-conditioned",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 11152,
+        "old_space": 3719120,
+        "code_space": 524224,
+        "shared_space": 0,
+        "trusted_space": 1566080,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725064,
+        "code_space": 134464,
+        "shared_space": 0,
+        "trusted_space": 1089512,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "edge-conditioned",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10136,
+        "old_space": 3718704,
+        "code_space": 272352,
+        "shared_space": 0,
+        "trusted_space": 1299320,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725024,
+        "code_space": 136768,
+        "shared_space": 0,
+        "trusted_space": 1092416,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "positive-root"
+      },
+      "status": "retained-after-budget",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10456,
+        "old_space": 3708864,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12808,
+        "old_space": 3716248,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "fresh",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 631192,
+        "old_space": 3441840,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073392,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3712008,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070552,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "fresh",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 631288,
+        "old_space": 3441720,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073160,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3711920,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070344,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "fresh",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 629640,
+        "old_space": 3439400,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1070248,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3710256,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1067696,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10456,
+        "old_space": 3708824,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713552,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 11664,
+        "old_space": 3708792,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064176,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713464,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070504,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10144,
+        "old_space": 3705992,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1061264,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3711728,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1067856,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "edge-conditioned",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10592,
+        "old_space": 3719464,
+        "code_space": 262112,
+        "shared_space": 0,
+        "trusted_space": 1295040,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725672,
+        "code_space": 136576,
+        "shared_space": 0,
+        "trusted_space": 1093000,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "edge-conditioned",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 11560,
+        "old_space": 3719080,
+        "code_space": 131072,
+        "shared_space": 0,
+        "trusted_space": 1094768,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725408,
+        "code_space": 134464,
+        "shared_space": 0,
+        "trusted_space": 1089512,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "edge-conditioned",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10136,
+        "old_space": 3715800,
+        "code_space": 125824,
+        "shared_space": 0,
+        "trusted_space": 1087408,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725344,
+        "code_space": 136384,
+        "shared_space": 0,
+        "trusted_space": 1092176,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "positive-root"
+      },
+      "status": "retained-after-budget",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 41024,
+        "old_space": 3708856,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12808,
+        "old_space": 3716240,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "fresh",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 634832,
+        "old_space": 3441840,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073392,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3712008,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070552,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "fresh",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 631544,
+        "old_space": 3441720,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073160,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3711920,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070344,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "fresh",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 629656,
+        "old_space": 3439328,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1070248,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3710184,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1067696,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10456,
+        "old_space": 3708824,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713552,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 11664,
+        "old_space": 3708792,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064176,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713464,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070504,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 40712,
+        "old_space": 3705992,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1061264,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3711728,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1067856,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "edge-conditioned",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10832,
+        "old_space": 3718880,
+        "code_space": 270496,
+        "shared_space": 0,
+        "trusted_space": 1348336,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12832,
+        "old_space": 3725024,
+        "code_space": 134464,
+        "shared_space": 0,
+        "trusted_space": 1089720,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "edge-conditioned",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10592,
+        "old_space": 3718456,
+        "code_space": 116800,
+        "shared_space": 0,
+        "trusted_space": 1082464,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725064,
+        "code_space": 134464,
+        "shared_space": 0,
+        "trusted_space": 1089512,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "edge-conditioned",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10136,
+        "old_space": 3718416,
+        "code_space": 116800,
+        "shared_space": 0,
+        "trusted_space": 1082488,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725024,
+        "code_space": 136768,
+        "shared_space": 0,
+        "trusted_space": 1092416,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "from",
+        "history": "aged",
+        "treatment": "positive-root"
+      },
+      "status": "retained-after-budget",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10456,
+        "old_space": 3708936,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12808,
+        "old_space": 3716320,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "fresh",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 641344,
+        "old_space": 3441840,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073392,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3712008,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070552,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "fresh",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 614536,
+        "old_space": 3441720,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1073160,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3711920,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1070344,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "fresh",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 609408,
+        "old_space": 3439328,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1070248,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3710184,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1067696,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 41024,
+        "old_space": 3708824,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713552,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 11664,
+        "old_space": 3708792,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064176,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3713464,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070504,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 40712,
+        "old_space": 3705992,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1061264,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12688,
+        "old_space": 3711728,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1067856,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "edge-conditioned",
+        "treatment": "old-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10592,
+        "old_space": 3715920,
+        "code_space": 125824,
+        "shared_space": 0,
+        "trusted_space": 1087616,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725632,
+        "code_space": 134080,
+        "shared_space": 0,
+        "trusted_space": 1089480,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "edge-conditioned",
+        "treatment": "young-edge"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10592,
+        "old_space": 3718704,
+        "code_space": 262112,
+        "shared_space": 0,
+        "trusted_space": 1301168,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3724888,
+        "code_space": 133696,
+        "shared_space": 0,
+        "trusted_space": 1090552,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": false
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "edge-conditioned",
+        "treatment": "carrier"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10136,
+        "old_space": 3719048,
+        "code_space": 125760,
+        "shared_space": 0,
+        "trusted_space": 1090032,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12416,
+        "old_space": 3725368,
+        "code_space": 136768,
+        "shared_space": 0,
+        "trusted_space": 1092416,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": false,
+            "consumer": false,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "to",
+        "history": "aged",
+        "treatment": "positive-root"
+      },
+      "status": "retained-after-budget",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 10456,
+        "old_space": 3708856,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1064240,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12808,
+        "old_space": 3716240,
+        "code_space": 103296,
+        "shared_space": 0,
+        "trusted_space": 1070712,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": true,
+            "source": true,
+            "consumer": true,
+            "edge": true
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "endpoint": "none",
+        "history": "fresh",
+        "treatment": "bare"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 606008,
+        "old_space": 3437656,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1069080,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3709680,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1066648,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "endpoint": "none",
+        "history": "fresh",
+        "treatment": "bare"
+      },
+      "status": "collected",
+      "before": {
+        "read_only_space": 0,
+        "new_space": 628136,
+        "old_space": 3437656,
+        "code_space": 87232,
+        "shared_space": 0,
+        "trusted_space": 1069080,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "after": {
+        "read_only_space": 0,
+        "new_space": 12296,
+        "old_space": 3709680,
+        "code_space": 102976,
+        "shared_space": 0,
+        "trusted_space": 1066648,
+        "shared_trusted_space": 0,
+        "new_large_object_space": 0,
+        "large_object_space": 131088,
+        "code_large_object_space": 0,
+        "shared_large_object_space": 0,
+        "shared_trusted_large_object_space": 0,
+        "trusted_large_object_space": 0
+      },
+      "minorObserved": true,
+      "majorObserved": true,
+      "observations": [
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "minor",
+          "observedKinds": [
+            1
+          ],
+          "alive": {
+            "payload": true,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        },
+        {
+          "requested": "major",
+          "observedKinds": [
+            4
+          ],
+          "alive": {
+            "payload": false,
+            "source": null,
+            "consumer": null,
+            "edge": null
+          }
+        }
+      ],
+      "events": [
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 1,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        },
+        {
+          "kind": 4,
+          "flags": 4
+        }
+      ],
+      "note": "Histories condition ages/allocation sites; individual object generations are not measured."
+    }
+  ]
+}

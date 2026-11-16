@@ -1,0 +1,353 @@
+{
+  "domain": "12 source-level temporal mutants; production; named finite witnesses",
+  "node": "v25.2.0",
+  "v8": "14.1.146.11-node.13",
+  "summary": {
+    "killed": 12,
+    "survived": 0,
+    "invalid": 0,
+    "timeout": 0
+  },
+  "score": 1,
+  "denominator": 12,
+  "sourceSha256": "981905f77d8d9fa4f47a4bbf1884507a3b31af17540a0468f75e75fe373498d2",
+  "catalog": [
+    {
+      "id": "pre-run-woken",
+      "file": "kernel.ts",
+      "needle": "n.flags = (n.flags & ~Flag.PendingMarked) | Flag.Busy;",
+      "replacement": "n.flags = (n.flags & ~(__DEV__ ? Flag.PendingMarked : Flag.Pending)) | Flag.Busy;"
+    },
+    {
+      "id": "preserve-consumed-cleanup",
+      "file": "host.ts",
+      "needle": "    w.value = undefined;",
+      "replacement": "    /* mutant: cleanup retained */"
+    },
+    {
+      "id": "retain-queued",
+      "file": "host.ts",
+      "needle": "queuedWatcher.flags & ~Flag.Queued",
+      "replacement": "queuedWatcher.flags"
+    },
+    {
+      "id": "never-shrink-ring",
+      "file": "host.ts",
+      "needle": "if ((spare += taken) > mask) shrink(calm);",
+      "replacement": "if (false) shrink(calm);"
+    },
+    {
+      "id": "skip-settle",
+      "file": "kernel.ts",
+      "needle": "if ((n.gen & SETTLE) === 0) settleDeps(n);",
+      "replacement": "if (false) settleDeps(n);"
+    },
+    {
+      "id": "stale-stack-slots",
+      "file": "kernel.ts",
+      "needle": "stack[top] = null;",
+      "replacement": "/* mutant: popped slot retained */"
+    },
+    {
+      "id": "retired-next-sub",
+      "file": "graph.ts",
+      "needle": "  e.nextSub = null;",
+      "replacement": "  /* mutant: next subscriber retained */"
+    },
+    {
+      "id": "retired-prev-dep",
+      "file": "graph.ts",
+      "needle": "  e.prevDep = null;",
+      "replacement": "  /* mutant: retained prefix */"
+    },
+    {
+      "id": "keep-dirty-on-success",
+      "file": "kernel.ts",
+      "needle": "n.flags = (n.flags & ~Flag.PendingMarked) | Flag.Busy;",
+      "replacement": "n.flags = (n.flags & ~Flag.Stale) | Flag.Busy;"
+    },
+    {
+      "id": "refresh-reread",
+      "file": "kernel.ts",
+      "needle": "else if (__STATS__) stats.repeats++;",
+      "replacement": "else { last.ver = n.ver; if (__STATS__) stats.repeats++; }"
+    },
+    {
+      "id": "lose-failed-debt",
+      "file": "kernel.ts",
+      "needle": "  n.flags |= Flag.Dirty;\n  const tentative",
+      "replacement": "  if ((n.flags & Flag.Watch) === 0) n.flags |= Flag.Dirty;\n  const tentative"
+    },
+    {
+      "id": "replace-first-error",
+      "file": "host.ts",
+      "needle": "if (!failed) first = error;",
+      "replacement": "first = error;"
+    }
+  ],
+  "results": [
+    {
+      "id": "pre-run-woken",
+      "file": "kernel.ts",
+      "test": "test/history-reentrant.test.ts",
+      "pattern": "cleanup-write-before",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "imperative callbacks and automatic host cleanup-write-before-failed-body-is-not-in-pass-invalidation",
+            "firstDivergenceStep": 4,
+            "message": "AssertionError: {\"kind\":\"implementation\",\"at\":3,\"expected\":{\"observation\":{\"error\":{\"name\":\"Error\",\"message\":\"body\"},\"events\":[{\"id\":\"w\",\"phase\":\"cleanup\"},{\"id\":\"w\",\"phase\":\"run\"}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":2},{\"id\":\"w\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false}],\"program\":{\"registers\":[[\"step\",2]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"w\",\"kind\":\"effect\",\"body\":[{\"type\":\"read\",\"id\":\"a\"},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"step\"},\"right\":{\"type\":\"value\",\"value\":1}},\"then\":[{\"type\":\"assign\",\"id\":\"step\",\"value\":{\"type\":\"value\",\"value\":2}},{\"type\":\"fail\",\"message\":\"body\"}],\"else\":[]}],\"cleanup\":[{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"step\"},\"right\":{\"type\":\"value\",\"value\":0}},\"then\":[{\"type\":\"assign\",\"id\":\"step\",\"value\":{\"type\":\"value\",\"value\":1}},{\"type\":\"set\",\"id\":\"a\",\"value\":{\"type\":\"value\",\"value\":2}}],\"else\":[]}]}]},\"relations\":[\"a>w\"]},\"actual\":{\"observation\":{\"error\":{\"name\":\"Error\",\"message\":\"body\"},\"events\":[{\"id\":\"w\",\"phase\":\"cleanup\"},{\"id\":\"w\",\"phase\":\"run\"},{\"id\":\"w\",\"phase\":\"run\"}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":2},{\"id\":\"w\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":true}],\"program\":{\"registers\":[[\"step\",2]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"w\",\"kind\":\"effect\",\"body\":[{\"type\":\"read\",\"id\":\"a\"},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"step\"},\"right\":{\"type\":\"value\",\"value\":1}},\"then\":[{\"type\":\"assign\",\"id\":\"step\",\"value\":{\"type\":\"value\",\"value\":2}},{\"type\":\"fail\",\"message\":\"body\"}],\"else\":[]}],\"cleanup\":[{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"step\"},\"right\":{\"type\":\"value\",\"value\":0}},\"then\":[{\"type\":\"assign\",\"id\":\"step\",\"value\":{\"type\":\"value\",\"value\":1}},{\"type\":\"set\",\"id\":\"a\",\"value\":{\"type\":\"value\",\"value\":2}}],\"else\":[]}]}]},\"relations\":[\"a>w\"]},\"message\":\"imperative mismatch cleanup-write-before-failed-body-is-not-in-pass-invalidation@3\"}: expected 'implementation' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-reentrant.test.ts:17:51\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "preserve-consumed-cleanup",
+      "file": "host.ts",
+      "test": "test/history-reentrant.test.ts",
+      "pattern": "cleanup-failure-consumed",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "imperative callbacks and automatic host cleanup-failure-consumed-before-retry",
+            "firstDivergenceStep": 4,
+            "message": "AssertionError: {\"kind\":\"implementation\",\"at\":3,\"expected\":{\"observation\":{\"error\":{\"name\":\"Error\",\"message\":\"cleanup\"},\"events\":[{\"id\":\"w\",\"phase\":\"cleanup\"}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"w\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false}],\"program\":{\"registers\":[[\"throwCleanup\",false]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"w\",\"kind\":\"effect\",\"body\":[{\"type\":\"read\",\"id\":\"a\"}],\"cleanup\":[{\"type\":\"if\",\"condition\":{\"type\":\"register\",\"id\":\"throwCleanup\"},\"then\":[{\"type\":\"assign\",\"id\":\"throwCleanup\",\"value\":{\"type\":\"value\",\"value\":false}},{\"type\":\"fail\",\"message\":\"cleanup\"}],\"else\":[]}]}]},\"relations\":[\"a>w\"]},\"actual\":{\"observation\":{\"error\":{\"name\":\"Error\",\"message\":\"cleanup\"},\"events\":[{\"id\":\"w\",\"phase\":\"cleanup\"}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"w\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":true}],\"program\":{\"registers\":[[\"throwCleanup\",false]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"w\",\"kind\":\"effect\",\"body\":[{\"type\":\"read\",\"id\":\"a\"}],\"cleanup\":[{\"type\":\"if\",\"condition\":{\"type\":\"register\",\"id\":\"throwCleanup\"},\"then\":[{\"type\":\"assign\",\"id\":\"throwCleanup\",\"value\":{\"type\":\"value\",\"value\":false}},{\"type\":\"fail\",\"message\":\"cleanup\"}],\"else\":[]}]}]},\"relations\":[\"a>w\"]},\"message\":\"imperative mismatch cleanup-failure-consumed-before-retry@3\"}: expected 'implementation' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-reentrant.test.ts:17:51\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "retain-queued",
+      "file": "host.ts",
+      "test": "test/history-reentrant.test.ts",
+      "pattern": "W2-self-write",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "imperative callbacks and automatic host W2-self-write-reread",
+            "firstDivergenceStep": 2,
+            "message": "AssertionError: {\"kind\":\"structure\",\"at\":1,\"message\":\"Error: research stale QUEUED token\"}: expected 'structure' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-reentrant.test.ts:17:51\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "never-shrink-ring",
+      "file": "host.ts",
+      "test": "test/history-reentrant.test.ts",
+      "pattern": "returns the ring",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "imperative callbacks and automatic host returns the ring after a burst while model outputs remain equivalent",
+            "firstDivergenceStep": null,
+            "message": "AssertionError: expected 1023 to be 255 // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-reentrant.test.ts:56:44\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "skip-settle",
+      "file": "kernel.ts",
+      "test": "test/history-counter-wrap.test.ts",
+      "pattern": "exhausts 120",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 6,
+        "passed": 0,
+        "failed": 3,
+        "evidence": [
+          {
+            "name": "finite version and generation domains exhausts 120 suffixes after repeated failure/recovery and multiple wraps, mask 3",
+            "firstDivergenceStep": 10,
+            "message": "AssertionError: {\"kind\":\"structure\",\"at\":9,\"message\":\"Error: research: clean node 3 has an invalidated source 1\"}: expected 'structure' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-counter-wrap.test.ts:65:53\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          },
+          {
+            "name": "finite version and generation domains exhausts 120 suffixes after repeated failure/recovery and multiple wraps, mask 7",
+            "firstDivergenceStep": 16,
+            "message": "AssertionError: {\"kind\":\"structure\",\"at\":15,\"message\":\"Error: research: clean node 3 has an invalidated source 1\"}: expected 'structure' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-counter-wrap.test.ts:65:53\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          },
+          {
+            "name": "finite version and generation domains exhausts 120 suffixes after repeated failure/recovery and multiple wraps, mask 15",
+            "firstDivergenceStep": 30,
+            "message": "AssertionError: {\"kind\":\"structure\",\"at\":29,\"message\":\"Error: research: clean node 3 has an invalidated source 1\"}: expected 'structure' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-counter-wrap.test.ts:65:53\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "stale-stack-slots",
+      "file": "kernel.ts",
+      "test": "test/history-temporal-witnesses.test.ts",
+      "pattern": "branching propagation",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 4,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "temporal mutation witnesses branching propagation releases completed work-stack slots",
+            "firstDivergenceStep": 6,
+            "message": "AssertionError: {\"kind\":\"structure\",\"at\":5,\"message\":\"Error: research kernel roots not clear\"}: expected 'structure' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-temporal-witnesses.test.ts:20:49\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "retired-next-sub",
+      "file": "graph.ts",
+      "test": "test/history-temporal-witnesses.test.ts",
+      "pattern": "retired early",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 4,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "temporal mutation witnesses retired early subscriber severs younger neighbour",
+            "firstDivergenceStep": 4,
+            "message": "AssertionError: {\"kind\":\"structure\",\"at\":3,\"message\":\"Error: retirement integrity: retired subscriber retains a neighbour\"}: expected 'structure' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-temporal-witnesses.test.ts:34:49\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "retired-prev-dep",
+      "file": "graph.ts",
+      "test": "test/history-temporal-witnesses.test.ts",
+      "pattern": "cut suffix",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 4,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "temporal mutation witnesses cut suffix severs its retained prefix",
+            "firstDivergenceStep": 7,
+            "message": "AssertionError: {\"kind\":\"structure\",\"at\":6,\"message\":\"Error: retirement integrity: cut dependency points outside its own retired run\"}: expected 'structure' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-temporal-witnesses.test.ts:55:49\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "keep-dirty-on-success",
+      "file": "kernel.ts",
+      "test": "test/history-reentrant.test.ts",
+      "pattern": "P5-first",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "imperative callbacks and automatic host P5-first-observation-reread",
+            "firstDivergenceStep": 6,
+            "message": "AssertionError: {\"kind\":\"implementation\",\"at\":5,\"expected\":{\"observation\":{\"value\":2,\"events\":[]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":2},{\"id\":\"c\",\"kind\":\"computed\",\"disposed\":false,\"value\":2}],\"program\":{\"registers\":[[\"once\",1]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"c\",\"kind\":\"computed\",\"body\":[{\"type\":\"read\",\"id\":\"a\"},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"once\"},\"right\":{\"type\":\"value\",\"value\":0}},\"then\":[{\"type\":\"assign\",\"id\":\"once\",\"value\":{\"type\":\"value\",\"value\":1}},{\"type\":\"set\",\"id\":\"a\",\"value\":{\"type\":\"value\",\"value\":2}}],\"else\":[]},{\"type\":\"return\",\"value\":{\"type\":\"read\",\"id\":\"a\"}}]}]},\"relations\":[\"a>c\"]},\"actual\":{\"observation\":{\"value\":2,\"events\":[{\"id\":\"c\",\"phase\":\"run\"}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":2},{\"id\":\"c\",\"kind\":\"computed\",\"disposed\":false,\"value\":2}],\"program\":{\"registers\":[[\"once\",1]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"c\",\"kind\":\"computed\",\"body\":[{\"type\":\"read\",\"id\":\"a\"},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"once\"},\"right\":{\"type\":\"value\",\"value\":0}},\"then\":[{\"type\":\"assign\",\"id\":\"once\",\"value\":{\"type\":\"value\",\"value\":1}},{\"type\":\"set\",\"id\":\"a\",\"value\":{\"type\":\"value\",\"value\":2}}],\"else\":[]},{\"type\":\"return\",\"value\":{\"type\":\"read\",\"id\":\"a\"}}]}]},\"relations\":[\"a>c\"]},\"message\":\"imperative mismatch P5-first-observation-reread@5\"}: expected 'implementation' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-reentrant.test.ts:17:51\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "refresh-reread",
+      "file": "kernel.ts",
+      "test": "test/history-reentrant.test.ts",
+      "pattern": "P5-first",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "imperative callbacks and automatic host P5-first-observation-reread",
+            "firstDivergenceStep": 5,
+            "message": "AssertionError: {\"kind\":\"implementation\",\"at\":4,\"expected\":{\"observation\":{\"value\":2,\"events\":[{\"id\":\"c\",\"phase\":\"run\"}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":2},{\"id\":\"c\",\"kind\":\"computed\",\"disposed\":false,\"value\":2}],\"program\":{\"registers\":[[\"once\",1]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"c\",\"kind\":\"computed\",\"body\":[{\"type\":\"read\",\"id\":\"a\"},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"once\"},\"right\":{\"type\":\"value\",\"value\":0}},\"then\":[{\"type\":\"assign\",\"id\":\"once\",\"value\":{\"type\":\"value\",\"value\":1}},{\"type\":\"set\",\"id\":\"a\",\"value\":{\"type\":\"value\",\"value\":2}}],\"else\":[]},{\"type\":\"return\",\"value\":{\"type\":\"read\",\"id\":\"a\"}}]}]},\"relations\":[\"a>c\"]},\"actual\":{\"observation\":{\"value\":2,\"events\":[]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":2},{\"id\":\"c\",\"kind\":\"computed\",\"disposed\":false,\"value\":2}],\"program\":{\"registers\":[[\"once\",1]],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"c\",\"kind\":\"computed\",\"body\":[{\"type\":\"read\",\"id\":\"a\"},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"register\",\"id\":\"once\"},\"right\":{\"type\":\"value\",\"value\":0}},\"then\":[{\"type\":\"assign\",\"id\":\"once\",\"value\":{\"type\":\"value\",\"value\":1}},{\"type\":\"set\",\"id\":\"a\",\"value\":{\"type\":\"value\",\"value\":2}}],\"else\":[]},{\"type\":\"return\",\"value\":{\"type\":\"read\",\"id\":\"a\"}}]}]},\"relations\":[\"a>c\"]},\"message\":\"imperative mismatch P5-first-observation-reread@4\"}: expected 'implementation' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-reentrant.test.ts:17:51\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "lose-failed-debt",
+      "file": "kernel.ts",
+      "test": "test/history-temporal-witnesses.test.ts",
+      "pattern": "failed execution debt",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 4,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "temporal mutation witnesses failed execution debt survives an unchanged computed wake",
+            "firstDivergenceStep": 9,
+            "message": "AssertionError: {\"kind\":\"implementation\",\"at\":8,\"expected\":{\"observation\":{\"events\":[{\"id\":\"c\",\"phase\":\"run\"},{\"id\":\"w\",\"phase\":\"run\"}]},\"public\":[{\"id\":\"c\",\"kind\":\"computed\",\"disposed\":false,\"value\":true},{\"id\":\"d\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"u\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"w\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false}],\"program\":{\"registers\":[[\"fail\",false]],\"definitions\":[{\"id\":\"d\",\"kind\":\"signal\"},{\"id\":\"u\",\"kind\":\"signal\"},{\"id\":\"c\",\"kind\":\"computed\",\"body\":[{\"type\":\"return\",\"value\":{\"type\":\"less\",\"left\":{\"type\":\"read\",\"id\":\"u\"},\"right\":{\"type\":\"value\",\"value\":5}}}]},{\"id\":\"w\",\"kind\":\"effect\",\"body\":[{\"type\":\"read\",\"id\":\"c\"},{\"type\":\"read\",\"id\":\"d\"},{\"type\":\"if\",\"condition\":{\"type\":\"register\",\"id\":\"fail\"},\"then\":[{\"type\":\"fail\",\"message\":\"w\"}],\"else\":[]}]}]},\"relations\":[\"c>w\",\"d>w\",\"u>c\"]},\"actual\":{\"observation\":{\"events\":[{\"id\":\"c\",\"phase\":\"run\"}]},\"public\":[{\"id\":\"c\",\"kind\":\"computed\",\"disposed\":false,\"value\":true},{\"id\":\"d\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"u\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"w\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false}],\"program\":{\"registers\":[[\"fail\",false]],\"definitions\":[{\"id\":\"d\",\"kind\":\"signal\"},{\"id\":\"u\",\"kind\":\"signal\"},{\"id\":\"c\",\"kind\":\"computed\",\"body\":[{\"type\":\"return\",\"value\":{\"type\":\"less\",\"left\":{\"type\":\"read\",\"id\":\"u\"},\"right\":{\"type\":\"value\",\"value\":5}}}]},{\"id\":\"w\",\"kind\":\"effect\",\"body\":[{\"type\":\"read\",\"id\":\"c\"},{\"type\":\"read\",\"id\":\"d\"},{\"type\":\"if\",\"condition\":{\"type\":\"register\",\"id\":\"fail\"},\"then\":[{\"type\":\"fail\",\"message\":\"w\"}],\"else\":[]}]}]},\"relations\":[\"c>w\",\"d>w\",\"u>c\"]},\"message\":\"imperative mismatch failure-debt-cutoff@8\"}: expected 'implementation' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-temporal-witnesses.test.ts:78:49\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    },
+    {
+      "id": "replace-first-error",
+      "file": "host.ts",
+      "test": "test/history-reentrant.test.ts",
+      "pattern": "F5-drain",
+      "status": "killed",
+      "result": {
+        "exit": 1,
+        "timeout": false,
+        "total": 18,
+        "passed": 0,
+        "failed": 1,
+        "evidence": [
+          {
+            "name": "imperative callbacks and automatic host F5-drain-continues-after-error",
+            "firstDivergenceStep": 4,
+            "message": "AssertionError: {\"kind\":\"implementation\",\"at\":3,\"expected\":{\"observation\":{\"error\":{\"name\":\"Error\",\"message\":\"first\"},\"events\":[{\"id\":\"first\",\"phase\":\"run\"},{\"id\":\"second\",\"phase\":\"run\"},{\"log\":\"second\",\"value\":1}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"first\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false},{\"id\":\"second\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false}],\"program\":{\"registers\":[],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"first\",\"kind\":\"effect\",\"body\":[{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"read\",\"id\":\"a\"},\"right\":{\"type\":\"value\",\"value\":1}},\"then\":[{\"type\":\"fail\",\"message\":\"first\"}],\"else\":[]}]},{\"id\":\"second\",\"kind\":\"effect\",\"body\":[{\"type\":\"log\",\"id\":\"second\",\"value\":{\"type\":\"read\",\"id\":\"a\"}},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"read\",\"id\":\"a\"},\"right\":{\"type\":\"value\",\"value\":1}},\"then\":[{\"type\":\"fail\",\"message\":\"second\"}],\"else\":[]}]}]},\"relations\":[\"a>first\",\"a>second\"]},\"actual\":{\"observation\":{\"error\":{\"name\":\"Error\",\"message\":\"second\"},\"events\":[{\"id\":\"first\",\"phase\":\"run\"},{\"id\":\"second\",\"phase\":\"run\"},{\"log\":\"second\",\"value\":1}]},\"public\":[{\"id\":\"a\",\"kind\":\"signal\",\"disposed\":false,\"value\":1},{\"id\":\"first\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false},{\"id\":\"second\",\"kind\":\"effect\",\"disposed\":false,\"cleanup\":false}],\"program\":{\"registers\":[],\"definitions\":[{\"id\":\"a\",\"kind\":\"signal\"},{\"id\":\"first\",\"kind\":\"effect\",\"body\":[{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"read\",\"id\":\"a\"},\"right\":{\"type\":\"value\",\"value\":1}},\"then\":[{\"type\":\"fail\",\"message\":\"first\"}],\"else\":[]}]},{\"id\":\"second\",\"kind\":\"effect\",\"body\":[{\"type\":\"log\",\"id\":\"second\",\"value\":{\"type\":\"read\",\"id\":\"a\"}},{\"type\":\"if\",\"condition\":{\"type\":\"equal\",\"left\":{\"type\":\"read\",\"id\":\"a\"},\"right\":{\"type\":\"value\",\"value\":1}},\"then\":[{\"type\":\"fail\",\"message\":\"second\"}],\"else\":[]}]}]},\"relations\":[\"a>first\",\"a>second\"]},\"message\":\"imperative mismatch F5-drain-continues-after-error@3\"}: expected 'implementation' to be 'pass' // Object.is equality\n    at D:/PersonalProjects/ReflesIndustries/Reflex/packages/reflex-runtime-quant/test/history-reentrant.test.ts:17:51\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)\n    at file:///D:/PersonalProjects/ReflesIndustries/Reflex/node_modules/.pnpm/@vitest+runner@4.1.5/node_modules/@vitest/runner/dist/chunk-artifact.js:1903:20"
+          }
+        ]
+      }
+    }
+  ],
+  "artifacts": ".cache\\temporal-mutants\\1794865136308"
+}

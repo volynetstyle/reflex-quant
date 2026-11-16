@@ -392,8 +392,10 @@ export function exec(n: Node): void {
   // Cleared before the run: a push during it marks the node again. In a
   // development build a computed's validation ends here, BUSY taking over
   // from CHECKING; on a watcher the bit is WOKEN, which this run discharges.
-  n.flags =
-    (n.flags & ~(__DEV__ ? Flag.PendingMarked : Flag.Pending)) | Flag.Busy;
+  // Also consume a watcher's pre-run WOKEN in production. A cleanup write
+  // preceded this attempt; retaining its wake would hot-retry a failed body.
+  // Writes during the body set a fresh wake and still survive (W2/F4).
+  n.flags = (n.flags & ~Flag.PendingMarked) | Flag.Busy;
   active = n;
   cursor = null;
   let value: unknown;

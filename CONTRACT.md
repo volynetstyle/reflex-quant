@@ -13,7 +13,7 @@ Nothing outside this contract defines correctness: not explanatory documents, no
 
 ### Semantic invariants
 
-P5, F5 and W5 lie outside the executable spec: its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API.
+P5, F5 and W5 lie outside the original expression spec (`test/support/contract-spec.ts`): its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API. The independent imperative model in `test/support/imperative-spec.ts` additionally checks finite composed callback/host domains, including these obligations; its language and limits are recorded in `research/HISTORY-ADVANCED.md`. This adds executable coverage, not new invariants.
 
 Graph and tracking
 - **T1 exact tracking.** A computation observes exactly the sources it read; dynamic branches add and drop relations.

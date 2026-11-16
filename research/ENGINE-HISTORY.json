@@ -1,0 +1,2496 @@
+{
+  "domain": "separate-process prefix histories, five common warmups, nine timing rounds; no correctness timing threshold; optimization diagnostics run separately from timing",
+  "node": "v25.2.0",
+  "v8": "14.1.146.11-node.13",
+  "arch": "x64",
+  "platform": "win32",
+  "osRelease": "10.0.19045",
+  "cpu": "12th Gen Intel(R) Core(TM) i5-1235U",
+  "runtimeSha256": "c9594843a25e94abfea0c4a09b8a2d2376c07674226f1d5916ce0288952940ae",
+  "trials": 5,
+  "iterations": 200000,
+  "ratios": [
+    {
+      "history": "polymorphic",
+      "pairs": [
+        {
+          "trial": 0,
+          "early": 0.7215359756423265,
+          "late": 1.234994746967566
+        },
+        {
+          "trial": 1,
+          "early": 0.4995465482139546,
+          "late": 0.5473528494228687
+        },
+        {
+          "trial": 2,
+          "early": 0.7423166895216577,
+          "late": 0.7428236753255694
+        },
+        {
+          "trial": 3,
+          "early": 0.6944204725372547,
+          "late": 0.7185547841673692
+        },
+        {
+          "trial": 4,
+          "early": 0.7700150414348961,
+          "late": 0.7312089515932857
+        }
+      ],
+      "medianLateRatio": 0.7312089515932857
+    },
+    {
+      "history": "high-degree",
+      "pairs": [
+        {
+          "trial": 0,
+          "early": 0.8164828267720746,
+          "late": 0.8484397811463876
+        },
+        {
+          "trial": 1,
+          "early": 0.5694984267999258,
+          "late": 0.6204526471505756
+        },
+        {
+          "trial": 2,
+          "early": 0.8112244897959182,
+          "late": 0.847102597671052
+        },
+        {
+          "trial": 3,
+          "early": 1.4630307889890788,
+          "late": 0.8168332062549333
+        },
+        {
+          "trial": 4,
+          "early": 0.8331252128504926,
+          "late": 0.8232519797832368
+        }
+      ],
+      "medianLateRatio": 0.8232519797832368
+    },
+    {
+      "history": "failure-churn",
+      "pairs": [
+        {
+          "trial": 0,
+          "early": 0.8755541904812788,
+          "late": 0.8835736993628116
+        },
+        {
+          "trial": 1,
+          "early": 0.6047936331667596,
+          "late": 0.6608064727133651
+        },
+        {
+          "trial": 2,
+          "early": 0.8672662740985726,
+          "late": 0.8684214152828511
+        },
+        {
+          "trial": 3,
+          "early": 0.8270013522420715,
+          "late": 0.8540738659924817
+        },
+        {
+          "trial": 4,
+          "early": 0.9258145078896578,
+          "late": 0.8656315035541488
+        }
+      ],
+      "medianLateRatio": 0.8656315035541488
+    }
+  ],
+  "logicalGraph": [
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": false,
+      "callable": false,
+      "deps": []
+    },
+    {
+      "value": 0,
+      "callable": true,
+      "deps": [
+        257,
+        256,
+        0
+      ]
+    }
+  ],
+  "telemetry": [
+    {
+      "history": "fresh",
+      "parameters": {
+        "history": "fresh",
+        "iterations": 20000,
+        "diagnostic": true
+      },
+      "counts": {
+        "prefix": {
+          "opt": 0,
+          "deopt": 0
+        },
+        "warmup": {
+          "opt": 17,
+          "deopt": 5
+        },
+        "measured": {
+          "opt": 6,
+          "deopt": 10
+        }
+      },
+      "trace": ".cache\\history-experiments\\engine-history\\fresh.trace.txt",
+      "deoptExamples": [
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 000001FD40301CE9)>, 0x00a611cca1e1 <Code MAGLEV>, opt id 11, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x00f581dfec20, pc 0x022fc9d49a99]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 000001FD40301CE9)>, 0x00a611cca1e1 <Code MAGLEV>, opt id 11, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x00f581dfec20, pc 0x022fc9d49a99]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 000001FD40301CE9)>, 0x00a611cca1e1 <Code MAGLEV>, opt id 11, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x00f581dfec20, pc 0x022fc9d49a99]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 000001FD40301CE9)>, 0x00a611cca1e1 <Code MAGLEV>, opt id 11, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x00f581dfec20, pc 0x022fc9d49a99]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 0000",
+        "[bailout (kind: deopt-eager, reason: prepare for on stack replacement (OSR)): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 000001FD40301CE9)>, 0x00a611cca1e1 <Code MAGLEV>, opt id 11, bytecode offset 64, deopt exit 30, FP to SP delta 128, caller SP 0x00f581dfec20, pc 0x022fc9d49aa1]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 000001FD40301CE9)>, 0x015505106c81 <Code TURBOFAN_JS>, opt id 12, bytecode offset 96, deopt exit 60, FP to SP delta 200, caller SP 0x00f581dfec20, pc 0x022fc9d4d10c]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x020f41b73529 <JSFunction work (sfi = 000001FD40301CE9)>, 0x015505106c81 <Code TURBOFAN_JS>, opt id 12, bytecode offset 96, deopt exit 60, FP to SP delta 200, caller SP 0x00f581dfec20, pc 0x022fc9d4d10c]\r"
+      ]
+    },
+    {
+      "history": "polymorphic",
+      "parameters": {
+        "history": "polymorphic",
+        "iterations": 20000,
+        "diagnostic": true
+      },
+      "counts": {
+        "prefix": {
+          "opt": 10,
+          "deopt": 0
+        },
+        "warmup": {
+          "opt": 9,
+          "deopt": 1
+        },
+        "measured": {
+          "opt": 12,
+          "deopt": 1
+        }
+      },
+      "trace": ".cache\\history-experiments\\engine-history\\polymorphic.trace.txt",
+      "deoptExamples": [
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic named access): begin. deoptimizing 0x0288af54b499 <JSFunction child (sfi = 0000038DAB7D2849)>, 0x007e1848a389 <Code MAGLEV>, opt id 12, bytecode offset 587, deopt exit 25, FP to SP delta 320, caller SP 0x0035f8dfe938, pc 0x014dd174c357]\r",
+        "[bailout (kind: deopt-eager, reason: prepare for on stack replacement (OSR)): begin. deoptimizing 0x034c66f35471 <JSFunction work (sfi = 00000288AF541CE9)>, 0x0371a36c1e71 <Code MAGLEV>, opt id 19, bytecode offset 64, deopt exit 34, FP to SP delta 128, caller SP 0x0035f8dfe7d0, pc 0x014dd179092a]\r"
+      ]
+    },
+    {
+      "history": "high-degree",
+      "parameters": {
+        "history": "high-degree",
+        "iterations": 20000,
+        "diagnostic": true
+      },
+      "counts": {
+        "prefix": {
+          "opt": 9,
+          "deopt": 0
+        },
+        "warmup": {
+          "opt": 21,
+          "deopt": 6
+        },
+        "measured": {
+          "opt": 2,
+          "deopt": 10
+        }
+      },
+      "trace": ".cache\\history-experiments\\engine-history\\high-degree.trace.txt",
+      "deoptExamples": [
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic named access): begin. deoptimizing 0x0399b877ef81 <JSFunction exec (sfi = 000003E5160453F9)>, 0x01b58998b4b1 <Code MAGLEV>, opt id 16, bytecode offset 261, deopt exit 16, FP to SP delta 64, caller SP 0x00b5941fe908, pc 0x02b0de4cc657]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x010499eb4f91 <JSFunction work (sfi = 000003E516041CD9)>, 0x01acc66c1ec9 <Code MAGLEV>, opt id 19, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x00b5941fea30, pc 0x02b0de4cebd9]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x010499eb4f91 <JSFunction work (sfi = 000003E516041CD9)>, 0x01acc66c1ec9 <Code MAGLEV>, opt id 19, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x00b5941fea30, pc 0x02b0de4cebd9]\r",
+        "[bailout (kind: deopt-eager, reason: prepare for on stack replacement (OSR)): begin. deoptimizing 0x010499eb4f91 <JSFunction work (sfi = 000003E516041CD9)>, 0x01acc66c1ec9 <Code MAGLEV>, opt id 19, bytecode offset 64, deopt exit 30, FP to SP delta 128, caller SP 0x00b5941fea30, pc 0x02b0de4cebe1]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x010499eb4f91 <JSFunction work (sfi = 000003E516041CD9)>, 0x01b58998f1a9 <Code TURBOFAN_JS>, opt id 20, bytecode offset 96, deopt exit 25, FP to SP delta 168, caller SP 0x00b5941fea30, pc 0x02b0de4cf34f]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x010499eb4f91 <JSFunction work (sfi = 000003E516041CD9)>, 0x01b58998f1a9 <Code TURBOFAN_JS>, opt id 20, bytecode offset 96, deopt exit 25, FP to SP delta 168, caller SP 0x00b5941fea30, pc 0x02b0de4cf34f]\r",
+        "RESULT {\"parameters\":{\"history\":\"high-degree\",\"iterations\":20000,\"diagnostic\":true},\"logical\":[{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":false,\"deps\":[]},{\"value\":false,\"callable\":false,\"deps\":[]},{\"value\":0,\"callable\":true,\"deps\":[257,256,0]}],\"rounds\":[{\"ms\":0.6697999999999951,\"checksum\":2546416},{\"ms\":0.6098999999999961,\"checksum\":2546416},{\"ms\":0.6276999999999902,\"checksum\":2546416},{\"ms\":0.664599999999993,\"checksum\":2546416},{\"ms\":0.6312000000000069,\"checksum\":2546416},{\"ms\":0.6263000000000005,\"checksum\":2546416},{\"ms\":0.6278000000000077,\"checksum\":2546416},{\"ms\":0.598700000000008,\"checksum\":2546416},{\"ms\":0.622799999999998,\"checksum\":2546416}],\"earlyMedian\":0.6461499999999916,\"lateMedian\":0.6263000000000005,\"expected\":2546416}back for generic keyed access): begin. deoptimizing 0x010499eb4f91 <JSFunction work (sfi = 000003E516041CD9)>, 0x01b58998f1a9 <Code TURBOFAN_JS>, opt id 20, bytecode offset 96, deopt exit 25, FP to SP delta 168, caller SP 0x00b5941fea30, pc 0x02b0de4cf34f]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x010499eb4f91 <JSFunction work (sfi = 000003E516041CD9)>, 0x01b58998f1a9 <Code TURBOFAN_JS>, opt id 20, bytecode offset 96, deopt exit 25, FP to SP delta 168, caller SP 0x00b5941fea30, pc 0x02b0de4cf34f]\r"
+      ]
+    },
+    {
+      "history": "failure-churn",
+      "parameters": {
+        "history": "failure-churn",
+        "iterations": 20000,
+        "diagnostic": true
+      },
+      "counts": {
+        "prefix": {
+          "opt": 22,
+          "deopt": 0
+        },
+        "warmup": {
+          "opt": 8,
+          "deopt": 4
+        },
+        "measured": {
+          "opt": 9,
+          "deopt": 2
+        }
+      },
+      "trace": ".cache\\history-experiments\\engine-history\\failure-churn.trace.txt",
+      "deoptExamples": [
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic named access): begin. deoptimizing 0x0209082bc4f9 <JSFunction exec (sfi = 000002957EF453F9)>, 0x00eadef44961 <Code MAGLEV>, opt id 18, bytecode offset 261, deopt exit 17, FP to SP delta 72, caller SP 0x002e8c5feb08, pc 0x01b880095bd8]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x0062b6629e49 <JSFunction work (sfi = 000002957EF41CD9)>, 0x018f426c0db9 <Code MAGLEV>, opt id 22, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x002e8c5fec30, pc 0x01b880098b99]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x0062b6629e49 <JSFunction work (sfi = 000002957EF41CD9)>, 0x018f426c0db9 <Code MAGLEV>, opt id 22, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP 0x002e8c5fec30, pc 0x01b880098b99]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x0062b6629e49 <JSFunction work (sfi = 000002957EF41CD9)>, 0x018f426c0db9 <Code MAGLEV>, opt id 22, bytecode offset 85, deopt exit 28, FP to SP delta 128, caller SP",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x0062b6629e49 <JSFunction work (sfi = 000002957EF41CD9)>, 0x00eadef48cf9 <Code TURBOFAN_JS>, opt id 24, bytecode offset 96, deopt exit 26, FP to SP delta 168, caller SP 0x002e8c5fec30, pc 0x01b880099662]\r",
+        "[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic keyed access): begin. deoptimizing 0x0062b6629e49 <JSFunction work (sfi = 000002957EF41CD9)>, 0x00eadef48cf9 <Code TURBOFAN_JS>, opt id 24, bytecode offset 96, deopt exit 26, FP to SP delta 168, caller SP 0x002e8c5fec30, pc 0x01b880099662]\r"
+      ]
+    }
+  ],
+  "results": [
+    {
+      "parameters": {
+        "trial": 0,
+        "history": "fresh",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 7.5154,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.461399999999998,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.55980000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.367100000000008,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.268100000000004,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.384500000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.212600000000009,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.329100000000011,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.492199999999997,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 7.488399999999999,
+      "lateMedian": 7.329100000000011,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "history": "polymorphic",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 5.4495000000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.342699999999994,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.356799999999993,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.123999999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.5049999999999955,
+          "checksum": 25493856
+        },
+        {
+          "ms": 9.051400000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 10.8172,
+          "checksum": 25493856
+        },
+        {
+          "ms": 9.303600000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 8.911899999999989,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 5.403149999999997,
+      "lateMedian": 9.051400000000001,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "history": "high-degree",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 6.021800000000013,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.072599999999994,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.176199999999994,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.15570000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.218299999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.105400000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.486500000000007,
+          "checksum": 25493856
+        },
+        {
+          "ms": 8.077100000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.140699999999981,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.114150000000002,
+      "lateMedian": 6.218299999999999,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 0,
+        "history": "failure-churn",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 6.610400000000013,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.516000000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.597000000000008,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.459900000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.5090999999999894,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.55919999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.31110000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.3311999999999955,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.4757999999999925,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.556500000000007,
+      "lateMedian": 6.4757999999999925,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "history": "failure-churn",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 7.315099999999987,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.569200000000009,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.165199999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.501599999999996,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.530799999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.573700000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.58189999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.5101999999999975,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.566499999999991,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.535400000000003,
+      "lateMedian": 6.566499999999991,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "history": "high-degree",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 6.170000000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.1377000000000095,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.150599999999997,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.1573999999999955,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.179000000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.669899999999998,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.074400000000011,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.036100000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.165499999999994,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.153999999999996,
+      "lateMedian": 6.165499999999994,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "history": "polymorphic",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 5.410199999999989,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.417099999999991,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.384699999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.385999999999996,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.5186999999999955,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.3857,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.439099999999996,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.424800000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.487499999999997,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 5.398099999999992,
+      "lateMedian": 5.439099999999996,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 1,
+        "history": "fresh",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 10.979,
+          "checksum": 25493856
+        },
+        {
+          "ms": 13.537300000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 10.632999999999996,
+          "checksum": 25493856
+        },
+        {
+          "ms": 10.349900000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 9.937100000000015,
+          "checksum": 25493856
+        },
+        {
+          "ms": 10.425999999999988,
+          "checksum": 25493856
+        },
+        {
+          "ms": 9.331400000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 9.847099999999983,
+          "checksum": 25493856
+        },
+        {
+          "ms": 10.040199999999999,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 10.805999999999997,
+      "lateMedian": 9.937100000000015,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 2,
+        "history": "fresh",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 7.395700000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.466999999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.409400000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.476299999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.381299999999996,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.256500000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.913799999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.868300000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.324600000000004,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 7.438200000000002,
+      "lateMedian": 7.256500000000003,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 2,
+        "history": "polymorphic",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 5.338899999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.460799999999992,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.5822,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.648399999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.108800000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.206600000000009,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.390299999999996,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.420700000000011,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.4696,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 5.521499999999996,
+      "lateMedian": 5.390299999999996,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 2,
+        "history": "high-degree",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 5.626500000000007,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.045400000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.094400000000007,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.0227,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.1222000000000065,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.1325999999999965,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.146999999999991,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.1861999999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.191299999999998,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.034050000000001,
+      "lateMedian": 6.146999999999991,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 2,
+        "history": "failure-churn",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 6.5575000000000045,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.2149,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.183800000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.344300000000004,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.463199999999986,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.564599999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.301700000000011,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.0178000000000225,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.967500000000001,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.450900000000004,
+      "lateMedian": 6.301700000000011,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 3,
+        "history": "failure-churn",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 6.2845999999999975,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.060199999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.065799999999996,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.104600000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.153199999999998,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.176199999999994,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.634899999999988,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.3847999999999985,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.494099999999975,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.0852,
+      "lateMedian": 6.3847999999999985,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 3,
+        "history": "high-degree",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 11.820599999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 11.678699999999992,
+          "checksum": 25493856
+        },
+        {
+          "ms": 9.851699999999994,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.019100000000009,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.134500000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.07080000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.046300000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.106400000000008,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.1170999999999935,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 10.765199999999993,
+      "lateMedian": 6.106400000000008,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 3,
+        "history": "polymorphic",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 5.559600000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.207800000000006,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.011499999999998,
+          "checksum": 25493856
+        },
+        {
+          "ms": 4.999600000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.420500000000004,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.371700000000004,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.392600000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.224099999999993,
+          "checksum": 25493856
+        },
+        {
+          "ms": 4.981700000000004,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 5.109650000000002,
+      "lateMedian": 5.371700000000004,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 3,
+        "history": "fresh",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 6.9833,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.143600000000006,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.5726999999999975,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.792400000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 8.008199999999988,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.475700000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.2117000000000075,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.500699999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.079400000000007,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 7.358150000000002,
+      "lateMedian": 7.475700000000003,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 4,
+        "history": "fresh",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 7.452500000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.121399999999994,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.923100000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.973000000000013,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.768799999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.100700000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.488399999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.5458,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.399799999999999,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 7.047200000000004,
+      "lateMedian": 7.399799999999999,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 4,
+        "history": "polymorphic",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 5.455600000000004,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.397300000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.361199999999997,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.48190000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.334400000000002,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.411599999999993,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.410799999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.399300000000011,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.420000000000002,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 5.426450000000003,
+      "lateMedian": 5.410799999999995,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 4,
+        "history": "high-degree",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 5.953399999999988,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.14670000000001,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.585300000000004,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.7890000000000015,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.091899999999995,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.756500000000003,
+          "checksum": 25493856
+        },
+        {
+          "ms": 5.875600000000006,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.13539999999999,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.095699999999994,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 5.871199999999995,
+      "lateMedian": 6.091899999999995,
+      "expected": 25493856
+    },
+    {
+      "parameters": {
+        "trial": 4,
+        "history": "failure-churn",
+        "iterations": 200000
+      },
+      "rounds": [
+        {
+          "ms": 6.4893,
+          "checksum": 25493856
+        },
+        {
+          "ms": 7.036600000000007,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.5595,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.3049000000000035,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.266400000000004,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.405499999999989,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.420799999999986,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.417100000000005,
+          "checksum": 25493856
+        },
+        {
+          "ms": 6.3922000000000025,
+          "checksum": 25493856
+        }
+      ],
+      "earlyMedian": 6.5244,
+      "lateMedian": 6.405499999999989,
+      "expected": 25493856
+    }
+  ]
+}

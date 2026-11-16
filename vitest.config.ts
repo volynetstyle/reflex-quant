@@ -50,10 +50,16 @@ const historyRoots: Plugin = {
     const file = slashes(id.split("?")[0]!);
     if (!quantDirs.some((dir) => file.startsWith(dir))) return null;
     if (file.endsWith("/graph.ts")) return { code: instrumentRetirement(code), map: null };
+    if (file.endsWith("/host.ts")) {
+      const allocation = "queue[(head + size++) & mask] = w;";
+      if (!code.includes(allocation)) throw new Error("missing research queue instrumentation boundary");
+      code = code.replace(allocation, allocation + "\n  if (size > __historyPeakQueued) __historyPeakQueued = size;");
+      code += "\nlet __historyPeakQueued = 0;\n";
+    }
     const snapshot = file.endsWith("/kernel.ts")
-      ? "({ active, cursor, top, slots: stack.slice() })"
+      ? "({ active, cursor, top, peak, slots: stack.slice() })"
       : file.endsWith("/host.ts")
-        ? "({ size, hold, slots: queue.slice() })"
+        ? "({ size, hold, head, mask, spare, calm, peakQueued: __historyPeakQueued, slots: queue.slice() })"
         : undefined;
     return snapshot === undefined ? null : {
       code: code + `\nexport function __historyRoots() { return ${snapshot}; }\n`,

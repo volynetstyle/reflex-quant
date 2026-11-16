@@ -1657,6 +1657,88 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   checks pass. No new Quant defect was found in these bounded domains. Stages
   2–8 remain future domains, not results of this corpus.
 
+## 55. Imperative histories, actual host/counters, greybox and physical experiments
+
+- **Request/domain:** implement stages 2–8 of the assumption-removal strategy.
+  [HISTORY-ADVANCED.md](./HISTORY-ADVANCED.md) records languages, bounds,
+  instrumentation, reproduction commands and the separate result types. The
+  original expression/interleaving domains are retained. No contract invariant
+  or framework policy is added.
+- **Classification:** the interpreter, independent semantic/host model,
+  instrumentation, source-mutant runner and physical/timing tools are research
+  infrastructure. The sole production edit is a semantic repair of F3 using an
+  existing mask/store; the mechanism basis and object shapes are unchanged.
+- **Actual Quant witness:** an established watcher reads a source and returns a
+  cleanup. A later write starts a rerun; that cleanup writes the same source
+  before the new body begins. The body reads it and throws. Production retained
+  pre-run WOKEN and hot-retried the failed body in the same drain, allowing a new
+  cleanup to be installed. Development already cleared it. There was no later
+  causal source change authorizing this retry (F3).
+- **Smallest repair:** `exec` now clears `PendingMarked` on entry in both builds,
+  consuming the pre-body wake along with pending work. There is no new branch,
+  field, allocation or flag. An extra “cleanup wake” bit is unnecessary: writes
+  during the body set a fresh wake, preserving W2/F4. A direct public API
+  regression and an independent imperative witness fail on the previous
+  production expression and pass after the repair; a no-op write stays cold and
+  a later changed write recovers.
+- **Independent oracle:** an interpreted scalar imperative language runs inside
+  computed/watcher/cleanup callbacks. A separate Maps/unbounded-version/Set-queue
+  model handles first observations, execution debt, retry evidence, first error,
+  batching, cleanup consumption and atomic watcher construction. C1-invalid
+  demands are excluded before Quant execution. Model fixes for F1 validation
+  failures and F4 redelivery are recorded as model fixes, not Quant defects.
+  Chosen FIFO/birth-order delivery remains a scheduling convention in the model
+  checkpoint. Every top-level operation compares public/program state, event
+  traces and relation pairs and audits graph, retirement and physical slots.
+- **Reentrancy/host coverage:** 13 named cases, one deliberately C1-invalid;
+  all 60 mode × callback-position × action × failure combinations; P5 and batch
+  partition history pairs. A 1,024-watcher burst versus steady construction has
+  equal ready model state; 2,048 common small deliveries converge the ring to
+  mask 255. Ring policy and the general storage envelope are distinguished.
+- **Counter domain:** actual graph constants mocked to masks 3/7/15 with matching
+  SETTLE, native proof of ver/gen wrap, more than four cycles per prelude, then
+  all 120 length-1–4 words over toggle/read/flush per mask (360 total). The model
+  counters stay unbounded. No divergence; this is not all multi-cycle histories.
+- **Greybox domain:** independent model admission, then scalar implementation
+  scars guide weighted parent mutation of at most eight blocks. Seed `0x55ace`,
+  budget 256, stop after 16 admitted non-novel candidates: 153 admitted, 34 scars,
+  one spec class. Farthest fresh/eight-block pair distance 63.96076532432932;
+  every depth-1–2 word over read-c/write-a=2/flush passes (12 words). This is
+  generator-relative empirical saturation, with no spec-only future-path pruning.
+  [SCAR-SEARCH.json](./SCAR-SEARCH.json) contains the witnesses.
+- **Temporal source mutations:** 12/12 killed, zero survived/invalid/timeout,
+  pristine baselines required; exact edits/hash/assertions in
+  [TEMPORAL-MUTANTS.json](./TEMPORAL-MUTANTS.json). The first run missed the
+  stale-stack-slot seed (11/12): the original wide witness never pushed sibling
+  work. A branching propagation witness closes that coverage gap. First differing
+  steps on fixed witnesses are not global minimal continuation depths. The
+  no-shrink seed tests the selected host policy.
+- **Physical GC:** clean production bundle and fresh child processes, no test
+  registries; neighbour-clean retired edges with immutable from/to. Two trials
+  over both endpoints, three age/allocation-site histories and three treatments
+  produce 36 cases, plus four rooted positive and two bare WeakRef controls.
+  All 38 unrooted payloads collect at the first major request; the four rooted
+  controls remain, no invalid cohort. Bare targets also survive all minors:
+  additional young retention through from/to is **inconclusive**. Individual
+  object generations/pretenuring are not measured. No representation change.
+  [GC-HISTORY.json](./GC-HISTORY.json) retains observed GC events and curves.
+- **Engine experiment:** fresh/polymorphic/high-degree/failure-churn prefixes
+  reach equal logical graphs; five common warmups, nine rounds of 200,000
+  iterations, five paired trial groups in separate processes. All checksums
+  agree; median late changed/fresh ratios 0.731/0.823/0.866 on this machine.
+  Optimization diagnostics run in separate children; counts are trace emission
+  windows, not exact causal phase attribution. No persistent slowdown was
+  observed in this workload, and no specific engine cause is established.
+  [ENGINE-HISTORY.json](./ENGINE-HISTORY.json) stores raw timings and diagnostics.
+- **Validation:** 268 development tests, 261 production with seven diagnostic
+  skips; source and strict advanced-oracle typechecks pass. ESM/CJS/declarations,
+  18 scenarios / 5,400 minified equivalence steps and allocation-site release
+  checks pass; production bundle 2,717 B gzip. Source formatting passes. Standard
+  lint cannot load missing installed `eslint-config-prettier`; installed
+  TypeScript ESLint recommended rules pass via a temporary config. The bounded
+  negative findings do not imply general history independence or physical-GC
+  independence.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
