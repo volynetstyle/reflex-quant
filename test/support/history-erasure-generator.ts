@@ -23,6 +23,7 @@ interface Parameters {
   watchers: number;
   bias: number;
   history: readonly Rule[];
+  historyA: readonly Rule[];
   actions: readonly {
     target: "a0" | "order" | "branch" | "failure" | "tick";
     value: number;
@@ -41,6 +42,7 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
     watchers = 2,
     bias = 0,
     history = historyRules,
+    historyA = [],
     actions = [],
   } = parameters;
   const forward = Array.from({ length: width }, (_, i) => `a${i}`);
@@ -97,42 +99,45 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
     );
   }
   prefix.push(op.read(outer), op.flush());
-  const churn: Op[] = [];
-  history.forEach((rule, index) => {
-    if (rule === "disposed-neighbor") {
-      const id = `private${index}`;
-      churn.push(
-        op.watcher(id, e.add(e.read(outer), sum(forward)), {
-          cleanup: e.read("a0"),
-        }),
-        op.flush(),
-        op.dispose(id),
-      );
-    } else if (rule === "settled-aba") {
-      churn.push(
-        op.set("a0", bias + 100),
-        op.set("a0", bias + 1),
-        op.read(outer),
-        op.flush(),
-      );
-    } else {
-      const target =
-        rule === "reorder-inverse"
-          ? "order"
-          : rule === "branch-return"
-            ? "branch"
-            : "failure";
-      const value = rule === "watcher-recovery" ? 2 : 1;
-      churn.push(
-        op.set(target, value),
-        op.read(outer),
-        op.flush(),
-        op.set(target, 0),
-        op.read(outer),
-        op.flush(),
-      );
-    }
-  });
+  const expand = (rules: readonly Rule[]): Op[] => {
+    const churn: Op[] = [];
+    rules.forEach((rule, index) => {
+      if (rule === "disposed-neighbor") {
+        const id = `private${index}`;
+        churn.push(
+          op.watcher(id, e.add(e.read(outer), sum(forward)), {
+            cleanup: e.read("a0"),
+          }),
+          op.flush(),
+          op.dispose(id),
+        );
+      } else if (rule === "settled-aba") {
+        churn.push(
+          op.set("a0", bias + 100),
+          op.set("a0", bias + 1),
+          op.read(outer),
+          op.flush(),
+        );
+      } else {
+        const target =
+          rule === "reorder-inverse"
+            ? "order"
+            : rule === "branch-return"
+              ? "branch"
+              : "failure";
+        const value = rule === "watcher-recovery" ? 2 : 1;
+        churn.push(
+          op.set(target, value),
+          op.read(outer),
+          op.flush(),
+          op.set(target, 0),
+          op.read(outer),
+          op.flush(),
+        );
+      }
+    });
+    return churn;
+  };
   const suffix: Op[] = [
     op.read(outer),
     op.read(outer),
@@ -163,11 +168,12 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
     op.flush(),
   );
   return {
-    id: `history-${width}-${depth}-${watchers}-${bias}-${history.join("+")}`,
-    rule: history.join(" + "),
+    id: `history-${width}-${depth}-${watchers}-${bias}-A:${historyA.join("+")}-B:${history.join("+")}`,
+    rule: [...new Set([...historyA, ...history])].join(" + "),
+    histories: { a: historyA, b: history },
     handles,
-    prefixA: prefix,
-    prefixB: [...prefix, ...churn],
+    prefixA: [...prefix, ...expand(historyA)],
+    prefixB: [...prefix, ...expand(history)],
     suffix,
     bounds: [
       ...[0, 1, stable].map((at) => ({
@@ -179,29 +185,37 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
   };
 }
 
-export const historyCaseArbitrary: fc.Arbitrary<HistoryCase> = fc
-  .record({
-    width: fc.integer({ min: 1, max: 48 }),
-    depth: fc.integer({ min: 0, max: 3 }),
-    watchers: fc.integer({ min: 1, max: 3 }),
-    bias: fc.integer({ min: -5, max: 5 }),
-    history: fc.array(fc.constantFrom(...historyRules), {
-      minLength: 1,
-      maxLength: 12,
+const historyParametersArbitrary = fc.record({
+  width: fc.integer({ min: 1, max: 48 }),
+  depth: fc.integer({ min: 0, max: 3 }),
+  watchers: fc.integer({ min: 1, max: 3 }),
+  bias: fc.integer({ min: -5, max: 5 }),
+  history: fc.array(fc.constantFrom(...historyRules), {
+    minLength: 1,
+    maxLength: 12,
+  }),
+  actions: fc.array(
+    fc.record({
+      target: fc.constantFrom(
+        "a0" as const,
+        "order" as const,
+        "branch" as const,
+        "failure" as const,
+        "tick" as const,
+      ),
+      value: fc.integer({ min: 0, max: 2 }),
+      demand: fc.boolean(),
     }),
-    actions: fc.array(
-      fc.record({
-        target: fc.constantFrom(
-          "a0" as const,
-          "order" as const,
-          "branch" as const,
-          "failure" as const,
-          "tick" as const,
-        ),
-        value: fc.integer({ min: 0, max: 2 }),
-        demand: fc.boolean(),
-      }),
-      { maxLength: 16 },
-    ),
-  })
-  .map(historyCase);
+    { maxLength: 16 },
+  ),
+});
+
+export const historyCaseArbitrary: fc.Arbitrary<HistoryCase> =
+  historyParametersArbitrary.map(historyCase);
+
+export const symmetricHistoryCaseArbitrary: fc.Arbitrary<HistoryCase> = fc
+  .tuple(
+    historyParametersArbitrary,
+    fc.array(fc.constantFrom(...historyRules), { minLength: 1, maxLength: 12 }),
+  )
+  .map(([parameters, historyA]) => historyCase({ ...parameters, historyA }));

@@ -1,4 +1,4 @@
-# History erasure: the first executable slice
+# History erasure and bounded continuations
 
 This is test infrastructure for the existing Quant contract, not a new core
 mechanism or a change to its semantic/resource guarantees. Implementation:
@@ -11,6 +11,8 @@ Run both runtime modes:
 ```sh
 npm test -- test/history-erasure.test.ts
 npm run test:production -- test/history-erasure.test.ts
+npm test -- test/history-continuations.test.ts
+npm run test:production -- test/history-continuations.test.ts
 ```
 
 ## What is compared
@@ -62,8 +64,8 @@ The suffix cannot access them or reuse any prefix name for a declaration. This
 restricts the continuation interface explicitly rather than pretending the test
 proved equivalence for arbitrary programs that can inspect private handles.
 Suffix declarations are supported and become part of the final checkpoint.
-Both endpoints must meet the successful boundary conditions; transient suffix
-failures are allowed. Checking non-quiescent final states is future work.
+The original runner defaults to successful endpoints; transient suffix failures
+are allowed. The bounded explorer below uses open suffix endpoints instead.
 
 The resulting `EquivalenceWitness` records the boundary, DSL restriction, node
 and relation counts and checked equalities. A transformation name is provenance,
@@ -84,6 +86,14 @@ index equal to the suffix length means only the final projection differed.
 This is a location in the tested suffix, not the shortest distinguishing depth
 over all possible continuations. `describeHistoryFailure` emits the replayable
 case and normalized first-difference evidence without cyclic runtime objects.
+
+An unchanged computed may already be validated while its watcher still has a
+redundant `STALE` bit before the next explicit flush. The projection checks
+current observations and execution debt rather than equating that representation
+bit with a semantic obligation. The three-operation witness `set x=1; set x=0;
+read c` exposed this overly strict oracle assumption when bounded search was
+added; the oracle was corrected and a regression test added. Quant did not
+require a repair.
 
 ## Isolation, roots and bounds
 
@@ -148,3 +158,122 @@ work envelopes, and shrinking. These validate the oracle, not evidence of real
 Quant defects. Successful bounded cases and seeded sampling support state
 sufficiency on that corpus; they do not prove equivalence for all DSL programs
 or minimality of the implementation.
+
+## Bounded continuation search (LOG 52)
+
+`test/support/history-continuations.ts` supplies breadth-first replay over an
+explicit finite operation alphabet. `searchHistoryContinuations` certifies the
+same successful initial boundary, then visits every admissible word of length
+1 through `maxDepth`. It does not restore or rewrite runtime state between
+branches: each word replays both prefixes into independent worlds.
+
+```ts
+const result = await searchHistoryContinuations(test, {
+  maxDepth: 3,
+  alphabet: continuationAlphabet(
+    test,
+    [0, 1],
+    continuationDeclarations("a0"),
+  ),
+  maxTransitions: 20_000,
+});
+```
+
+`continuationAlphabet` includes reads of every public producer/computed, writes
+of the supplied values to every public producer, explicit flush, disposal of
+every public watcher, and optional finite declaration templates together with
+reads/disposals of those new names. `continuationDeclarations` supplies one small
+computed and one watcher template; callers may specify others. A new name is
+readable only after declaration; redeclaration and access to private names are
+inadmissible. Expected computation/lifecycle errors are observations, not reasons
+to discard a continuation. Batch scheduling remains outside this language.
+
+`runHistoryCase(..., factory, { endpoint: "open" })` supports these prefixes
+without forcing a successful recovery at their ends. After every BFS step the
+two spec worlds compare:
+
+- public cached values, liveness and cleanup presence;
+- initialized state, failed-computed re-entry state and watcher execution debt;
+- ordered committed observations and retry evidence, distinguishing current
+  from stale versions and absent from empty retry frontiers;
+- callback definitions and explicit-flush order.
+
+Absolute counters are omitted; the model tests each retained version only
+against its source's current version. Validation-cache timestamps are model
+optimizations. The read-only failed-computed diagnostic lives in the test spec,
+not the runtime. This is an executable projection to be challenged by further
+continuations, not a representation-independent sufficiency proof.
+
+Quant is compared vertically and horizontally for outputs, public cached values
+and lifecycle state at each step. Whenever the spec can certify a recovered
+endpoint, the full existing committed-graph projection is checked too. At open
+endpoints the runner does not pretend to reconstruct the spec's debt/retry maps
+from Quant's flags and intrusive lists. Their effects are challenged by the
+remaining continuations. All existing graph/root audits still run after every
+operation, including failed ones.
+
+### What the result establishes
+
+- `equivalent` means every admissible word through `requestedDepth` was checked;
+  `completedDepth` equals that bound. This is bounded equivalence for the
+  reported alphabet, initial pair, projections and selected envelopes only.
+- `counterexample` returns the first failing word, its depth and the four-world
+  verdict/evidence. BFS makes this depth minimal for the configured checks on
+  that fixed pair and alphabet. A next-state mismatch is distinguished from an
+  output mismatch; neither is silently called the globally shortest observable
+  suffix over an unrestricted language.
+- `incomplete` means `maxTransitions` interrupted a level. `completedDepth`
+  reports only fully checked levels; no claim is made for the partial level.
+- `ineligible` means the root/candidate could not be certified. An uncertified
+  root has `completedDepth = -1`.
+
+Counts include admitted transition words, rejected extensions and per-depth
+totals; the initial boundary is separate. Original fixed-suffix envelopes are
+cleared rather than accidentally applied to unrelated words. An optional
+deterministic `envelopes(suffix)` policy can specify the explorer's own bounds.
+
+### Why equal spec states do not prune paths
+
+Two words that end in the same spec state may leave different hidden Quant
+states. Discarding either word on that basis would assume the history-erasure
+property under investigation. The explorer counts distinct/repeated canonical
+spec states for diagnostics but keeps every implementation path.
+
+A fault fixture makes the same spec state repeat after no-op writes while only
+one Quant history accumulates a hidden token. BFS finds `set x=0; set x=0; read x`
+at depth 3, after completing depths 1 and 2. Spec-only pruning would remove the
+path before the token becomes observable. A sound implementation-state reduction
+would need a separately justified product-state equivalence; it is not present.
+
+### Symmetric histories and coverage
+
+The generator now accepts independent `historyA` and `history` (B) sequences.
+Both start at the common base and may contain different nonempty churn/recovery
+histories. `histories` labels are coverage provenance, not axioms. The existing
+fresh-versus-churned corpus remains; additional tests cover all 30 ordered pairs
+of different single rules and 80 sampled independently churned pairs.
+
+Every search returns a residue-by-continuation-class matrix with counts. A
+`failure` entry counts an actual spec error observation; `new-node` counts an
+admitted declaration. These measure attempted distinctions, not causal proof
+that a particular operation exercised an internal residue.
+
+The per-rule depth-3 corpus checks all six columns below (nonzero counts), using
+eight alphabet operations with seven admissible choices at each step. Both
+computed- and watcher-failure modes are writable:
+
+| History label | read | write | flush | dispose | failure | new node |
+| --- | --- | --- | --- | --- | --- | --- |
+| reorder/inverse | yes | yes | yes | yes | yes | yes |
+| branch/return | yes | yes | yes | yes | yes | yes |
+| computed recovery | yes | yes | yes | yes | yes | yes |
+| watcher recovery | yes | yes | yes | yes | yes | yes |
+| disposed neighbor | yes | yes | yes | yes | yes | yes |
+| settled ABA | yes | yes | yes | yes | yes | yes |
+
+That corpus checks 399 admitted words per rule (2,394 total). A separate
+13-operation public-node/declaration alphabet checks 1,463 admitted words through
+depth 3, including a new watcher. A two-operation no-op-write/read alphabet checks
+all 62 words through depth 5. These are different bounded domains; the depth-5
+result does not extend to the larger alphabets. No GC, JIT, generation-wrap or
+scheduled-queue-hysteresis result follows from these checks.

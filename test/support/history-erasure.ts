@@ -36,6 +36,11 @@ export type Work = typeof stats;
 export interface HistoryCase {
   readonly id: string;
   readonly rule: string;
+  /** Coverage provenance, never an equivalence axiom. */
+  readonly histories?: {
+    readonly a: readonly string[];
+    readonly b: readonly string[];
+  };
   /** Public names at the boundary; private disposed watchers cannot be named by S. */
   readonly handles: readonly string[];
   readonly prefixA: readonly Op[];
@@ -114,7 +119,7 @@ function record<P, C, W>(port: RuntimePort<P, C, W>): RecordedWorld<P, C, W> {
 
 function specWorld() {
   const runtime = new ContractSpecRuntime();
-  return record({
+  const world = record({
     createProducer: (value) => runtime.createProducer(value),
     createComputed: (fn) => runtime.createComputed(fn),
     createWatcher: (fn) => runtime.createWatcher(fn),
@@ -127,6 +132,10 @@ function specWorld() {
     enterBatch: () => {},
     leaveBatch: () => {},
   });
+  return {
+    ...world,
+    failed: (node: SpecComputed<Value>) => runtime.isFailedComputed(node),
+  };
 }
 
 type SpecWorld = ReturnType<typeof specWorld>;
@@ -376,6 +385,17 @@ function validate(test: HistoryCase, prefix: readonly Op[]): void {
   }
 }
 
+/** Syntactic/domain admissibility only; this does not certify the checkpoint. */
+export function historyContinuationIsValid(test: HistoryCase): boolean {
+  try {
+    validate(test, test.prefixA);
+    validate(test, test.prefixB);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function snapshot<P, C, W>(
   world: RecordedWorld<P, C, W>,
   handles: readonly string[],
@@ -479,7 +499,10 @@ function quantCheckpoint(
     if (kind === "watcher" && node.fn === null)
       return { kind, state: "disposed" };
     demand(
-      node.fn !== null && (node.flags & Flag.Pending) === 0,
+      // STALE can be redundant validation work: a computed may already have
+      // validated unchanged while its watcher still awaits an explicit flush.
+      // Current observations below, not that representation bit, decide debt.
+      node.fn !== null && (node.flags & Flag.Dirty) === 0,
       `${id} is not recovered in Quant`,
     );
     const deps: string[] = [];
@@ -503,14 +526,170 @@ function quantCheckpoint(
   });
 }
 
+interface PublicNode {
+  id: string;
+  kind: "producer" | "computed" | "watcher";
+  live: boolean;
+  value?: Value | undefined;
+  cleanup?: boolean;
+}
+
+interface PublicState {
+  nodes: PublicNode[];
+  watchers: string[];
+}
+
+/** Open states retain debts/failure gates; only absolute historical counters disappear. */
+export interface ContinuationState {
+  readonly public: PublicState;
+  readonly computations: readonly {
+    readonly id: string;
+    readonly initialized: boolean;
+    readonly failed?: boolean;
+    readonly executionPending?: boolean;
+    readonly deps: readonly {
+      readonly id: string;
+      readonly current: boolean;
+    }[];
+    readonly retry:
+      | readonly { readonly id: string; readonly current: boolean }[]
+      | null;
+    readonly expression: Expr;
+    readonly cleanupExpression?: Expr;
+  }[];
+}
+
+interface OpenBoundary {
+  public: PublicState;
+  recovered?: Checkpoint;
+}
+
+export interface HistoryRunOptions {
+  /** Open suffix endpoints are for continuation search; initial checkpoints stay strict. */
+  readonly endpoint?: "successful" | "open";
+}
+
+function publicState<P, C, W>(
+  world: RecordedWorld<P, C, W>,
+  handles: readonly string[],
+  project: (entry: RuntimeNode<P, C, W>, id: string) => PublicNode,
+): PublicState {
+  const nodes = [...handles]
+    .sort()
+    .map((id) => project(world.nodes.get(id)!, id));
+  return {
+    nodes,
+    watchers: [...world.nodes.keys()].filter((id) =>
+      nodes.some(
+        (node) => node.id === id && node.kind === "watcher" && node.live,
+      ),
+    ),
+  };
+}
+
+function specContinuation(
+  world: SpecWorld,
+  handles: readonly string[],
+): ContinuationState {
+  const names = new Map(
+    [...world.nodes].map(([id, entry]) => [entry.node, id]),
+  );
+  const frontier = (deps: Map<unknown, number>) =>
+    [...deps].map(([source, observed]) => {
+      const id = names.get(source as SpecNode);
+      demand(
+        id !== undefined && handles.includes(id),
+        "continuation has a private dependency",
+      );
+      return {
+        id,
+        current: (source as { version: number }).version === observed,
+      };
+    });
+  return {
+    public: publicState(world, handles, ({ node, kind }, id) =>
+      kind === "watcher"
+        ? {
+            id,
+            kind,
+            live: (node as SpecWatcher).compute !== undefined,
+            cleanup: (node as SpecWatcher).cleanup !== undefined,
+          }
+        : {
+            id,
+            kind,
+            live: true,
+            value: (node as SpecProducer<Value> | SpecComputed<Value>).value,
+          },
+    ),
+    computations: [...handles].sort().flatMap((id) => {
+      const { node } = world.nodes.get(id)!;
+      if (
+        node.kind === "producer" ||
+        (node.kind === "watcher" && node.compute === undefined)
+      )
+        return [];
+      const declaration = world.declarations.get(id)!;
+      demand(
+        declaration.type !== "signal",
+        "computation has a producer declaration",
+      );
+      return [
+        {
+          id,
+          initialized: node.initialized,
+          ...(node.kind === "computed"
+            ? { failed: world.failed(node) }
+            : { executionPending: node.executionPending }),
+          deps: frontier(node.dependencies),
+          retry:
+            node.retryDependencies === undefined
+              ? null
+              : frontier(node.retryDependencies),
+          expression: declaration.expression,
+          ...(declaration.type === "effect" && declaration.cleanup !== undefined
+            ? { cleanupExpression: declaration.cleanup }
+            : {}),
+        },
+      ];
+    }),
+  };
+}
+
+function quantPublicState(
+  world: QuantWorld,
+  handles: readonly string[],
+): PublicState {
+  return publicState(world, handles, ({ node, kind }, id) =>
+    kind === "watcher"
+      ? {
+          id,
+          kind,
+          live: node.fn !== null,
+          cleanup: typeof node.value === "function",
+        }
+      : {
+          id,
+          kind,
+          live: kind === "producer" || node.fn !== null,
+          value: node.value as Value | undefined,
+        },
+  );
+}
+
 interface SpecRun {
   prefix: Observation[];
   suffix: Observation[];
   checkpoint: Checkpoint;
-  next: Checkpoint;
+  next: Checkpoint | OpenBoundary;
+  continuation?: ContinuationState;
 }
 
-function runSpec(test: HistoryCase, prefix: readonly Op[]): SpecRun {
+function runSpec(
+  test: HistoryCase,
+  prefix: readonly Op[],
+  options: HistoryRunOptions,
+): SpecRun {
   validate(test, prefix);
   const world = specWorld();
   const before = prefix.map((operation) => world.execute(operation));
@@ -524,11 +703,25 @@ function runSpec(test: HistoryCase, prefix: readonly Op[]): SpecRun {
         operation.type === "effect",
     )
     .map((operation) => operation.id);
+  const handles = [...test.handles, ...added];
+  const continuation =
+    options.endpoint === "open" ? specContinuation(world, handles) : undefined;
+  let next: Checkpoint | OpenBoundary;
+  if (continuation === undefined) next = specCheckpoint(world, handles);
+  else {
+    next = { public: continuation.public };
+    try {
+      next.recovered = specCheckpoint(world, handles);
+    } catch {
+      /* Debts, uninitialized nodes and cold failures remain open. */
+    }
+  }
   return {
     prefix: before,
     suffix: after,
     checkpoint,
-    next: specCheckpoint(world, [...test.handles, ...added]),
+    next,
+    ...(continuation === undefined ? {} : { continuation }),
   };
 }
 
@@ -547,6 +740,8 @@ export interface HistoryResult {
   readonly witness?: EquivalenceWitness;
   readonly work?: { readonly a: readonly Work[]; readonly b: readonly Work[] };
   readonly resources?: { readonly a: Resources; readonly b: Resources };
+  readonly continuation?: ContinuationState;
+  readonly lastObservation?: Observation;
   readonly difference?: {
     readonly edge: "spec" | "quant" | "A/spec" | "B/spec";
     readonly phase: "prefix" | "suffix" | "checkpoint" | "next";
@@ -580,11 +775,12 @@ function subtract(after: Work, before: Work): Work {
 export async function runHistoryCase(
   test: HistoryCase,
   factory: () => Promise<QuantWorld> = createHistoryQuantWorld,
+  options: HistoryRunOptions = {},
 ): Promise<HistoryResult> {
   let a: SpecRun, b: SpecRun;
   try {
-    a = runSpec(test, test.prefixA);
-    b = runSpec(test, test.prefixB);
+    a = runSpec(test, test.prefixA, options);
+    b = runSpec(test, test.prefixB, options);
   } catch (error) {
     return { kind: "ineligible", message: String(error) };
   }
@@ -592,6 +788,8 @@ export async function runHistoryCase(
     return { kind: "ineligible", message: "spec checkpoints differ" };
   const common = {
     checkpoint: a.checkpoint,
+    ...(a.continuation === undefined ? {} : { continuation: a.continuation }),
+    ...(a.suffix.length === 0 ? {} : { lastObservation: a.suffix.at(-1)! }),
     witness: {
       boundary: "successful-quiescent" as const,
       callbackState: "stateless-expression-dsl" as const,
@@ -612,7 +810,11 @@ export async function runHistoryCase(
     },
   };
   const upper = difference(a.suffix, b.suffix);
-  if (upper >= 0 || !isDeepStrictEqual(a.next, b.next))
+  if (
+    upper >= 0 ||
+    !isDeepStrictEqual(a.next, b.next) ||
+    !isDeepStrictEqual(a.continuation, b.continuation)
+  )
     return {
       ...common,
       kind: "spec-divergence",
@@ -621,14 +823,14 @@ export async function runHistoryCase(
       difference: {
         edge: "spec",
         phase: upper >= 0 ? "suffix" : "next",
-        expected: upper >= 0 ? a.suffix[upper] : a.next,
-        actual: upper >= 0 ? b.suffix[upper] : b.next,
+        expected: upper >= 0 ? a.suffix[upper] : (a.continuation ?? a.next),
+        actual: upper >= 0 ? b.suffix[upper] : (b.continuation ?? b.next),
       },
     };
   const runs: {
     suffix: Observation[];
     work: Work[];
-    next: Checkpoint | { error: string };
+    next: Checkpoint | OpenBoundary | { error: string };
     resources: Resources;
   }[] = [];
   for (const [label, prefix, spec] of [
@@ -712,9 +914,18 @@ export async function runHistoryCase(
             operation.type === "effect",
         )
         .map((operation) => operation.id);
-      let next: Checkpoint | { error: string };
+      let next: Checkpoint | OpenBoundary | { error: string };
       try {
-        next = quantCheckpoint(world, [...test.handles, ...added]);
+        const handles = [...test.handles, ...added];
+        next =
+          options.endpoint === "open"
+            ? {
+                public: quantPublicState(world, handles),
+                ...("recovered" in spec.next
+                  ? { recovered: quantCheckpoint(world, handles) }
+                  : {}),
+              }
+            : quantCheckpoint(world, handles);
       } catch (error) {
         next = { error: String(error) };
       }

@@ -46,6 +46,11 @@ export class ContractSpecRuntime extends SpecRuntime {
     self.stabilize = (node: SpecComputed<unknown>) => this.stabilizeContract(node);
   }
 
+  /** Read-only test diagnostic; failed re-entry is part of the abstract state. */
+  isFailedComputed(node: SpecComputed<unknown>): boolean {
+    return failed.has(node);
+  }
+
   private changed(deps: Map<{ kind: string; version: number }, number>): boolean {
     let changed = false;
     for (const [dependency, observed] of deps) {

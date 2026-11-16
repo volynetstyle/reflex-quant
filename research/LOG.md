@@ -1546,6 +1546,42 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   Source typecheck, release build and release checks pass. The sampled corpus
   found no additional Quant defect.
 
+### 52. Bounded continuation BFS and independently churned histories (test infrastructure)
+
+- **Classification:** research/test infrastructure; no runtime mechanism or
+  contract change. Initial checkpoints remain successful/quiescent, but suffix
+  prefixes may contain pending validation, cold failures and uninitialized nodes.
+- **Construction:** `test/support/history-continuations.ts` replays every
+  admissible word in an explicit finite alphabet breadth first. Each step checks
+  both spec outputs/residual states, both Quant outputs/public lifecycle states,
+  vertical agreement and graph/root bounds. Recovered endpoints also receive the
+  full committed-graph comparison. A cutoff is `incomplete`, with the last fully
+  checked depth; a counterexample carries a shortest witness for that fixed
+  pair, alphabet and comparison policy.
+- **No spec-only pruning:** identical spec states do not justify discarding
+  distinct Quant histories. Collisions are counted, not merged. An intentional
+  history-token fault remains invisible through depth 2 and is found at depth 3
+  on `set x=0; set x=0; read x`, despite the spec state never changing.
+- **Oracle correction:** `set x=1; set x=0; read c` initially produced a false
+  shared-implementation verdict: c had validated unchanged, while its watcher
+  still carried redundant STALE validation work before flush. The Quant
+  projection now checks current relation observations and execution debt rather
+  than demanding the representation bit be clear. This was a harness defect,
+  not a Quant defect; a regression covers both endpoint modes.
+- **History coverage:** fresh controls remain; the generator additionally accepts
+  independent nonempty churn histories for both worlds. Tests cover all 30
+  ordered pairs of different single rules and 80 seeded sampled symmetric pairs.
+  Search reports per-depth counts and a residue-by-read/write/flush/dispose/
+  failure/declaration matrix. Every column is exercised for each of six rules.
+- **Bounded domains:** 1,463 admitted words through depth 3 in a 13-operation
+  alphabet; 399 words for each of six rule cases (2,394 total) in eight-operation
+  alphabets; all 62 words through depth 5 in a two-operation alphabet. These
+  bounds/alphabet restrictions are part of the result, not interchangeable.
+  See [HISTORY-ERASURE.md](./HISTORY-ERASURE.md) for the projections and limits.
+- **Validation:** 14 new tests. Full development suite 216 passed; production
+  209 passed with seven diagnostic skips; source typecheck passed. No additional
+  Quant defect was found in these bounded domains.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
