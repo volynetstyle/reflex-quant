@@ -11,6 +11,7 @@
 import { resolve } from "node:path";
 import { defineConfig, type Plugin } from "vitest/config";
 import { fileURLToPath } from "node:url";
+import { instrumentRetirement } from "./test/support/history-retirement";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const slashes = (p: string) => p.split("\\").join("/");
@@ -39,7 +40,7 @@ const quantDev = (dev: boolean): Plugin => ({
   },
 });
 
-// Read-only roots for the history-erasure oracle. These exports exist only in
+// Read-only roots and operation-scoped retirement witnesses. These exist only in
 // Vitest's transformed modules; neither runtime source nor release bundles
 // acquire a diagnostic API. Copy the entire arrays, including inactive slots.
 const historyRoots: Plugin = {
@@ -48,6 +49,7 @@ const historyRoots: Plugin = {
   transform(code, id) {
     const file = slashes(id.split("?")[0]!);
     if (!quantDirs.some((dir) => file.startsWith(dir))) return null;
+    if (file.endsWith("/graph.ts")) return { code: instrumentRetirement(code), map: null };
     const snapshot = file.endsWith("/kernel.ts")
       ? "({ active, cursor, top, slots: stack.slice() })"
       : file.endsWith("/host.ts")

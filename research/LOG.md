@@ -1582,6 +1582,42 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   209 passed with seven diagnostic skips; source typecheck passed. No additional
   Quant defect was found in these bounded domains.
 
+### 53. Composed history candidates and operation-scoped retirement witnesses (test infrastructure)
+
+- **Classification:** test/research infrastructure. Runtime source, mechanism
+  basis and contract are unchanged.
+- **History families:** 15 distinct commutation pairs, six idempotence candidates,
+  12 bounded power pairs (1/4 and 2/7 for each rule), and all 60 distinct
+  three-rule reversal pairs up to reflection. Every candidate is independently
+  certified by the spec. All 93 are checked at widths 1 and 40; all 15 commutation
+  pairs also exhaust 399 continuation words through depth 3 in a seven-operation
+  alphabet (5,985 words). An intentional order-specific token is detected under
+  a common read without increasing search depth.
+- **Retirement layer:** a Vitest-only graph transform captures cut-run identities
+  and unlink calls before mutation. At the operation boundary, all retired
+  subscriber neighbours must be null; individual failure pruning must clear both
+  dependency neighbours; cut chains may point only within their own removed run.
+  This supplements root traversal with inspection of otherwise orphaned edges.
+- **Reference lifetime:** collection is operation-scoped, the module registry is
+  drained before checking, and all witness arrays are cleared in `finally`, even
+  on an audit failure. Only scalar counts survive. The immutable from/to endpoints
+  and arbitrary JS closure/GC topology are outside this neighbour-field witness.
+- **Evidence:** intentional orphan->live and retired-run->different-retired-run
+  pointers pass root traversal but fail retirement integrity. Legal interior
+  chains, failed tentative pruning, throwing cleanup and failure-time registry
+  release have dedicated tests. Existing history and BFS worlds automatically
+  receive this second layer after every operation. No physical-GC result follows.
+- **Scope correction:** the history projections omit absolute `ver` and `gen`;
+  their bounded results exclude counter wrap of both kinds, not only generation
+  wrap. Longer/masked-counter campaigns remain a separate obligation.
+- **Details:** [HISTORY-ERASURE.md](./HISTORY-ERASURE.md) records the finite domains,
+  retirement protocol and separation from physical collection.
+- **Validation:** 11 new tests; full development suite 227 passed, production
+  220 passed with seven diagnostic skips. Source typecheck, the retirement
+  module's strict typecheck, formatting, release build and release checks pass.
+  Release files contain no history/retirement hooks. No new Quant defect was
+  found in these finite interaction/continuation domains.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

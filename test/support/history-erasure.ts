@@ -28,6 +28,11 @@ import type { Edge, Node } from "../../src/graph";
 import type { stats } from "../../src/instrumentation";
 import { ContractSpecRuntime } from "./contract-spec";
 import { checkGraph } from "./graph";
+import {
+  auditRetiredEdges,
+  type RetirementCounts,
+  type RetirementPort,
+} from "./history-retirement";
 
 type Declaration = Extract<Op, { type: "signal" | "computed" | "effect" }>;
 type SpecNode = SpecProducer<Value> | SpecComputed<Value> | SpecWatcher;
@@ -157,6 +162,7 @@ export interface Resources {
   readonly reachableEdges: number;
   readonly stackSlots: number;
   readonly queueSlots: number;
+  readonly retirement?: Readonly<RetirementCounts>;
 }
 
 export interface QuantWorld extends RecordedWorld<Node, Node, Node> {
@@ -169,6 +175,15 @@ export async function createHistoryQuantWorld(): Promise<QuantWorld> {
   vi.resetModules();
   const kernel = (await import("../../src/kernel")) as Kernel;
   const host = (await import("../../src/host")) as Host;
+  const graph =
+    (await import("../../src/graph")) as typeof import("../../src/graph") &
+      RetirementPort;
+  const retirement: RetirementCounts = {
+    edges: 0,
+    cutRuns: 0,
+    cutEdges: 0,
+    singleEdges: 0,
+  };
   const world = record<Node, Node, Node>({
     createProducer: (value) => kernel.createNode(null, value, 0),
     createComputed: (fn) => kernel.createNode(fn, undefined, Flag.Dirty),
@@ -183,9 +198,27 @@ export async function createHistoryQuantWorld(): Promise<QuantWorld> {
   });
   return {
     ...world,
+    execute(operation) {
+      graph.__historyBeginRetirement();
+      try {
+        return world.execute(operation);
+      } finally {
+        const counts = auditRetiredEdges(graph.__historyTakeRetirements());
+        retirement.edges += counts.edges;
+        retirement.cutRuns += counts.cutRuns;
+        retirement.cutEdges += counts.cutEdges;
+        retirement.singleEdges += counts.singleEdges;
+      }
+    },
     counters: () => ({ ...kernel.stats }),
-    audit: () =>
-      auditHistoryRoots(world, kernel.__historyRoots(), host.__historyRoots()),
+    audit: () => ({
+      ...auditHistoryRoots(
+        world,
+        kernel.__historyRoots(),
+        host.__historyRoots(),
+      ),
+      retirement: { ...retirement },
+    }),
   };
 }
 

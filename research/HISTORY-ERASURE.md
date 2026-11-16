@@ -13,6 +13,7 @@ npm test -- test/history-erasure.test.ts
 npm run test:production -- test/history-erasure.test.ts
 npm test -- test/history-continuations.test.ts
 npm run test:production -- test/history-continuations.test.ts
+npm test -- test/history-interactions.test.ts test/history-retirement.test.ts
 ```
 
 ## What is compared
@@ -118,7 +119,8 @@ presence is not a node-allocation leak, but they must not retain graph relations
 
 The oracle covers the controlled DSL's graph topology and known runtime roots.
 It does not inspect arbitrary closure environments, V8 backing-store capacity,
-remembered sets, or physical GC collection. Small generation domains, scheduled
+remembered sets, or physical GC collection. Counter wrap (both `ver` and `gen`),
+scheduled
 queue high-water histories, GC schedules, nested user callbacks and JIT history
 are separate later extensions.
 
@@ -199,8 +201,11 @@ two spec worlds compare:
 - callback definitions and explicit-flush order.
 
 Absolute counters are omitted; the model tests each retained version only
-against its source's current version. Validation-cache timestamps are model
-optimizations. The read-only failed-computed diagnostic lives in the test spec,
+against its source's current version. These bounded cases do not approach wrap
+of either `ver` or `gen`; after sufficiently long continuations, masked version
+counters as well as generations require separate investigation. No unrestricted
+counter-renaming theorem follows from this projection. Validation-cache timestamps
+are model optimizations. The read-only failed-computed diagnostic lives in the test spec,
 not the runtime. This is an executable projection to be challenged by further
 continuations, not a representation-independent sufficiency proof.
 
@@ -275,5 +280,75 @@ That corpus checks 399 admitted words per rule (2,394 total). A separate
 13-operation public-node/declaration alphabet checks 1,463 admitted words through
 depth 3, including a new watcher. A two-operation no-op-write/read alphabet checks
 all 62 words through depth 5. These are different bounded domains; the depth-5
-result does not extend to the larger alphabets. No GC, JIT, generation-wrap or
-scheduled-queue-hysteresis result follows from these checks.
+result does not extend to the larger alphabets. No GC, JIT, counter-wrap (`ver` or
+`gen`) or scheduled-queue-hysteresis result follows from these checks.
+
+## Residue interactions (LOG 53)
+
+`historyInteractionCases` generates pairs of compositions. Spec certification
+remains mandatory: these are candidate equations, not assumed algebraic laws.
+For six rules the default finite corpus contains:
+
+| Family | Left/right histories | Pairs |
+| --- | --- | ---: |
+| commutation | `Ri Rj` / `Rj Ri`, distinct i,j, one orientation | 15 |
+| idempotence | `Ri Ri` / `Ri` | 6 |
+| powers | `Ri` / `Ri^4` and `Ri^2` / `Ri^7` | 12 |
+| reversed cycles | `Ri Rj Rk` / `Rk Rj Ri`, all distinct, one orientation | 60 |
+
+The tests execute all 93 pairs at widths 1 and 40 (186 cases), with nested
+computeds and two watchers, against the shared failure/recovery/disposal suffix.
+All 15 commutation pairs additionally exhaust a seven-operation alphabet through
+depth 3: set order to 1, set failure to 0/1/2, read c, flush, dispose w0. That is
+399 words per pair, 5,985 admitted continuation words total. It is a separate
+bounded domain, not a claim for all suffixes or all history compositions.
+
+An intentional order-sensitive token distinguishes disposed-neighbor/settled-ABA
+from the reverse order under a single public read. The witness verifies that the
+same independent certificate and lower/vertical checks apply to interactions.
+
+## Retirement integrity, independently of root reachability
+
+`test/support/history-retirement.ts` adds the second deterministic layer. The
+Vitest transform captures a cut's dependency-run identities before mutation and
+each identity passed to `unlinkSub`. These cover the current two removal paths:
+`cutDeps` (including disposal) and individual tentative pruning in `fail`.
+Collection is enabled only during one history-world operation. Auditing waits
+until that operation returns, including when its callback or cleanup failed.
+
+For each newly retired identity the witness requires:
+
+- subscriber neighbours `prevSub` and `nextSub` are null;
+- individually pruned edges also have null `prevDep` and `nextDep`;
+- cut-run dependency neighbours are null or members of that same cut run;
+  another retired run in the same operation is not an allowed target;
+- every captured cut identity was unlinked exactly once, with no identity in
+  multiple captured runs.
+
+This permits the existing interior dependency chain of one removed run. It
+does not require a new core representation. Immutable `from`/`to` endpoints
+are not cleared by this protocol; the claim concerns the four intrusive
+neighbour fields, not every outgoing pointer of an arbitrary dead JS object.
+New removal paths would need corresponding instrumentation/coverage.
+
+`auditRetiredEdges` clears the record array and cut-run arrays in `finally`,
+including on a diagnostic failure. The module registry is disabled/drained
+before audit; only numeric totals escape into `Resources.retirement`. Other
+tests do not enable collection. Release source/bundles acquire no hook, registry
+or diagnostic export. This instrumented build adds test allocations and is not
+a physical allocation-rate or timing oracle.
+
+The dedicated tests retain a real detached edge, corrupt its outgoing neighbour,
+and demonstrate that root traversal still passes while retirement integrity
+fails. They also cover permitted interior chains, forbidden cross-run links,
+individual failure pruning, cleanup errors, record release on audit failure and
+the structural verdict. These are intentional witness faults, not Quant defects.
+
+The three layers now have explicit boundaries:
+
+1. Graph/root integrity: retained runtime/handle roots do not reach retired
+   relation storage and active graph structure is valid.
+2. Retirement integrity: newly removed identities satisfy the neighbour-severing
+   protocol even when absent from those roots; witness references are released.
+3. Physical collection under engine/GC schedules: still untested here. Neither
+   deterministic layer establishes remembered-set behavior or collection time.

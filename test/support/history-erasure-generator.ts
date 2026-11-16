@@ -15,15 +15,15 @@ export const historyRules = [
   "disposed-neighbor",
   "settled-aba",
 ] as const;
-type Rule = (typeof historyRules)[number];
+export type HistoryRule = (typeof historyRules)[number];
 
 interface Parameters {
   width: number;
   depth: number;
   watchers: number;
   bias: number;
-  history: readonly Rule[];
-  historyA: readonly Rule[];
+  history: readonly HistoryRule[];
+  historyA: readonly HistoryRule[];
   actions: readonly {
     target: "a0" | "order" | "branch" | "failure" | "tick";
     value: number;
@@ -99,7 +99,7 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
     );
   }
   prefix.push(op.read(outer), op.flush());
-  const expand = (rules: readonly Rule[]): Op[] => {
+  const expand = (rules: readonly HistoryRule[]): Op[] => {
     const churn: Op[] = [];
     rules.forEach((rule, index) => {
       if (rule === "disposed-neighbor") {
@@ -219,3 +219,68 @@ export const symmetricHistoryCaseArbitrary: fc.Arbitrary<HistoryCase> = fc
     fc.array(fc.constantFrom(...historyRules), { minLength: 1, maxLength: 12 }),
   )
   .map(([parameters, historyA]) => historyCase({ ...parameters, historyA }));
+
+export type HistoryInteractionFamily =
+  | "commutator"
+  | "idempotence"
+  | "powers"
+  | "reverse-cycle";
+export interface HistoryInteraction {
+  readonly family: HistoryInteractionFamily;
+  readonly test: HistoryCase;
+}
+
+/** An algebra of candidates, not assumed laws: every pair still needs its spec certificate. */
+export function historyInteractionCases(
+  parameters: Partial<
+    Pick<Parameters, "width" | "depth" | "watchers" | "bias">
+  > = {},
+  powers: readonly (readonly [number, number])[] = [
+    [1, 4],
+    [2, 7],
+  ],
+): HistoryInteraction[] {
+  for (const pair of powers) {
+    if (
+      pair.some((power) => !Number.isSafeInteger(power) || power < 1) ||
+      pair[0] === pair[1]
+    )
+      throw new Error("history powers must be distinct positive integers");
+  }
+  const cases: HistoryInteraction[] = [];
+  const add = (
+    family: HistoryInteractionFamily,
+    left: readonly HistoryRule[],
+    right: readonly HistoryRule[],
+  ) => {
+    const test = historyCase({ ...parameters, historyA: left, history: right });
+    cases.push({ family, test: { ...test, id: `${family}:${test.id}` } });
+  };
+  for (let i = 0; i < historyRules.length; i++) {
+    const a = historyRules[i]!;
+    add("idempotence", [a, a], [a]);
+    for (const [n, m] of powers)
+      add(
+        "powers",
+        Array<HistoryRule>(n).fill(a),
+        Array<HistoryRule>(m).fill(a),
+      );
+    for (let j = i + 1; j < historyRules.length; j++) {
+      const b = historyRules[j]!;
+      add("commutator", [a, b], [b, a]);
+    }
+    // One orientation of every reversal pair of three distinct rules. The
+    // middle rule is unrestricted, so all 60 pairs, not just 20 subsets, occur.
+    for (let j = 0; j < historyRules.length; j++)
+      if (j !== i) {
+        for (let k = i + 1; k < historyRules.length; k++)
+          if (k !== j)
+            add(
+              "reverse-cycle",
+              [a, historyRules[j]!, historyRules[k]!],
+              [historyRules[k]!, historyRules[j]!, a],
+            );
+      }
+  }
+  return cases;
+}
