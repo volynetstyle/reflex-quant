@@ -14,6 +14,7 @@ npm run test:production -- test/history-erasure.test.ts
 npm test -- test/history-continuations.test.ts
 npm run test:production -- test/history-continuations.test.ts
 npm test -- test/history-interactions.test.ts test/history-retirement.test.ts
+npm test -- test/history-interleavings.test.ts
 ```
 
 ## What is compared
@@ -352,3 +353,72 @@ The three layers now have explicit boundaries:
    protocol even when absent from those roots; witness references are released.
 3. Physical collection under engine/GC schedules: still untested here. Neither
    deterministic layer establishes remembered-set behavior or collection time.
+
+## Open scenario interleavings (LOG 54)
+
+The next search domain removes the assumption that one transformation recovers
+before another begins. `historyScenario` expresses each of the six rules as
+named phases. Concatenating those phases preserves the existing closed rule:
+
+| Rule | Phases | Operations |
+| --- | --- | ---: |
+| reorder/inverse, branch/return | open, perturb, restore, settle | 6 each |
+| computed/watcher recovery | establish debt, fail, causal change, recover | 6 each |
+| disposed neighbor | create, establish deps, dispose/cleanup | 3 |
+| settled ABA | A-to-B, B-to-A, validate, discharge | 4 |
+
+`scenarioShuffles` preserves each scenario's internal operation order and emits
+all labelled shuffles. Interleaving happens between DSL operations, including
+inside a named multi-operation phase. A callback/cleanup invocation itself is
+not split into independent steps. This still does not test imperative callbacks
+or arbitrary suspended execution frames.
+
+`partitionHistoryShuffles` starts from a common certified base. For every full
+shuffle it calls `certifyHistoryPrefix`, which uses only the independent spec.
+The snapshot reads fields; no extra flush, read, reset or healing operation is
+inserted after the shuffle. Malformed schedules and valid but still-open
+endpoints are counted separately. Optional state traces record actual failed
+frontiers/retry gates/execution debt, rather than inferring them from phase names.
+
+Certified histories are partitioned by their exact abstract checkpoint. A class
+need not equal the base checkpoint. All members remain in the implementation
+corpus. The representative with the most A/B label switches is selected without
+looking at Quant internals; every member, including that representative, is
+compared with it. For a fixed continuation, star comparisons cover pairwise
+equality by transitivity. This avoids a quadratic pair product without discarding
+any implementation history or merging its continuation branches.
+
+The complete small domain contains all 15 pairs of distinct rules at width 1:
+6,755 labelled shuffles, of which 6,725 overlap before either whole scenario has
+finished. All 6,755 endpoints were certified, with one class per rule pair and no
+invalid or still-open endpoints in this built-in corpus. Six-operation pairs each
+contribute 924. Repeated labels may correspond
+to identical operation sequences when equal flush/read operations exchange places;
+the corpus deliberately keeps these labelled schedules. The tests count admission
+classes/rejections and check every certified member against a common fixed
+failure/recovery/disposal suffix, including graph and retirement audits.
+
+All 924 watcher-failure/reorder shuffles also receive continuation BFS through
+depth 2 over `{ set b0=99, flush }`: 5,544 admitted continuation words. This probes
+a source used by failed watcher attempts but absent from the recovered frontier.
+The narrow alphabet is part of the result; no larger depth-2 language is implied.
+
+Wide coverage is separate: six pair types at width 40 with a nested computed,
+an older shared reader and the permutation `(17*i) mod 40`. For each class the
+tests choose six high-alternation schedules plus both serial controls. These
+48 cases are supplemented by one explicit debt-overlap schedule (49 total).
+They exercise the actual index path before the checkpoint, including the exact
+reorder read while the independent spec still records failed watcher debt.
+Ordinary reversals alone
+used exact fast paths and had zero index visits. No internal state is edited or
+index forced by the harness. This is representation coverage, not a contract
+requirement that an index be constructed.
+
+An intentional token is set only when reordering occurs while a watcher failure
+remains unresolved. Both closed compositions pass; an interleaved composition
+is distinguished by a common public read. This is a sensitivity witness, not a
+real Quant defect or a source-level temporal mutation score.
+
+The next domains and their admission/exit criteria are recorded in
+[HISTORY-SEARCH.md](./HISTORY-SEARCH.md). This stage leaves callback purity,
+explicit flushing, large counters and logical heap assumptions in place.

@@ -718,6 +718,58 @@ interface SpecRun {
   continuation?: ContinuationState;
 }
 
+export interface PrefixTraceStep {
+  readonly at: number;
+  readonly observation: Observation;
+  readonly state: ContinuationState;
+}
+
+export type PrefixCertification =
+  | {
+      readonly kind: "certified";
+      readonly checkpoint: Checkpoint;
+      readonly trace: readonly PrefixTraceStep[];
+    }
+  | {
+      readonly kind: "invalid" | "open";
+      readonly message: string;
+      readonly trace: readonly PrefixTraceStep[];
+    };
+
+/** Spec-only admission of an exact prefix: no Quant, demands or healing suffix. */
+export function certifyHistoryPrefix(
+  test: HistoryCase,
+  prefix: readonly Op[],
+  traceStates = false,
+): PrefixCertification {
+  const candidate = { ...test, suffix: [], bounds: [] };
+  const trace: PrefixTraceStep[] = [];
+  try {
+    validate(candidate, prefix);
+  } catch (error) {
+    return { kind: "invalid", message: String(error), trace };
+  }
+  const world = specWorld();
+  prefix.forEach((operation, at) => {
+    const observation = world.execute(operation);
+    if (traceStates)
+      trace.push({
+        at,
+        observation,
+        state: specContinuation(world, [...world.nodes.keys()]),
+      });
+  });
+  try {
+    return {
+      kind: "certified",
+      checkpoint: specCheckpoint(world, test.handles),
+      trace,
+    };
+  } catch (error) {
+    return { kind: "open", message: String(error), trace };
+  }
+}
+
 function runSpec(
   test: HistoryCase,
   prefix: readonly Op[],

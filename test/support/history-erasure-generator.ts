@@ -22,6 +22,8 @@ interface Parameters {
   depth: number;
   watchers: number;
   bias: number;
+  /** Optional bijection of source positions for the order=1 branch. */
+  permutation: readonly number[];
   history: readonly HistoryRule[];
   historyA: readonly HistoryRule[];
   actions: readonly {
@@ -33,6 +35,82 @@ interface Parameters {
 
 const sum = (ids: readonly string[]): Expr =>
   ids.reduce<Expr>((left, id) => e.add(left, e.read(id)), e.value(0));
+
+export interface HistoryScenario {
+  readonly rule: string;
+  readonly phases: readonly {
+    readonly name: string;
+    readonly operations: readonly Op[];
+  }[];
+}
+
+/** Phase names describe candidate boundaries; only the spec decides recovery. */
+export function historyScenario(
+  rule: HistoryRule,
+  context: {
+    readonly outer: string;
+    readonly sources: readonly string[];
+    readonly privateId: string;
+    readonly bias?: number;
+  },
+): HistoryScenario {
+  const { outer, sources, privateId, bias = 0 } = context;
+  if (rule === "disposed-neighbor")
+    return {
+      rule,
+      phases: [
+        {
+          name: "create",
+          operations: [
+            op.watcher(privateId, e.add(e.read(outer), sum(sources)), {
+              cleanup: e.read("a0"),
+            }),
+          ],
+        },
+        { name: "establish-deps", operations: [op.flush()] },
+        // Cleanup is part of disposal, not a separately schedulable operation.
+        { name: "dispose-cleanup", operations: [op.dispose(privateId)] },
+      ],
+    };
+  if (rule === "settled-aba")
+    return {
+      rule,
+      phases: [
+        { name: "A-to-B", operations: [op.set("a0", bias + 100)] },
+        { name: "B-to-A", operations: [op.set("a0", bias + 1)] },
+        { name: "validate", operations: [op.read(outer)] },
+        { name: "discharge", operations: [op.flush()] },
+      ],
+    };
+  const failure = rule === "computed-recovery" || rule === "watcher-recovery";
+  const target =
+    rule === "reorder-inverse"
+      ? "order"
+      : rule === "branch-return"
+        ? "branch"
+        : "failure";
+  return {
+    rule,
+    phases: [
+      {
+        name: failure ? "establish-debt" : "open",
+        operations: [op.set(target, rule === "watcher-recovery" ? 2 : 1)],
+      },
+      {
+        name: failure ? "fail" : "perturb",
+        operations: [op.read(outer), op.flush()],
+      },
+      {
+        name: failure ? "causal-change" : "restore",
+        operations: [op.set(target, 0)],
+      },
+      {
+        name: failure ? "recover" : "settle",
+        operations: [op.read(outer), op.flush()],
+      },
+    ],
+  };
+}
 
 /** Rules propose convergent histories. Only the independent spec certifies them. */
 export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
@@ -46,6 +124,20 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
     actions = [],
   } = parameters;
   const forward = Array.from({ length: width }, (_, i) => `a${i}`);
+  const permutation = parameters.permutation;
+  if (
+    permutation !== undefined &&
+    (permutation.length !== width ||
+      new Set(permutation).size !== width ||
+      permutation.some((i) => !Number.isInteger(i) || i < 0 || i >= width))
+  )
+    throw new Error(
+      "history permutation must be a bijection of source positions",
+    );
+  const reordered =
+    permutation === undefined
+      ? [...forward].reverse()
+      : permutation.map((i) => forward[i]!);
   const alternate = Array.from({ length: width }, (_, i) => `b${i}`);
   const handles = [
     "order",
@@ -70,7 +162,7 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
           e.when(
             e.read("branch"),
             sum(alternate),
-            e.when(e.read("order"), sum([...forward].reverse()), sum(forward)),
+            e.when(e.read("order"), sum(reordered), sum(forward)),
           ),
         ),
       ),
@@ -100,43 +192,14 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
   }
   prefix.push(op.read(outer), op.flush());
   const expand = (rules: readonly HistoryRule[]): Op[] => {
-    const churn: Op[] = [];
-    rules.forEach((rule, index) => {
-      if (rule === "disposed-neighbor") {
-        const id = `private${index}`;
-        churn.push(
-          op.watcher(id, e.add(e.read(outer), sum(forward)), {
-            cleanup: e.read("a0"),
-          }),
-          op.flush(),
-          op.dispose(id),
-        );
-      } else if (rule === "settled-aba") {
-        churn.push(
-          op.set("a0", bias + 100),
-          op.set("a0", bias + 1),
-          op.read(outer),
-          op.flush(),
-        );
-      } else {
-        const target =
-          rule === "reorder-inverse"
-            ? "order"
-            : rule === "branch-return"
-              ? "branch"
-              : "failure";
-        const value = rule === "watcher-recovery" ? 2 : 1;
-        churn.push(
-          op.set(target, value),
-          op.read(outer),
-          op.flush(),
-          op.set(target, 0),
-          op.read(outer),
-          op.flush(),
-        );
-      }
-    });
-    return churn;
+    return rules.flatMap((rule, index) =>
+      historyScenario(rule, {
+        outer,
+        sources: forward,
+        privateId: `private${index}`,
+        bias,
+      }).phases.flatMap((phase) => phase.operations),
+    );
   };
   const suffix: Op[] = [
     op.read(outer),
@@ -168,7 +231,7 @@ export function historyCase(parameters: Partial<Parameters> = {}): HistoryCase {
     op.flush(),
   );
   return {
-    id: `history-${width}-${depth}-${watchers}-${bias}-A:${historyA.join("+")}-B:${history.join("+")}`,
+    id: `history-${width}-${depth}-${watchers}-${bias}-A:${historyA.join("+")}-B:${history.join("+")}${permutation === undefined ? "" : `-permutation:${permutation.join(",")}`}`,
     rule: [...new Set([...historyA, ...history])].join(" + "),
     histories: { a: historyA, b: history },
     handles,

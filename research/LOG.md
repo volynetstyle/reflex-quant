@@ -1618,6 +1618,45 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   Release files contain no history/retirement hooks. No new Quant defect was
   found in these finite interaction/continuation domains.
 
+### 54. Open interleavings before recovery boundaries (test infrastructure)
+
+- **Strategy:** challenge one simplifying assumption at a time, starting with
+  complete recovery between rules. [HISTORY-SEARCH.md](./HISTORY-SEARCH.md)
+  records subsequent reentrant-callback, scheduler, counter-wrap, greybox,
+  temporal-mutation, physical-GC and engine-history domains. They are not claimed
+  by this stage. No runtime mechanism or contract change is introduced.
+- **Construction:** the existing six closed transformations are factored into
+  named phases with identical concatenated operations. All order-preserving
+  operation shuffles are enumerated. The independent spec certifies each exact
+  endpoint without adding recovery; invalid and open endpoints are distinguished.
+  Checkpoint classes can differ from the initial base. Every admitted history is
+  retained and checked against a high-alternation class representative; this is
+  pair selection by spec equivalence, not spec-only implementation-path pruning.
+- **Small domain:** all 15 pairs of distinct rules at width 1, 6,755 labelled
+  shuffles (6,725 nonserial). A six/six pair contributes all 924. Every admitted
+  shuffle receives vertical and horizontal comparison under the fixed common
+  failure/recovery/disposal suffix and existing graph/retirement checks. All
+  6,755 endpoints certified, one class per rule pair, zero invalid/open endpoints.
+- **Continuation domain:** all 924 watcher-failure/reorder shuffles receive BFS
+  through depth 2 over write-b0/flush, 5,544 continuation words. This alphabet
+  targets expired failed-attempt evidence; no larger alphabet/depth is inferred.
+- **Wide representation coverage:** selected interleavings of six pair types,
+  width 40, a nested computed, an older shared reader and a stride-17 permutation.
+  Reversals initially yielded zero indexed passes, so the fixture was repaired
+  rather than pretending to cover that path. The selected histories exercise
+  indexes naturally before the checkpoint, including the exact failed-debt reorder
+  read. There are 49 selected cases; no representation field is forged or
+  mechanism added.
+- **Oracle witnesses:** a state trace confirms execution debt/retry evidence
+  while another scenario changes dependency order. A deliberately overlap-only
+  token passes the closed compositions but is exposed after an open interleaving.
+  Additional tests cover still-open endpoints, distinct final checkpoint classes,
+  malformed schedules and incomplete enumeration budgets.
+- **Validation:** nine new tests; full development suite 236 passed, production
+  229 passed with seven diagnostic skips; source typecheck, formatting and diff
+  checks pass. No new Quant defect was found in these bounded domains. Stages
+  2–8 remain future domains, not results of this corpus.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
