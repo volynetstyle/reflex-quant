@@ -142,7 +142,7 @@ export function createNode(fn: Node["fn"], value: unknown, flags: Flags): Node {
     firstSub: null,
     slot: null,
     gen: 0,
-  };
+  } satisfies Node;
 }
 
 /** Move an unread edge (strictly after `next`) up to the cursor. */

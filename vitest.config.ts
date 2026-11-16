@@ -39,9 +39,30 @@ const quantDev = (dev: boolean): Plugin => ({
   },
 });
 
+// Read-only roots for the history-erasure oracle. These exports exist only in
+// Vitest's transformed modules; neither runtime source nor release bundles
+// acquire a diagnostic API. Copy the entire arrays, including inactive slots.
+const historyRoots: Plugin = {
+  name: "quant-history-roots",
+  enforce: "pre",
+  transform(code, id) {
+    const file = slashes(id.split("?")[0]!);
+    if (!quantDirs.some((dir) => file.startsWith(dir))) return null;
+    const snapshot = file.endsWith("/kernel.ts")
+      ? "({ active, cursor, top, slots: stack.slice() })"
+      : file.endsWith("/host.ts")
+        ? "({ size, hold, slots: queue.slice() })"
+        : undefined;
+    return snapshot === undefined ? null : {
+      code: code + `\nexport function __historyRoots() { return ${snapshot}; }\n`,
+      map: null,
+    };
+  },
+};
+
 export default defineConfig(({ mode }) => ({
   root,
-  plugins: [quantDev(mode !== "production"), ...(mutantSrc ? [redirect] : [])],
+  plugins: [quantDev(mode !== "production"), historyRoots, ...(mutantSrc ? [redirect] : [])],
   resolve: { alias: { "@runtime": resolve(root, "reference/reflex/src") } },
   define: { __DEV__: false, __PROFILE__: false, __TRACKING_ONE_HOP__: true, __TRACKING_TWO_HOP__: true, __TRACKING_LAST_EDGE__: true, __TEST__: true, __PROD__: false, __STATS__: "true" },
   esbuild: { platform: "node", format: "esm", target: "es2022" } as never,

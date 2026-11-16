@@ -97,11 +97,11 @@ function deliver(w: Node, flags: Flags): void {
 
     if ((w.flags & Flag.Dirty) === 0 || w.fn === null) return;
   }
-  const cleanup = w.value;
+  const cleanup = w.value as Cleanup;
 
   if (typeof cleanup === "function") {
     w.value = undefined;
-    untracked(cleanup as Cleanup);
+    untracked(cleanup);
 
     if (w.fn === null) return;
   }

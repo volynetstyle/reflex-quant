@@ -445,7 +445,7 @@ function fail(n: Node, base: number, last: Edge | null): void {
 
   n.flags |= Flag.Dirty;
   const tentative = (n.gen + 1) & CounterLimit.Mask;
-  for (let e = last === null ? n.firstDep : last.nextDep; e !== null;) {
+  for (let e = last === null ? n.firstDep : last.nextDep; e !== null; ) {
     const after: Edge | null = e.nextDep;
 
     if (e.gen === tentative) {

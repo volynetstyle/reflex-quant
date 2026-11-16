@@ -1508,6 +1508,44 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   replace-all-256 0.59, replace-half 0.87, push.effects-1000 0.49,
   computed-create 0.92; the rest within spread.
 
+### 51. History erasure at successful checkpoints (test infrastructure)
+
+- **Classification:** research/test infrastructure. No semantic invariant,
+  structural bound or production mechanism is added or changed.
+- **Question:** after the contract permits historical facts to be forgotten,
+  can their implementation residue still distinguish a common continuation?
+- **Construction:** `test/support/history-erasure.ts` runs two contract-spec
+  histories and two isolated Quant histories. The spec independently certifies
+  successful quiescent checkpoints, preserving program definitions, values,
+  ordered frontiers, lifecycle and obligations before omitting raw counters.
+  Both suffix outputs and final checkpoints are compared. Each vertical
+  implementation/spec comparison remains a gate, including prefix behavior.
+- **Candidates:** reorder/inverse, branch/return, computed and watcher
+  failure/recovery, disposed neighbors, and settled ABA. Rules generate
+  candidates; the spec decides equivalence. The corpus composes long histories
+  and seeded random suffixes with failure, recovery and disposal.
+- **Structure:** a Vitest-only transform exposes copied runtime root snapshots;
+  no diagnostic API enters runtime source. Every operation checks all physical
+  stack/queue slots, registers and Node/Edge graph pointers. Counter deltas are
+  recorded, with separate stable-read/relation-reuse envelopes. Unequal constant
+  work is not itself a semantic defect.
+- **Shrinking:** operation deletion and public-handle elimination must retain
+  independently certified equivalence and the original failure predicate.
+  Generated failures report the reduced replayable pair and first difference.
+- **Scope:** explicit-flush acyclic DSL, stateless callback expressions,
+  successful endpoints. This does not test scheduled queue hysteresis, arbitrary
+  closures, small generation domains, physical GC or engine history, and does
+  not prove universal state sufficiency or implementation minimality.
+- **Evidence and usage:** [HISTORY-ERASURE.md](./HISTORY-ERASURE.md) describes the
+  projections, verdicts, roots and limitations. The suite includes deliberate
+  fault fixtures to distinguish temporal, shared, structural and performance
+  outcomes; these are harness witnesses, not reported Quant defects.
+- **Validation:** 15 new tests, including 18 individual rule/width cases, one
+  60-transformation history and 160 sampled pairs (seed `0x51a7e`). Full suite:
+  development 202 passed; production 195 passed, seven diagnostic tests skipped.
+  Source typecheck, release build and release checks pass. The sampled corpus
+  found no additional Quant defect.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
