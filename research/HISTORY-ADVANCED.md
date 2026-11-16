@@ -5,6 +5,11 @@ The contract is unchanged. This is a collection of finite semantic domains,
 source mutation witnesses and two engine experiments; their results have
 different meanings and must not be combined into a history-independence theorem.
 
+The subsequent [temporal ownership sweep](./TEMPORAL-OWNERSHIP.md) (LOG 56)
+targets causal extinction boundaries and adds direct DEV/PROD observations and
+an automatically discovered conditional-mask mutation axis. Its catalogue and
+negative results are separate from the 12-seed score recorded here.
+
 ## Independent imperative oracle: stages 2 and 3
 
 `test/support/imperative-language.ts` interprets scalar expressions and bounded

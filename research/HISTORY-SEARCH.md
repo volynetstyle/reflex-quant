@@ -5,6 +5,10 @@ mechanisms. The frozen contract remains the oracle. Each domain must state its
 language, admission conditions, explored histories/continuations and bounds.
 Results from different domains are reported separately.
 
+LOG 56's [temporal ownership sweep](./TEMPORAL-OWNERSHIP.md) adds an extinction
+matrix and boundary twins to stages 2/3/4/6, with a direct DEV/PROD observation
+axis. This does not expand the physical GC or engine-history conclusions.
+
 | Stage | Assumption challenged | Completion criterion in a stated finite domain | Status |
 | --- | --- | --- | --- |
 | 1 | One history fully recovers before the next begins | Enumerate all order-preserving operation shuffles; certify exact endpoints; compare every admitted history and explore selected continuation alphabets | Implemented for the LOG 54 domains |

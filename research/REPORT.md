@@ -59,6 +59,19 @@ WeakRef controls also survive minors. The timing experiment is separate from
 semantic correctness. Earlier corpus and measurement claims below retain their
 original domains; the old expression corpus still cannot express in-pass writes.
 
+**Temporal ownership update (LOG 56, 2026-11-17).** The F3 entry-mask repair,
+native regression and evidence were backported separately to main (`5c847db`).
+Research adds a 17-fact birth/owner/extinction/residue matrix and 104 boundary
+programs, including actual overlapping indexed owners at depth two/three.
+Direct DEV/PROD traces agree for 176 valid programs / 4,465 operations on both
+full counters and mask 7. A 68-seed fact/operator matrix plus 14 AST-discovered
+conditional-branch seeds yields 67 killed, 15 surviving, zero invalid/timeout.
+[TEMPORAL-OWNERSHIP.md](./TEMPORAL-OWNERSHIP.md) records the surviving controls,
+work-bound exclusion and alternative every-commit restamping path. A disposed
+ancestor validation defect was in the independent model, not Quant. No additional
+Quant defect or production mechanism follows from the sweep. Tests: 374 DEV,
+367 PROD with seven diagnostic skips. Earlier scores retain their own domains.
+
 **Result.** The invariants admit a substantially different architecture of
 about the same per-object size: versions instead of change bits, bounded
 exact searches backed by an on-demand mark or source-side index instead of
