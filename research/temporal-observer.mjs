@@ -140,6 +140,7 @@ export async function observeBoundaryCorpus(
     suite === "handoffs"
       ? oracle.handoffPrograms()
       : [
+          ...(suite === "transitions" ? oracle.handoffPrograms() : []),
           ...oracle.boundaryPrograms(),
           ...oracle.imperativeCases(),
           ...oracle.composedCallbackCases(),
@@ -313,6 +314,8 @@ export async function observeBoundaryCorpus(
           }
         : {}),
     });
+    if (runtime.transfer)
+      coverage.at(-1).flagTransfers = { ...runtime.transfer.counts };
     traces.push({ id: program.id, observations });
   }
   return {

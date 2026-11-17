@@ -1,0 +1,40 @@
+{
+  "domain": "bounded DEV=false instrumented write-level monitor of concrete flag pre/post action and body-entry/exit premises; independent imperative oracle and ownership audits remain enabled",
+  "profile": {
+    "__DEV__": false,
+    "__STATS__": true,
+    "flagWriteMonitor": true
+  },
+  "sourceSha256": "e57e4748f717aac7b55bef792feeb64bc905f686a1eff18c25c7bfdc5da469b5",
+  "runtimeSha256": "6116af7537f2079561c374f4345ec1757861322e05d74c0db466b1fa19f209e9",
+  "programs": 236,
+  "operations": 7541,
+  "counts": {
+    "host.deliver|assign|Node.flags|2": 1026,
+    "kernel.exec|assign|Node.flags|1": 3119,
+    "kernel.exec|assign|Node.flags|2": 2847,
+    "kernel.write|assign|Node.flags|2": 509,
+    "kernel.detach|assign|Node.flags|1": 558,
+    "host.deliver|assign|Node.flags|1": 137,
+    "kernel.write|assign|Node.flags|1": 37,
+    "kernel.fail|assign|Node.flags|1": 272,
+    "kernel.fail|assign|Node.flags|2": 260,
+    "host.wake|assign|Node.flags|1": 866,
+    "kernel.check|assign|Node.flags|1": 266,
+    "kernel.write|assign|Node.flags|4": 953,
+    "kernel.mark|assign|Node.flags|2": 89,
+    "kernel.verify|assign|Node.flags|1": 51,
+    "kernel.verify|assign|Node.flags|3": 6,
+    "kernel.mark|assign|Node.flags|1": 471,
+    "kernel.write|assign|Node.flags|3": 148,
+    "host.deliver|assign|Node.flags|3": 163,
+    "kernel.verify|assign|Node.flags|2": 30,
+    "kernel.verify|assign|Node.flags|4": 4
+  },
+  "unexecuted": [],
+  "traceSha256": "69b91979f2d279b2e7629051208593d4840b89da4f6f6e61645f31d7cc99368c",
+  "artifacts": ".cache\\transition-traces\\run-0rvnnt\\trace.json",
+  "excluded": [
+    "C1-reentrant-cycle-excluded"
+  ]
+}

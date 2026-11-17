@@ -85,6 +85,23 @@ classification is also retained without asserting equivalence. No new Quant
 defect or production mechanism was found. Tests: 434 DEV, 427 PROD plus seven
 diagnostic skips. [TEMPORAL-HANDOFFS.md](./TEMPORAL-HANDOFFS.md) records the limits.
 
+**Transition map update (LOG 58, 2026-11-17).** The 17 facts and eight handoffs
+now bind to 13 finite local protocols (60 states / 105 edges in total) and
+24 source store schemas. A reviewed AST ledger maps all 197 production-view
+sites (174 global/object/array, 23 scoped ownership snapshots), with zero unknown
+stores/calls. All 11 public entry effect alphabets close to a fixed point under
+synchronous callback reentry. Twenty flag assignments pass 1,114 finite local
+transfer cases under explicit role/phase/snapshot premises; a concrete native
+monitor exercises all 20 sites in 11,812 transfers across 236 programs / 7,541
+operations. Seventeen checker tests include old F3, premature extinction,
+historical-snapshot restoration and source-coverage negative controls. This
+proves effect-alphabet coverage and conditional local transfers, **not** whole-
+heap refinement or concrete public-operation state closure. The unresolved
+list/frame/queue/counter-age/cross-protocol lemmas are named in
+[TRANSITION-SYSTEM.md](./TRANSITION-SYSTEM.md). Tests: 451 DEV, 444 PROD plus
+seven diagnostic skips; source and strict oracle typechecks pass. Production
+source and main are unchanged.
+
 **Result.** The invariants admit a substantially different architecture of
 about the same per-object size: versions instead of change bits, bounded
 exact searches backed by an on-demand mark or source-side index instead of

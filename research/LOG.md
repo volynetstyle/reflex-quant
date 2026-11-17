@@ -1866,6 +1866,67 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   diagnostic skips. Source and strict oracle typechecks pass. No additional
   Quant defect was found; physical-GC/JIT conclusions are unchanged.
 
+## 58. Production ownership transition map and source-write coverage (2026-11-17)
+
+- **Class:** research formalization and checker validation. The 17 lifetime
+  facts and eight ownership/alias handoffs bind to 13 local control protocols,
+  totaling 60 states / 105 edges, and 24 store schemas. These are parameterized
+  local carriers, not a 60-state global runtime or a bounded heap universe.
+  No production code, mechanism or contract change; main stays at `5c847db`.
+- **Source map:** TypeScript AST/type/symbol analysis of the DEV=false,
+  STATS=false view finds 54 reachable procedures and 197 mapped sites: 174
+  global/object/array sites plus 23 scoped ownership snapshots/bindings. It
+  includes immutable endpoint initialization, local array aliases, bulk fills,
+  module-startup effects and error/frame evidence. Unknown calls/stores fail.
+  Every row has a schema, allowed protocol edges and birth/handoff/extinction/
+  residue classification; selecting an enabled edge still requires its premise.
+- **Review boundary:** the separate reviewed ledger pins normalized stores,
+  enclosing bodies, constant environment and the entire source fingerprint.
+  Guards or no-store helpers cannot silently change beneath an accepted row.
+  Ordinary verification cannot regenerate its expectations; deliberate review
+  requires both an environment opt-in and explicit switch. Pins are review
+  gates, not proofs about newly accepted source.
+- **Public effects:** all 11 actual API entries have explicit contracts.
+  Least-fixed-point call effects include arbitrary finite synchronous public
+  callback reentry, without a BFS depth bound. This establishes closure of the
+  source effect alphabet. Pure constructors/query have checked allocation-only
+  or empty footprints; the kernel's indirect wake dispatch has exactly the
+  checked startup registration. Eighteen helper transactions are callback-free.
+- **Local transfer checks:** 39 role-tagged flag combinations; 20 assignment
+  sites; 1,114 cases under listed phase/type/path/snapshot premises. Born/dead
+  bit actions are declared independently of assignment expressions. Historical
+  flags after check() are enumerated independently from current flags, without
+  reusing mutable pre-callback guards. Extra source lemmas check fresh Node
+  defaults, constructor roles, endpoint immutability, terminal callback nulling,
+  marker domains and counter ranges; the latter do not establish counter age.
+- **Non-vacuity:** 17 checker/regression tests include alias writes, hidden
+  mutators and startup effects, changed guards/const enums, callback insertion
+  in an atomic helper, a new public entry, wrong wake registration, invalid
+  constructor/defaults/range/markers and forbidden protocol resurrection.
+  Old F3, clearing fresh Stale at success exit, and restoring an old flags
+  snapshot after check fail local transfer checks with source pins bypassed.
+- **Concrete bridge:** a DEV=false, statistics-enabled private monitor checks
+  actual flag pre/post actions and body-entry/exit premises. The existing
+  boundary+handoff union runs 236 programs / 7,541 top-level operations and
+  11,812 transfers, covering 20/20 flag sites. Independent model, graph,
+  retirement and root audits remain enabled. The corpus includes manual-host
+  extensions; one deliberate C1 program is excluded. This remains bounded
+  trace evidence, separate from static public effect closure.
+- **Claim boundary:** whole-heap forward simulation and concrete public-
+  operation state closure remain explicitly false in the artifact. Five
+  unresolved obligations cover intrusive-list/retirement relations, stack/slot
+  frames, queue/hold arithmetic, version/generation age with counter wrap, and
+  caller premises/cross-protocol simulation. The 17 facts alone are not a
+  complete data-state abstraction. Physical GC/JIT and projection sufficiency
+  are unchanged.
+- **Artifacts/validation:** [TRANSITION-SYSTEM.md](./TRANSITION-SYSTEM.md),
+  [TRANSITION-AUDIT.json](./TRANSITION-AUDIT.json),
+  [TRANSITION-WRITES.md](./TRANSITION-WRITES.md),
+  [TRANSITION-MAP.mmd](./TRANSITION-MAP.mmd), and
+  [TRANSITION-TRACES.json](./TRANSITION-TRACES.json). Full suite: 451 DEV / 444
+  PROD plus seven diagnostic skips; source and strict oracle typechecks pass.
+  No Quant defect or new core admission follows from this map.
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

@@ -53,11 +53,54 @@ export async function buildBoundaryOracle(referenceDirectory) {
 export async function buildBoundaryRuntime(
   directory,
   oracle,
-  { dev, mask, edits = [], handoffs = false },
+  { dev, mask, edits = [], handoffs = false, flagCertificates },
 ) {
   mkdirSync(directory, { recursive: true });
   const entry = path.join(directory, "entry.ts"),
     outfile = path.join(directory, "runtime.mjs");
+  const traceFile = path.join(directory, "flag-transfer.ts");
+  if (flagCertificates) {
+    if (dev || edits.length || mask)
+      throw new Error(
+        "Flag certificates require unchanged full-counter production source",
+      );
+    const actions = Object.fromEntries(
+      flagCertificates.map((c) => [c.id, c.action]),
+    );
+    writeFileSync(
+      traceFile,
+      `const actions = ${JSON.stringify(actions)};
+const bits = {Stale: 1, Dirty: 2, Busy: 4, Woken: 32, Queued: 128};
+export const counts: Record<string, number> = {};
+export function checkWrite(
+  id: string, node: {flags: number; fn: unknown},
+  run: () => number, snapshot?: number,
+) {
+  const before = node.flags, a = actions[id as keyof typeof actions];
+  let expected = a.input === 'snapshot' ? snapshot! : before;
+  for (const b of a.died) expected &= ~bits[b as keyof typeof bits];
+  for (const b of a.born) expected |= bits[b as keyof typeof bits];
+  if (a.id === 'body-entry' && ((before & 4) !== 0 || node.fn === null))
+    throw new Error('entry premise ' + id);
+  if (a.id === 'body-success-exit' && (before & 4) === 0)
+    throw new Error('exit premise ' + id);
+  const value = run(), after = node.flags;
+  if (
+    after < 0 || after > 255 || (after & 8) !== 0 ||
+    after !== expected || ((before ^ after) & 80) !== 0 ||
+    (!(after & 16) && (after & ~7) !== 0) ||
+    ((after & 16) && (
+      ((after & 4) && (after & 32)) ||
+      ((after & 32) && !(after & 2)) ||
+      ((after & 128) && !(after & 64))
+    ))
+  ) throw new Error('flag transfer ' + id + ' ' + before + ' -> ' + after + ' expected ' + expected);
+  counts[id] = (counts[id] ?? 0) + 1;
+  return value;
+}
+`,
+    );
+  }
   writeFileSync(
     entry,
     ["index", "kernel", "host", "graph"]
@@ -65,7 +108,10 @@ export async function buildBoundaryRuntime(
         (name) =>
           `export * as ${name === "index" ? "api" : name} from ${JSON.stringify(sourcePath(`src/${name}.ts`))};`,
       )
-      .join("\n"),
+      .join("\n") +
+      (flagCertificates
+        ? `\nexport * as transfer from ${JSON.stringify(traceFile.replaceAll("\\", "/"))};\n`
+        : ""),
   );
   const matched = new Set();
   await esbuild().build({
@@ -86,6 +132,20 @@ export async function buildBoundaryRuntime(
             ({ path: file }) => {
               const name = path.basename(file);
               let code = readFileSync(file, "utf8");
+              if (flagCertificates) {
+                for (const c of flagCertificates
+                  .filter((c) => c.file.endsWith("/" + name))
+                  .sort((a, b) => b.offset - a.offset)) {
+                  if (code.slice(c.offset, c.offset + c.raw.length) !== c.raw)
+                    throw new Error("Flag certificate source drift " + c.id);
+                  code =
+                    code.slice(0, c.offset) +
+                    `__checkTransfer(${JSON.stringify(c.id)},${c.base},()=>(${c.raw}),${c.action.input === "snapshot" ? "flags" : "undefined"})` +
+                    code.slice(c.offset + c.raw.length);
+                }
+                if (flagCertificates.some((c) => c.file.endsWith("/" + name)))
+                  code += `\nimport {checkWrite as __checkTransfer} from ${JSON.stringify(traceFile.replaceAll("\\", "/"))};\n`;
+              }
               for (let n = 0; n < edits.length; n++) {
                 const edit = edits[n];
                 if (edit.file !== name) continue;

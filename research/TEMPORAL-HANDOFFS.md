@@ -6,6 +6,11 @@ Eight protocols describe migration between those facts, including the alias-role
 constraint; they are not eight new fields or invariants. Main stays at its
 isolated F3 repair, `5c847db`. All new machinery is research code.
 
+[TRANSITION-SYSTEM.md](./TRANSITION-SYSTEM.md) (LOG 58) maps these protocols to
+production stores and checks public effect-alphabet closure. Its local flag
+proofs and remaining heap-simulation obligations are separate from this bounded
+mutation campaign.
+
 | Protocol | Source ownership | Destination ownership | Boundary |
 | --- | --- | --- | --- |
 | queue | Queued plus physical cell | local delivery, then possibly a new queue entry | dequeue / callback |

@@ -34,6 +34,7 @@ const files = [
   "test/history-temporal-witnesses.test.ts",
   "test/history-boundaries.test.ts",
   "test/history-handoffs.test.ts",
+  "test/transition-system.test.ts",
 ].map((file) => path.join(root, file));
 const diagnostics = ts.getPreEmitDiagnostics(ts.createProgram(files, options));
 if (diagnostics.length)
@@ -46,6 +47,6 @@ if (diagnostics.length)
   );
 else
   process.stdout.write(
-    "strict imperative/host/counter/greybox oracle typecheck passed\n",
+    "strict imperative/host/counter/greybox/transition oracle typecheck passed\n",
   );
 process.exitCode = diagnostics.length ? 1 : 0;

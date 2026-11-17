@@ -1,0 +1,192 @@
+flowchart LR
+  subgraph p0["queue"]
+    p0s0["empty"]
+    p0s1["flagged"]
+    p0s2["queued"]
+    p0s3["popped"]
+    p0s4["local"]
+    p0s5["local+flag"]
+    p0s6["local+queue"]
+    p0s0 -->|"queue.flag"| p0s1
+    p0s1 -->|"queue.publish"| p0s2
+    p0s2 -->|"queue.borrow"| p0s2
+    p0s2 -->|"queue.pop"| p0s3
+    p0s3 -->|"queue.consume"| p0s4
+    p0s4 -->|"queue.reflag"| p0s5
+    p0s5 -->|"queue.republish"| p0s6
+    p0s6 -->|"queue.return-new"| p0s2
+    p0s4 -->|"queue.return"| p0s0
+  end
+  subgraph p1["attempt"]
+    p1s0["idle"]
+    p1s1["owed"]
+    p1s2["ready"]
+    p1s3["busy"]
+    p1s4["busy+new"]
+    p1s5["cold-debt"]
+    p1s6["dead"]
+    p1s7["dead-busy"]
+    p1s0 -->|"attempt.wake"| p1s1
+    p1s1 -->|"attempt.deliver"| p1s2
+    p1s2 -->|"attempt.enter"| p1s3
+    p1s3 -->|"attempt.invalidate"| p1s4
+    p1s3 -->|"attempt.success"| p1s0
+    p1s4 -->|"attempt.success-new"| p1s1
+    p1s3 -->|"attempt.failure"| p1s5
+    p1s4 -->|"attempt.failure-new"| p1s1
+    p1s5 -->|"attempt.causal-wake"| p1s1
+    p1s5 -->|"attempt.computed-demand"| p1s2
+    p1s0 -->|"attempt.first-demand"| p1s2
+    p1s0 -->|"attempt.dispose"| p1s6
+    p1s1 -->|"attempt.dispose"| p1s6
+    p1s2 -->|"attempt.dispose"| p1s6
+    p1s5 -->|"attempt.dispose"| p1s6
+    p1s3 -->|"attempt.dispose-busy"| p1s7
+    p1s4 -->|"attempt.dispose-busy"| p1s7
+    p1s7 -->|"attempt.unwind-dead"| p1s6
+    p1s6 -->|"attempt.dead-read"| p1s6
+  end
+  subgraph p2["cleanup"]
+    p2s0["none"]
+    p2s1["slot"]
+    p2s2["borrowed"]
+    p2s3["consumed"]
+    p2s4["calling"]
+    p2s0 -->|"cleanup.install"| p2s1
+    p2s1 -->|"cleanup.borrow"| p2s2
+    p2s2 -->|"cleanup.consume"| p2s3
+    p2s3 -->|"cleanup.call"| p2s4
+    p2s4 -->|"cleanup.return"| p2s0
+    p2s4 -->|"cleanup.throw"| p2s0
+    p2s0 -->|"cleanup.body-fails"| p2s0
+    p2s1 -->|"cleanup.dispose-borrow"| p2s2
+  end
+  subgraph p3["slots"]
+    p3s0["outer"]
+    p3s1["saved-copy"]
+    p3s2["inner+saved"]
+    p3s3["saved"]
+    p3s4["local"]
+    p3s5["empty"]
+    p3s0 -->|"slot.borrow"| p3s1
+    p3s1 -->|"slot.claim-inner"| p3s2
+    p3s2 -->|"slot.clear-inner"| p3s3
+    p3s3 -->|"slot.pop"| p3s4
+    p3s4 -->|"slot.restore"| p3s0
+    p3s0 -->|"slot.clear-outer"| p3s5
+    p3s5 -->|"slot.claim-first"| p3s0
+  end
+  subgraph p4["stack"]
+    p4s0["empty"]
+    p4s1["reserved"]
+    p4s2["owned"]
+    p4s3["local+stale-cell"]
+    p4s4["local"]
+    p4s0 -->|"stack.reserve"| p4s1
+    p4s1 -->|"stack.publish"| p4s2
+    p4s2 -->|"stack.borrow"| p4s2
+    p4s2 -->|"stack.pop"| p4s3
+    p4s3 -->|"stack.clear"| p4s4
+    p4s4 -->|"stack.resume"| p4s0
+  end
+  subgraph p5["relation"]
+    p5s0["absent"]
+    p5s1["tentative"]
+    p5s2["committed"]
+    p5s3["retired"]
+    p5s0 -->|"relation.birth"| p5s1
+    p5s1 -->|"relation.failed-read-retained"| p5s1
+    p5s1 -->|"relation.commit-same"| p5s2
+    p5s2 -->|"relation.stable-commit"| p5s2
+    p5s2 -->|"relation.restamp"| p5s2
+    p5s1 -->|"relation.retire"| p5s3
+    p5s2 -->|"relation.retire"| p5s3
+  end
+  subgraph p6["marker"]
+    p6s0["observed"]
+    p6s1["skipped"]
+    p6s2["unread"]
+    p6s3["retired"]
+    p6s0 -->|"marker.skip"| p6s1
+    p6s0 -->|"marker.unread"| p6s2
+    p6s1 -->|"marker.unread"| p6s2
+    p6s1 -->|"marker.observe"| p6s0
+    p6s2 -->|"marker.observe"| p6s0
+    p6s0 -->|"marker.observe"| p6s0
+    p6s2 -->|"marker.failed-frontier"| p6s2
+    p6s1 -->|"marker.failed-frontier"| p6s1
+    p6s0 -->|"marker.retire"| p6s3
+    p6s1 -->|"marker.retire"| p6s3
+    p6s2 -->|"marker.retire"| p6s3
+  end
+  subgraph p7["graph"]
+    p7s0["absent"]
+    p7s1["private"]
+    p7s2["linked"]
+    p7s3["rewiring"]
+    p7s4["retiring"]
+    p7s5["retired"]
+    p7s0 -->|"graph.allocate"| p7s1
+    p7s1 -->|"graph.publish"| p7s2
+    p7s2 -->|"graph.begin-rewire"| p7s3
+    p7s3 -->|"graph.store"| p7s3
+    p7s3 -->|"graph.finish-rewire"| p7s2
+    p7s2 -->|"graph.begin-retire"| p7s4
+    p7s4 -->|"graph.sever"| p7s4
+    p7s4 -->|"graph.finish-retire"| p7s5
+  end
+  subgraph p8["scope"]
+    p8s0["caller"]
+    p8s1["saved"]
+    p8s2["callee"]
+    p8s3["restoring"]
+    p8s4["untracked"]
+    p8s0 -->|"scope.save"| p8s1
+    p8s1 -->|"scope.enter"| p8s2
+    p8s2 -->|"scope.return-local"| p8s3
+    p8s2 -->|"scope.throw-local"| p8s3
+    p8s3 -->|"scope.restore"| p8s0
+    p8s1 -->|"scope.untracked-enter"| p8s4
+    p8s4 -->|"scope.untracked-return"| p8s0
+  end
+  subgraph p9["error"]
+    p9s0["none"]
+    p9s1["first"]
+    p9s0 -->|"error.capture"| p9s1
+    p9s1 -->|"error.later-preserve"| p9s1
+    p9s1 -->|"error.rollback-preserve"| p9s1
+    p9s1 -->|"error.rethrow"| p9s0
+  end
+  subgraph p10["host"]
+    p10s0["rest"]
+    p10s1["held"]
+    p10s2["draining"]
+    p10s0 -->|"host.enter"| p10s1
+    p10s1 -->|"host.nest"| p10s1
+    p10s1 -->|"host.unnest"| p10s1
+    p10s1 -->|"host.drain"| p10s2
+    p10s2 -->|"host.queue-register"| p10s2
+    p10s2 -->|"host.hysteresis"| p10s2
+    p10s2 -->|"host.leave"| p10s0
+    p10s1 -->|"host.batch-leave"| p10s0
+    p10s0 -->|"host.resize"| p10s0
+  end
+  subgraph p11["payload"]
+    p11s0["initial"]
+    p11s1["committed"]
+    p11s0 -->|"payload.write"| p11s1
+    p11s1 -->|"payload.write"| p11s1
+    p11s1 -->|"payload.observe"| p11s1
+  end
+  subgraph p12["startup"]
+    p12s0["unconfigured"]
+    p12s1["configured"]
+    p12s2["ready"]
+    p12s0 -->|"startup.constant"| p12s0
+    p12s0 -->|"startup.root"| p12s0
+    p12s0 -->|"startup.register"| p12s1
+    p12s1 -->|"startup.constant"| p12s1
+    p12s1 -->|"startup.root"| p12s1
+    p12s1 -->|"startup.finish"| p12s2
+    p12s2 -->|"startup.public-entry"| p12s2
+  end
