@@ -27,3 +27,15 @@ without online intrusive neighbor removal. Prediction against current
 Quant: shuffle@4096 ratio ≤0.85, reverse@4096 and every local control ≤1.05.
 An improvement on both global families requires reverse ≤0.85 as well.
 Retention, observable order and bounded failure recovery are independent gates.
+
+The splice job in [run 44304013295](https://github.com/volynetstyle/reflex-quant/actions/runs/44304013295/job/134800746932)
+has finished. At 4096 the seven round medians give 8.46 ns/source with
+addresses supplied and 11.08 through the source slot. A/A gives 10.90.
+Tile32 and tile1 give 10.38 and 14.48 respectively. These results trigger
+the candidate experiment specified above. Use an execution-local vector
+of the **old unread suffix**, mark it once, and append each subsequently
+observed edge in read order. Count down the remaining old edges. A complete
+permutation then requires zero unread-edge inspections at exit. A partial
+pass drains the remaining edges in their original order before the existing
+success or failure policy runs. Materialize before escalating to slots.
+The implementation will charge the vector and its allocation to the candidate.
