@@ -1978,6 +1978,23 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   0.85 gate on one runner and the local 1.05 gate on another.
 - **Record:** [protocol, evidence and reproduction](./REORDER-LEARNING.md)
 
+### Exact subscriber boundaries and the residual index
+
+- The old deep shuffle puts its reader ninth and last. The exact source
+  tail eliminates the transient index at every tested fixed tail rank.
+  At width 4096 the old workload takes 1.163 and 1.235 of Quant. A single
+  predecessor eliminates the index at rank 63/64 and takes 1.859 and 1.476.
+- `SKIPPED` removes the wide mark for eight nested swaps. In separate
+  runs it takes 0.839 and 0.896 of Quant and meets both 1.03 local gates.
+- The bounded resolver still indexes fixed and shuffled interior ranks.
+  Training within its index transaction captures the old edge vector
+  during the third qualifying walk. A single bounded resident owner
+  eliminates repeated slot fill and clear. The random-rank resident takes
+  0.648 and 0.727 of the tail-window control. The two new vector builds
+  both exceed the local gate and slow private shuffle by 30–34%.
+- Evidence and raw paired rounds are in the
+  [exact witness report](./REORDER-EXACT.md).
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
