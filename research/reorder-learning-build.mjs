@@ -17,7 +17,9 @@ const args = process.argv.slice(2);
 const variants = args.length === 0 ? ["observe", "thread", "witness"] : args;
 
 for (const variant of variants) {
-  assert.ok(["observe", "thread", "witness"].includes(variant));
+  assert.ok(["observe", "thread", "witness", "indexed-only"].includes(variant));
+  const indexedOnly = variant === "indexed-only";
+  const vector = variant === "witness" || indexedOnly;
   const out = path.join(root, ".cache/reorder-learning", variant);
   mkdirSync(out, { recursive: true });
   const src = path.join(out, "src");
@@ -31,9 +33,16 @@ for (const variant of variants) {
   }
 
   edit("  if (__STATS__) stats.indexes++;", "  if (next !== null) recordBudget(c, 2);\n  if (__STATS__) stats.indexes++;");
-  edit("  if (__STATS__) stats.sweeps++;", "  recordBudget(c, 1);\n  if (__STATS__) stats.sweeps++;");
   edit("  if (__STATS__) stats.links++;", "  recordBirth(c);\n  if (__STATS__) stats.links++;");
-  edit("  if (__STATS__) stats.moves++;", "  recordMoved(c);\n  if (__STATS__) stats.moves++;");
+  if (indexedOnly) {
+    edit("  if (cell !== null && cell.to === c) return take(c, cell, s, last, next);", `  if (cell !== null && cell.to === c) {
+    if (cell.ver === UNREAD) recordMoved(c);
+    return take(c, cell, s, last, next);
+  }`);
+  } else {
+    edit("  if (__STATS__) stats.sweeps++;", "  recordBudget(c, 1);\n  if (__STATS__) stats.sweeps++;");
+    edit("  if (__STATS__) stats.moves++;", "  recordMoved(c);\n  if (__STATS__) stats.moves++;");
+  }
   if (variant === "thread") {
     edit("  if (found !== null && found !== undefined) begin(c, found, first, next);", `  if (found !== null && found !== undefined) {
     if (found === first && next !== null && startLearnedThread(c, s, found, last, next)) return;
@@ -45,7 +54,7 @@ for (const variant of variants) {
   }
   near(c, s, last, next, first);`);
   }
-  if (variant === "witness") {
+  if (vector) {
     edit("  const first = s.firstSub;\n\n  // Absent", `  if (last === null && trial?.consumer === c && trial.usingWitness) return slot(c, s, null, next);
   const first = s.firstSub;
 
@@ -56,12 +65,20 @@ for (const variant of variants) {
   for (const pattern of [
     /export function read\(n: Node\): unknown \{[\s\S]*?\n\}(?=\n)/,
     /export function exec\(n: Node\): void \{[\s\S]*?\n\}(?=\n)/,
-  ]) assert.equal(kernel.match(pattern)?.[0], original.match(pattern)?.[0], "hot entry changed");
+    ...indexedOnly ? [
+      /function begin\(c: Node,[\s\S]*?\n\}(?=\n)/,
+      /function take\(\n[\s\S]*?\n\}(?=\n)/,
+    ] : [],
+  ]) {
+    const expected = original.match(pattern)?.[0];
+    assert.ok(expected, "missing unmodified function");
+    assert.equal(kernel.match(pattern)?.[0], expected, "hot function changed");
+  }
   const witnessStart = fragment.indexOf("// Vector lookup");
   const threadStart = fragment.indexOf("function startLearnedThread(");
   assert.ok(witnessStart > 0 && threadStart > witnessStart);
-  let learner = fragment.slice(0, witnessStart).replace("__EXPERIMENT__", variant);
-  if (variant === "witness") learner += fragment.slice(witnessStart, threadStart);
+  let learner = fragment.slice(0, witnessStart).replace("__EXPERIMENT__", vector ? "witness" : variant);
+  if (vector) learner += fragment.slice(witnessStart, threadStart);
   else learner = learner
     .replace("    const base = top;\n", "")
     .replace(/^.*openWitness\(state\).*\n/m, "")

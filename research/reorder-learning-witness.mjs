@@ -4,7 +4,9 @@ import path from "node:path";
 import { permutation, range } from "../bench/scaling.mjs";
 
 const variant = process.argv[2];
-assert.ok(["observe", "thread", "witness"].includes(variant));
+assert.ok(["observe", "thread", "witness", "indexed-only"].includes(variant));
+const indexedOnly = variant === "indexed-only";
+const vector = variant === "witness" || indexedOnly;
 const q = await import(pathToFileURL(path.resolve(`.cache/reorder-learning/${variant}/raw-stats/index.mjs`)));
 const { stats, signal, computed, get, set, untracked, dispose } = q;
 const width = 96;
@@ -23,10 +25,11 @@ function heldSources(deep) {
 
 function reader(sources) {
   const tick = signal(0);
-  const state = { sources, order: orders[0], hook: null, extra: null, value: undefined };
+  const state = { sources, order: orders[0], before: null, hook: null, extra: null, value: undefined };
   function body(previous) {
     assert.equal(this, c);
     assert.equal(previous, state.value);
+    state.before?.();
     get(tick);
     let answer = 0;
     for (let i = 0; i < state.order.length; i++) {
@@ -73,10 +76,18 @@ function checkGraph(r) {
 }
 
 const specialized = () => stats.threadRuns + stats.witnessRuns;
-function train(r, qualifies) {
+function train(r, qualifies, canEnroll = true) {
   const promotions = stats.promotions;
   const runs = specialized();
   r.run(orders[1]);
+  if (!canEnroll) {
+    for (let i = 2; i <= 5; i++) r.run(orders[i]);
+    assert.equal(r.c.fn, r.original);
+    assert.equal(stats.promotions, promotions);
+    assert.equal(specialized(), runs);
+    checkGraph(r);
+    return;
+  }
   assert.notEqual(r.c.fn, r.original);
   for (let i = 2; i <= 4; i++) r.run(orders[i]);
   assert.equal(stats.promotions - promotions, 1);
@@ -87,14 +98,20 @@ function train(r, qualifies) {
 }
 
 const privateConsumer = reader(heldSources(false));
-train(privateConsumer, variant === "thread");
+train(privateConsumer, variant === "thread", !indexedOnly);
 assert.equal(stats.witnessCellsBuilt, 0);
+const beforePrivateQuiet = specialized();
+privateConsumer.run();
+privateConsumer.run();
+assert.equal(specialized(), beforePrivateQuiet);
+assert.equal(privateConsumer.c.fn, privateConsumer.original);
+checkGraph(privateConsumer);
 const deepConsumer = reader(heldSources(true));
-train(deepConsumer, variant === "witness");
+train(deepConsumer, vector);
 const beforeQuiet = specialized();
 deepConsumer.run();
 const afterQuiet = specialized();
-assert.equal(afterQuiet - beforeQuiet, Number(variant === "witness"));
+assert.equal(afterQuiet - beforeQuiet, Number(vector));
 deepConsumer.run();
 assert.equal(specialized(), afterQuiet);
 assert.equal(deepConsumer.c.fn, deepConsumer.original);
@@ -112,8 +129,8 @@ checkGraph(one);
 // misses must restore the outer slot before evaluating the next outer read.
 const shared = heldSources(true);
 const inner = reader(shared), outer = reader(shared);
-train(inner, variant === "witness");
-train(outer, variant === "witness");
+train(inner, vector);
+train(outer, vector);
 outer.hook = () => untracked(() => {
   const saved = shared[0].slot;
   assert.equal(saved?.to, outer.c);
@@ -128,11 +145,11 @@ checkGraph(outer);
 // including a newly linked source. Exercise successful and throwing exits.
 const foreign = heldSources(true)[0];
 const privateFallback = reader(heldSources(false));
-train(privateFallback, variant === "thread");
+train(privateFallback, variant === "thread", !indexedOnly);
 privateFallback.extra = foreign;
 privateFallback.run(orders[6]);
 checkGraph(privateFallback);
-const throwing = reader(heldSources(variant === "witness"));
+const throwing = reader(heldSources(vector));
 train(throwing, variant !== "observe");
 const beforeFailure = specialized();
 const extra = signal(11111);
@@ -147,10 +164,36 @@ throwing.run(orders[9]);
 checkGraph(throwing);
 assert.ok(!extra.firstSub);
 
+// An eager witness owns slots even if the callback throws before its first
+// observation and the ordinary cursor is still null.
+const early = reader(heldSources(true));
+train(early, vector);
+early.before = () => { throw thrown; };
+assert.throws(() => early.run(orders[6]), (error) => error === thrown);
+for (const s of [...early.sources, early.tick]) assert.equal(s.slot, null);
+early.before = null;
+early.run();
+checkGraph(early);
+
+const selfInvalidating = reader(heldSources(vector));
+train(selfInvalidating, variant !== "observe");
+const observed = selfInvalidating.sources[orders[6][2]];
+let calls = 0;
+selfInvalidating.hook = () => {
+  if (calls++ === 0) {
+    set(observed, observed.value + 1000);
+    get(observed);
+  }
+};
+selfInvalidating.run(orders[6]);
+get(selfInvalidating.c);
+assert.equal(calls, 2, "an in-run write must survive a reread of the same source");
+checkGraph(selfInvalidating);
+
 // The learned wrapper never resurrects a disposed body. Its old relation
 // objects must be collectible while the terminal consumer remains live.
 function retireWithWeakEdge() {
-  const retired = reader(heldSources(variant === "witness"));
+  const retired = reader(heldSources(vector));
   train(retired, variant !== "observe");
   const edge = new WeakRef(retired.c.firstDep);
   retired.hook = () => { dispose(retired.c); throw thrown; };

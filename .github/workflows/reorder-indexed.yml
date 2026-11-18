@@ -1,0 +1,63 @@
+name: Indexed witness
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/reorder-indexed-witness]
+    paths:
+      - "research/reorder-learning*.mjs"
+      - "bench/cost/locality-run.mjs"
+      - ".github/workflows/reorder-indexed.yml"
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node research/reorder-learning-build.mjs indexed-only
+      - run: npx --no-install tsc -p .cache/reorder-learning/indexed-only/tsconfig.json
+      - run: node --expose-gc research/reorder-learning-witness.mjs indexed-only
+      - run: node --expose-gc research/reorder-witness.mjs .cache/reorder-learning/indexed-only/raw-stats/index.mjs
+      - run: npm test
+        env:
+          QUANT_SRC: .cache/reorder-learning/indexed-only/src
+      - run: npm run test:production
+        env:
+          QUANT_SRC: .cache/reorder-learning/indexed-only/src
+  timing:
+    needs: contract
+    name: ${{ matrix.group }} repeat ${{ matrix.repeat }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [indexed-target, indexed-local]
+        repeat: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node bench/build.mjs
+      - run: node research/reorder-learning-build.mjs witness indexed-only
+      - run: node bench/cost/locality-run.mjs "${{ matrix.group }}" 7
+        env:
+          REPETITION: ${{ matrix.repeat }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.group }}-${{ matrix.repeat }}
+          path: .cache/locality-results
+          include-hidden-files: true

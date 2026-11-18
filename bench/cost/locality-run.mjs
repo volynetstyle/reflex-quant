@@ -69,7 +69,7 @@ if (["walk", "splice", "pages"].includes(group)) {
       ...(candidate === "thread" && group === "global" ? { suffix: "reorder-suffix/api" } : {}),
     })) add(label, suite, id, bundle);
   }
-} else if (group.startsWith("learn-")) {
+} else if (group.startsWith("learn-") || group.startsWith("indexed-")) {
   const programs = {
     "learn-private": [
       ["cost", "lb.shuffle@256"], ["cost", "lb.shuffle@1024"], ["cost", "lb.shuffle@4096"],
@@ -85,12 +85,25 @@ if (["walk", "splice", "pages"].includes(group)) {
       ["scenarios", "branch.switch-100"], ["scenarios", "edit.insert-one-256"], ["scenarios", "reorder.rotate-256"],
       ["scenarios", "replace-half.256"], ["scenarios", "value-sort.256x32"], ["tradeoffs", "swaps-nested@8"],
     ],
+    "indexed-target": [
+      ["learning", "deep-shuffle@1024"], ["learning", "deep-shuffle@4096"],
+      ["cost", "lb.shuffle@1024"], ["cost", "lb.shuffle@4096"],
+      ["learning", "mixed@512"], ["scenarios", "shared-chaotic.64x32"],
+    ],
+    "indexed-local": [
+      ["mechanisms", "track.stable-1"], ["mechanisms", "track.stable-64"],
+      ["scenarios", "stable.wide-256"], ["scenarios", "branch.switch-100"],
+      ["scenarios", "edit.insert-one-256"], ["scenarios", "reorder.rotate-256"],
+      ["scenarios", "replace-half.256"], ["tradeoffs", "swaps-nested@8"],
+    ],
   };
   assert.ok(programs[group], "unknown learning group " + group);
   for (const [suite, id] of programs[group]) {
     add("quant", suite, id, "bench/quant");
     add("A/A", suite, id, "bench/quant");
-    for (const label of ["observe", "thread", "witness"])
+    const labels = group === "indexed-target" ? ["witness", "indexed-only"] :
+      group === "indexed-local" ? ["indexed-only"] : ["observe", "thread", "witness"];
+    for (const label of labels)
       add(label, suite, id, `reorder-learning/${label}/api`);
   }
 } else {
@@ -112,7 +125,7 @@ for (const cell of cells) {
   if (checks.has(comparison)) assert.equal(checksum, checks.get(comparison), id);
   checks.set(comparison, checksum);
   hashes[bundle] ??= createHash("sha256").update(readFileSync(path.join(dir, "index.mjs"))).digest("hex");
-  const learningStructure = group.startsWith("learn-") && label !== "A/A";
+  const learningStructure = (group.startsWith("learn-") || group.startsWith("indexed-")) && label !== "A/A";
   const suffixStructure = ["runtime", "global", "local", "neighbors"].includes(group) &&
     ["quant", "slots", "suffix", "thread"].includes(label);
   if (learningStructure || suffixStructure) {
