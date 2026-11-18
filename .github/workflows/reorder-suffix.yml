@@ -1,0 +1,64 @@
+name: Suffix reconstruction
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/reorder-locality]
+    paths:
+      - "research/reorder-build.mjs"
+      - "research/reorder-suffix.ts"
+      - "research/reorder-witness.mjs"
+      - ".github/workflows/reorder-suffix.yml"
+permissions:
+  contents: read
+jobs:
+  contract:
+    name: Contract and graph witnesses
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node research/reorder-build.mjs
+      - run: node --expose-gc research/reorder-witness.mjs .cache/reorder-suffix/raw/index.mjs
+      - run: npm test
+        env:
+          QUANT_SRC: .cache/reorder-suffix/src
+      - run: npm run test:production
+        env:
+          QUANT_SRC: .cache/reorder-suffix/src
+
+  timing:
+    needs: contract
+    name: ${{ matrix.group }} repeat ${{ matrix.repeat }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [global, local, neighbors]
+        repeat: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node bench/build.mjs
+      - run: node research/reorder-build.mjs
+      - run: node bench/cost/locality-run.mjs "${{ matrix.group }}" 7
+        env:
+          REPETITION: ${{ matrix.repeat }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: suffix-${{ matrix.group }}-${{ matrix.repeat }}
+          path: .cache/locality-results
+          include-hidden-files: true

@@ -34,6 +34,35 @@ if (["walk", "splice", "pages"].includes(group)) {
       })) add(label, "cost", id, bundle);
     }
   }
+} else if (group === "vintage") {
+  for (const n of [256, 1024, 4096]) {
+    for (const phase of ["full", "reads", "index", "index1", "index2", "index3", "lookup", "move", "lookup-move"]) {
+      const id = `decompose.${phase}@${n}`;
+      const sameAnswer = phase.startsWith("index") ? "index" : phase === "reads" ? "full" : phase;
+      add("816acde", "cost", id, "reorder-vintage/raw", sameAnswer + n);
+      if (phase === "full") add("A/A", "cost", id, "reorder-vintage/raw", sameAnswer + n);
+    }
+  }
+} else if (["global", "local", "neighbors"].includes(group)) {
+  const programs = {
+    global: [256, 1024, 4096, 8192].flatMap((n) =>
+      ["shuffle", "reverse"].map((f) => ["cost", `${n === 8192 ? "regime" : "lb"}.${f}@${n}`])),
+    local: [
+      ...["branch.switch-100", "edit.insert-one-256", "reorder.rotate-256", "replace-half.256", "stable.wide-256", "value-sort.256x32"].map((id) => ["scenarios", id]),
+      ["mechanisms", "track.stable-1"], ["mechanisms", "track.stable-64"], ["cost", "lb.insert-one@1024"],
+    ],
+    neighbors: [
+      ["scenarios", "reorder.reverse-8"], ["scenarios", "long-reorder.256"], ["scenarios", "shared-chaotic.64x32"],
+      ["mechanisms", "track.duplicate-64"], ["mechanisms", "track.fresh-after-reorder-64"],
+      ["tradeoffs", "swaps@256"], ["tradeoffs", "swaps-nested@8"],
+      ["tradeoffs", "replace-all-k3@256"],
+    ],
+  };
+  for (const [suite, id] of programs[group]) {
+    for (const [label, bundle] of Object.entries({
+      quant: "bench/quant", "A/A": "bench/quant", suffix: "reorder-suffix/api", reflex: "bench/reflex",
+    })) add(label, suite, id, bundle);
+  }
 } else {
   throw new Error(`unknown group ${group}`);
 }
@@ -45,14 +74,15 @@ function worker(script, args) {
   return JSON.parse(output.trim());
 }
 const checks = new Map(), structure = [], hashes = {};
+const timingWorker = group === "vintage" ? ".cache/reorder-vintage/bench/worker.mjs" : "bench/worker.mjs";
 for (const cell of cells) {
   const { bundle, suite, id, comparison } = cell;
   const dir = path.join(cache, bundle);
-  const { checksum } = worker("bench/worker.mjs", [dir, id, "--suite", suite, "--verify"]);
+  const { checksum } = worker(timingWorker, [dir, id, "--suite", suite, "--verify"]);
   if (checks.has(comparison)) assert.equal(checksum, checks.get(comparison), id);
   checks.set(comparison, checksum);
   hashes[bundle] ??= createHash("sha256").update(readFileSync(path.join(dir, "index.mjs"))).digest("hex");
-  if (group === "runtime" && ["quant", "slots"].includes(cell.label)) {
+  if (["runtime", "global", "local", "neighbors"].includes(group) && ["quant", "slots", "suffix"].includes(cell.label)) {
     structure.push({ label: cell.label, ...worker("bench/cost/structure-worker.mjs", [
       id, "--suite", suite, "--bundle", dir + "-stats",
     ]) });
@@ -60,11 +90,11 @@ for (const cell of cells) {
 }
 
 const samples = [];
-const seed = Number(process.env.GITHUB_RUN_ID ?? 3089) >>> 0;
+const seed = (Number(process.env.GITHUB_RUN_ID ?? 3089) + 31 * Number(process.env.REPETITION ?? 0)) >>> 0;
 for (let round = 0; round < rounds; round++) {
   for (const index of permutation(cells.length, seed + round * 7919)) {
     const { label, suite, id, bundle, comparison } = cells[index];
-    const m = worker("bench/worker.mjs", [path.join(cache, bundle), id, "--suite", suite, "--gc"]);
+    const m = worker(timingWorker, [path.join(cache, bundle), id, "--suite", suite, "--gc"]);
     assert.equal(m.checksum, checks.get(comparison), id);
     samples.push({ round, label, ...m });
   }

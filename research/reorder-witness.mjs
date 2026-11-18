@@ -13,7 +13,7 @@ let distinctions = 0;
 // An earlier changed computed lets the sink execute a new branch. An earlier
 // throwing computed ends validation. The sink itself is stale, never directly
 // dirtied by either write. No hidden application order is available on demand.
-function distinguish(order, a, b) {
+function distinguish(order, a, b, reorder = false) {
   const triggers = order.map(() => signal(0));
   const gates = triggers.map((tick, id) => computed(() => {
     const value = get(tick);
@@ -21,12 +21,15 @@ function distinguish(order, a, b) {
     return value;
   }));
   let finished = false;
+  const drive = signal(0);
   const sink = computed(() => {
     if (finished) return 99;
-    for (const id of order) get(gates[id]);
+    const pass = get(drive);
+    for (const id of reorder && pass === 0 ? range(order.length) : order) get(gates[id]);
     return 0;
   });
   assert.equal(get(sink), 0);
+  if (reorder) { set(drive, 1); assert.equal(get(sink), 0); }
   finished = true;
   set(triggers[a], 1);
   set(triggers[b], 1);
@@ -42,6 +45,11 @@ function orders(prefix, rest) {
   for (const id of rest) orders([...prefix, id], rest.filter((x) => x !== id));
 }
 orders([], range(4));
+for (let seed = 1; seed <= 12; seed++) {
+  const order = permutation(64, seed);
+  distinguish(order, order[10], order[45], true);
+  distinguish(order, order[45], order[10], true);
+}
 
 function checkList(c, expected) {
   const seen = new Set();
@@ -150,5 +158,31 @@ checkList(c, []);
 for (const s of ps) {
   assert.equal(s.slot, null);
   for (let e = s.firstSub; e; e = e.nextSub) assert.notEqual(e.to, c);
+}
+// Keep a disposed consumer alive but only a weak reference to an old edge.
+// A leaked last frame would keep that edge alive across full collections.
+if (globalThis.gc) {
+  function retirement() {
+    const nodes = range(1024).map(signal), trigger = signal(0);
+    const perm = permutation(nodes.length, 71);
+    const sink = computed(() => {
+      const pass = get(trigger);
+      for (const id of pass ? perm : range(nodes.length)) get(nodes[id]);
+      if (pass) { dispose(sink); throw firstError; }
+      return 1;
+    });
+    get(sink);
+    const weak = new WeakRef(nodes[0].firstSub);
+    set(trigger, 1);
+    assert.throws(() => get(sink), (e) => e === firstError);
+    return { sink, weak };
+  }
+  const kept = retirement();
+  for (let i = 0; i < 8; i++) {
+    await new Promise((resolve) => setImmediate(resolve));
+    globalThis.gc();
+  }
+  assert.equal(kept.weak.deref(), undefined);
+  assert.equal(kept.sink.firstDep, null);
 }
 console.log(`${distinctions} order observations and partial, nested, failure, P5 and disposal witnesses passed`);
