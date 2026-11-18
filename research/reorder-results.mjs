@@ -20,7 +20,8 @@ for (const file of files(input)) {
   const run = parts[0];
   assert.match(run, /^\d+$/);
   const raw = JSON.parse(readFileSync(file, "utf8"));
-  const subgroup = parts.find((p) => /^(suffix|thread)-(global|local|neighbors)-[12]$/.test(p)) ?? raw.group;
+  const subgroup = parts.find((p) =>
+    /^(?:(?:suffix|thread)-(?:global|local|neighbors)|learn-(?:private|deep|local)|indexed-(?:target|local))-[12]$/.test(p)) ?? raw.group;
   const key = run + "/" + subgroup;
   const rows = raw.cells.map(({ label, id, comparison }) => {
     const series = raw.samples.filter((s) => s.label === label && s.id === id).sort((a, b) => a.round - b.round);

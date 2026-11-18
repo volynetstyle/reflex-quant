@@ -1952,6 +1952,28 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
 - **Record:** [report and reproduction](./REORDER-LOCALITY.md) ·
   [per-round measurements](./REORDER-RESULTS.json)
 
+## 60. Reorder learning and an unread-edge certificate
+
+- **Classification:** experimental optimization. A per-consumer observation
+  begins at an existing wide resolver. The threshold separates a repeated
+  dense same-set permutation from frequent but sparse budget exhaustion.
+- **Structural result:** no specialized run or additional frontier walk on
+  nested swaps. The ordinary mark still visits a wide suffix. A separate
+  probe reuses the existing `SKIPPED` tag, once the bounded subscriber lookup
+  has found the exact pair. At fixed edit size its mark visits are zero at
+  widths 1,024, 4,096 and 8,192. In those same cells Quant averages 380,
+  1,916 and 3,964.
+- **Representations:** learned reconstruction delays relocation for
+  first-subscriber passes. The selective witness keeps one capped vector for
+  repeatedly indexed consumers and uses it to enumerate addresses in the
+  slot walks while preserving online relocation. A nonqualifying pass
+  drops the vector.
+- **CI:** the vector measures 0.779 and 0.778 of Quant on deep shuffle at
+  4,096 on separate runners. Broad observation slows private shuffle and
+  the mixed control. The indexed-only source copy limits enrollment to
+  actual slot indexing and has separate numerical gates.
+- **Record:** [protocol, evidence and reproduction](./REORDER-LEARNING.md)
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
