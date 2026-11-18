@@ -39,3 +39,22 @@ permutation then requires zero unread-edge inspections at exit. A partial
 pass drains the remaining edges in their original order before the existing
 success or failure policy runs. Materialize before escalating to slots.
 The implementation will charge the vector and its allocation to the candidate.
+
+### Second prediction after the vector A/B
+
+[The vector trial](https://github.com/volynetstyle/reflex-quant/actions/runs/44306105274)
+missed the 0.85 shuffle@4096 target in both repetitions (1.011 and 0.964).
+All 4096 edges were saved and appended, zero were inspected at exit, and
+sampling reported collections on every shuffle round. Nested skips at width
+1024 (`swaps-nested@8`) cost 1.344 and 1.404 of the release.
+
+Test one alternative way of remembering the same old suffix. Retain its old
+backward links while building the accepted forward chain. Three scalar
+execution registers suffice. On complete coverage, repair backward links
+in the new order. On partial coverage restore the unused edges first. This
+exchanges the vector, growth and online backward stores for a dependent
+repair traversal. Prediction before implementation: zero workspace objects
+per promotion and no collections on measured pure reorders, shuffle@4096
+≤0.85 of release, shuffle@8192 ≤0.95, reverse@4096 ≤1.05 and
+`swaps-nested@8` ≤1.05. All local controls retain the 1.05 gate. A gain
+only against the vector does not meet the release gate.
