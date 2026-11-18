@@ -681,11 +681,9 @@ function skip(c: Node, s: Node, last: Edge | null, next: Edge, e: Edge): void {
 
 /**
  * The source's first subscribers decide what the reader's list could not.
- * Found as the first one: a lookup through the subscribers costs no load
- * beyond the read itself, so mark the unread suffix and let the rest of the
- * pass find its pairs that way, with no slot to fill or clear. Found deeper:
- * every lookup would walk other readers' edges, so index; either way the
- * found edge is taken at once.
+ * A found SKIPPED edge already proves it is unread, even after a failure.
+ * For other matches, the first subscriber selects a suffix mark. A deeper
+ * subscriber selects an index to avoid walking other readers on every lookup.
  */
 function lookup(
   c: Node,
@@ -696,7 +694,15 @@ function lookup(
 ): void {
   const found = pair(first, c);
 
-  if (found !== null && found !== undefined) begin(c, found, first, next);
+  if (found !== null && found !== undefined) {
+    if (next !== null && found.ver === SKIPPED) {
+      if (__STATS__) stats.moves++;
+      found.ver = s.ver;
+      cursor = found;
+      return moveDep(c, found, last, next);
+    }
+    begin(c, found, first, next);
+  }
 
   settle(c, s, last, next, found);
 }

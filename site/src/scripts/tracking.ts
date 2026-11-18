@@ -106,6 +106,8 @@ function near(c: QNode, s: QNode, last: QEdge | null, next: QEdge | null, first:
   if (p !== null && p.from === s) return step("repeat", "behind", { dups: 1 }, { at });
   if (e === null && p === null) return step("new", "ends", { links: 1 });
   const found = pair(first, c);
+  if (next !== null && found.edge?.ver === SKIPPED)
+    return step("move", "subs", { lookups: 1, moves: 1 }, { at: found.at });
   let counters: Step["counters"] = { lookups: 1 }, more: Partial<Step> = {}, unread: Set<QEdge> | undefined;
   if (found.edge && next !== null) {
     // Either walk marks the unread suffix, from `next` on, before the found edge is taken.
