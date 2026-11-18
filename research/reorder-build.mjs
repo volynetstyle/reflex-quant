@@ -6,7 +6,10 @@ import path from "node:path";
 import { build } from "esbuild";
 
 const root = path.resolve(import.meta.dirname, "..");
-const out = path.join(root, ".cache/reorder-suffix");
+const variant = process.argv[2] ?? "suffix";
+assert.ok(["suffix", "thread"].includes(variant));
+const thread = variant === "thread";
+const out = path.join(root, ".cache/reorder-" + variant);
 const src = path.join(out, "src");
 mkdirSync(out, { recursive: true });
 cpSync(path.join(root, "src"), src, { recursive: true });
@@ -16,17 +19,17 @@ function edit(anchor, replacement) {
   assert.equal(kernel.split(anchor).length, 2, "non-unique or missing kernel anchor: " + anchor);
   kernel = kernel.replace(anchor, () => replacement);
 }
-const fragment = readFileSync(path.join(import.meta.dirname, "reorder-suffix.ts"), "utf8");
+const fragment = readFileSync(path.join(import.meta.dirname, `reorder-${variant}.ts`), "utf8");
 edit("const compare = Object.is;", "const compare = Object.is;\n" + fragment);
 edit("  const prevCursor = cursor;\n  const base = top;", `  const prevCursor = cursor;
   const outerSuffix = suffix;
-  suffix = null;
+  suffix = null;${thread ? "\n  const outerTail = suffixTail;\n  const outerLeft = suffixLeft;\n  suffixTail = null;\n  suffixLeft = 0;" : ""}
   const base = top;`);
 for (const indent of ["    ", "  "]) {
   const anchor = `\n${indent}const last = cursor as Edge | null;\n${indent}active = prev;`;
   edit(anchor, `\n${indent}const last = cursor as Edge | null;
 ${indent}if (suffix !== null) closeSuffix(n, last);
-${indent}suffix = outerSuffix;
+${indent}suffix = outerSuffix;${thread ? `\n${indent}suffixTail = outerTail;\n${indent}suffixLeft = outerLeft;` : ""}
 ${indent}active = prev;`);
 }
 edit("  // An indexed pass owns", `  if (next === null && suffix !== null) return readSuffix(c, s, last);
@@ -47,7 +50,9 @@ const statsFile = path.join(src, "instrumentation.ts");
 const stats = readFileSync(statsFile, "utf8");
 assert.ok(stats.includes("  reads: 0,"));
 writeFileSync(statsFile, stats.replace("  reads: 0,",
-  "  snapshots: 0,\n  savedEdges: 0,\n  snapshotHits: 0,\n  appends: 0,\n  restoreVisits: 0,\n  restoredEdges: 0,\n  reads: 0,"));
+  "  snapshots: 0,\n  savedEdges: 0,\n  snapshotHits: 0,\n  appends: 0,\n  restoreVisits: 0,\n  restoredEdges: 0,\n" +
+  (thread ? "  threadStarts: 0,\n  repairVisits: 0,\n" : "") + "  reads: 0,"));
+writeFileSync(path.join(out, "tsconfig.json"), JSON.stringify({ extends: "../../tsconfig.json", include: ["src"] }) + "\n");
 
 for (const [dir, adapter, counting] of [
   ["api", "quant.mjs", false],

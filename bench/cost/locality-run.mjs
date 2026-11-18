@@ -14,6 +14,8 @@ const rounds = Number(count);
 assert.ok(Number.isInteger(rounds) && (rounds === 0 || rounds >= 5));
 const root = path.resolve(import.meta.dirname, "../..");
 const cache = path.join(root, ".cache");
+const candidate = process.env.SUFFIX_CANDIDATE ?? "suffix";
+assert.ok(["suffix", "thread"].includes(candidate));
 const cells = [];
 function add(label, suite, id, bundle, comparison = id) {
   cells.push({ label, suite, id, bundle, comparison });
@@ -42,6 +44,9 @@ if (["walk", "splice", "pages"].includes(group)) {
       add("816acde", "cost", id, "reorder-vintage/raw", sameAnswer + n);
       if (phase === "full") add("A/A", "cost", id, "reorder-vintage/raw", sameAnswer + n);
     }
+    for (const mode of ["none", "fill", "clear", "both"])
+      add("addresses", "cost", `decompose.address-${mode}@${n}`, "reorder-vintage/addresses", "full" + n);
+    add("address A/A", "cost", `decompose.address-none@${n}`, "reorder-vintage/addresses", "full" + n);
   }
 } else if (["global", "local", "neighbors"].includes(group)) {
   const programs = {
@@ -60,7 +65,8 @@ if (["walk", "splice", "pages"].includes(group)) {
   };
   for (const [suite, id] of programs[group]) {
     for (const [label, bundle] of Object.entries({
-      quant: "bench/quant", "A/A": "bench/quant", suffix: "reorder-suffix/api", reflex: "bench/reflex",
+      quant: "bench/quant", "A/A": "bench/quant", [candidate]: `reorder-${candidate}/api`, reflex: "bench/reflex",
+      ...(candidate === "thread" && group === "global" ? { suffix: "reorder-suffix/api" } : {}),
     })) add(label, suite, id, bundle);
   }
 } else {
@@ -82,7 +88,7 @@ for (const cell of cells) {
   if (checks.has(comparison)) assert.equal(checksum, checks.get(comparison), id);
   checks.set(comparison, checksum);
   hashes[bundle] ??= createHash("sha256").update(readFileSync(path.join(dir, "index.mjs"))).digest("hex");
-  if (["runtime", "global", "local", "neighbors"].includes(group) && ["quant", "slots", "suffix"].includes(cell.label)) {
+  if (["runtime", "global", "local", "neighbors"].includes(group) && ["quant", "slots", "suffix", "thread"].includes(cell.label)) {
     structure.push({ label: cell.label, ...worker("bench/cost/structure-worker.mjs", [
       id, "--suite", suite, "--bundle", dir + "-stats",
     ]) });
