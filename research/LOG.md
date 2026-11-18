@@ -1523,6 +1523,23 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   on research/history-independence. The regression fails on the previous
   production code, then passes in both builds after the repair.
 
+## Exact lookup of a skipped edge
+
+- **Structural witness.** For eight nested swaps at fixed edit size, the
+  former resolver visits an average of 380, 1,916 and 3,964 edges to mark
+  the suffix at widths 1,024, 4,096 and 8,192. The visit count is zero
+  when the resolver accepts the exact skipped edge directly.
+- **Implementation.** `lookup` already found the live pair. `SKIPPED`
+  certifies that this edge is outside the accepted prefix. Move it to the
+  cursor and store the observed version, using the existing relation.
+  [Implementation lemma](../CONTRACT.md#implementation-lemma-for-skipped)
+- **Evidence.** The regression checks edge identity, read order and the
+  work bound at all three widths. It also checks a tag left by a failed
+  run, then a write and reread after acceptance (P5). The research A/B
+  measured 0.839 and 0.896 of Quant for `swaps-nested@8` and met the
+  1.03 local gate on both runners.
+  [Research run](https://github.com/volynetstyle/reflex-quant/actions/runs/44412795005)
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
