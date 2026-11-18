@@ -55,18 +55,21 @@ function fixture(
       (sum, id) => e.add(sum, e.read(id)),
       e.value(0),
     );
-    // An older shared reader removes the first-subscriber shortcut. Its watcher
-    // keeps this public reader validated when the overlapping ABA changes data.
+    // Pin the reordering consumer away from both list boundaries. The older
+    // reader's watcher keeps it validated when the overlapping ABA changes data.
     const prefix = [
       ...base.prefixA.slice(0, at),
       op.computed("filler", expression),
       op.watcher("fillerWatcher", e.read("filler")),
       op.read("filler"),
       ...base.prefixA.slice(at),
+      op.watcher("fillerTail", expression),
+      op.watcher("fillerEnd", expression),
+      op.flush(),
     ];
     base = {
       ...base,
-      handles: [...base.handles, "filler", "fillerWatcher"],
+      handles: [...base.handles, "filler", "fillerWatcher", "fillerTail", "fillerEnd"],
       prefixA: prefix,
       prefixB: prefix,
     };

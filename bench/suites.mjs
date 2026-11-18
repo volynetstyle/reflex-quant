@@ -13,8 +13,9 @@ import { scenarios as cost } from "./cost/scenarios.mjs";
 import { scenarios as tradeoffs } from "./tradeoffs.mjs";
 import { scenarios as locality } from "./cost/locality.mjs";
 import { scenarios as learning } from "./cost/learning.mjs";
+import { scenarios as exact } from "./cost/exact.mjs";
 
-export const suites = { scenarios: graph, mechanisms, scaling, cost, tradeoffs, locality, learning };
+export const suites = { scenarios: graph, mechanisms, scaling, cost, tradeoffs, locality, learning, exact };
 
 export function suiteOf(argv) {
   const i = argv.indexOf("--suite");

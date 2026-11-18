@@ -40,3 +40,22 @@ assertions that pin the old resolver choice must be identified individually
 if the new proof changes them. A scope-qualified improvement requires
 at least two independent runners. Changes belong to experimental source
 copies until reviewed against the contract.
+
+## Comparison cells
+
+`tail-window` adds exactly one predecessor of the source tail. It has a
+fixed boundary workload at rank 63/64 and an interior control at 33/64.
+`transaction` and `resident` both start from `tail-window`. The old vector
+remains in two comparison cells, with and without `tail`. Compare the new
+vectors to `tail-window` at the same rank and in the same round. Also retain
+the comparison to `tail` specified above. Compare `resident` to `transaction`
+to isolate the price of filling and clearing slots. Residency can retain
+one live index, with a capacity of 8193 edges, and still has to mark unread
+relations each time it starts a new pass.
+
+The resident proof covers replacement on idle overlap, LIFO restoration
+when the owner is active, and eviction on failure, membership change and
+disposal. Its separate runtime checks reflect the changed internal slot
+invariant. The other variants are checked with the original at-rest slot
+invariant. A fixed random-rank seed is shared across variants and repeated
+jobs. It creates a balanced mix of ranks at each tested width.

@@ -208,7 +208,7 @@ describe("structural bounds", () => {
     expect(idle()).toBe(true);
   });
 
-  it("LOG 29: over shared sources, the first reader marks its pass and deeper readers index", () => {
+  it("LOG 29: over shared sources, the first reader marks its pass and interior readers index", () => {
     const n = 64;
     const ps = range(n).map(signal);
     const orders = range(8).map((k) => {
@@ -222,9 +222,10 @@ describe("structural bounds", () => {
       return o;
     });
     const tick = signal(0);
-    // Three readers subscribed in order: the first is every source's first subscriber.
+    // Two fixed readers afterwards keep the later reordering readers in the interior.
     const cs = range(3).map(() => reader(ps, orders, tick));
     cs.forEach(read);
+    for (let i = 0; i < 2; i++) read(computed(() => ps.reduce((s, p) => s + (read(p) as number), 0)));
     resetStats();
     for (let t = 1; t <= 20; t++) {
       write(tick, t);
@@ -321,6 +322,7 @@ describe("structural bounds", () => {
     const tick = signal(0);
     const c = reader(ps, orders, tick);
     read(c);
+    for (let i = 0; i < 2; i++) read(computed(() => ps.reduce((s, p) => s + (read(p) as number), 0)));
     resetStats();
     for (let t = 1; t <= 40; t++) {
       write(tick, t);

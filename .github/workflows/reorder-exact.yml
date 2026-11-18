@@ -1,0 +1,80 @@
+name: Exact pair witnesses
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/reorder-exact-witness]
+    paths:
+      - "research/reorder-exact*.mjs"
+      - "research/reorder-index-transaction.ts"
+      - "bench/cost/exact.mjs"
+      - "bench/cost/locality-run.mjs"
+      - ".github/workflows/reorder-exact.yml"
+permissions:
+  contents: read
+jobs:
+  contract:
+    name: Contract (${{ matrix.variant }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [quant, tail, skipped, tail-skipped, tail-window, transaction, resident]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - if: matrix.variant != 'quant'
+        run: |
+          node research/reorder-exact-build.mjs "$VARIANT"
+          npx --no-install tsc -p ".cache/reorder-exact/$VARIANT/tsconfig.json"
+          node --expose-gc research/reorder-exact-witness.mjs "$VARIANT"
+          echo "QUANT_SRC=.cache/reorder-exact/$VARIANT/src" >> "$GITHUB_ENV"
+        env:
+          VARIANT: ${{ matrix.variant }}
+      - if: matrix.variant != 'resident'
+        run: npm test
+      - if: matrix.variant != 'resident'
+        run: npm run test:production
+      # The ordinary graph helper asserts that source cells are empty at rest.
+      # The resident witness above checks the replacement ownership invariant.
+      - if: matrix.variant == 'resident'
+        run: |
+          npm test -- test/semantics.test.ts test/disposal-retention.test.ts test/torture-structure.test.ts test/work-stack.test.ts
+          npm run test:production -- test/semantics.test.ts test/disposal-retention.test.ts test/torture-structure.test.ts test/work-stack.test.ts
+  timing:
+    needs: contract
+    name: ${{ matrix.group }} repeat ${{ matrix.repeat }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [exact-low, exact-middle, exact-high, exact-controls, exact-residual, exact-residual-controls]
+        repeat: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node bench/build.mjs
+      - run: node research/reorder-learning-build.mjs indexed-only
+      - run: node research/reorder-exact-build.mjs tail skipped tail-skipped tail-vector tail-window transaction resident
+      - run: node bench/cost/locality-run.mjs "$GROUP" 7
+        env:
+          GROUP: ${{ matrix.group }}
+          REPETITION: ${{ matrix.repeat }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.group }}-${{ matrix.repeat }}
+          path: .cache/locality-results
+          include-hidden-files: true

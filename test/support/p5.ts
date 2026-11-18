@@ -29,7 +29,7 @@ export interface FoundRepeat {
  * Twenty-four sources read in order, then the middle one first and the rest
  * from both ends inward: no bounded scan of the reader's list finds the
  * middle one, so the pass marks its suffix (one reader) or indexes it
- * (another reader subscribed first), and its last read repeats the first one
+ * (readers subscribed before and after it), and its last read repeats the first one
  * after a write, a repeat found through the subscribers or the slot. The
  * values are 0..10 and 11 on the middle one (sum 66).
  */
@@ -56,5 +56,9 @@ export function foundRepeat(indexed: boolean): FoundRepeat {
     }
     return sum + get(ps[mid]!);
   });
+  if (indexed) {
+    get(c);
+    for (let i = 0; i < 2; i++) get(computed(() => ps.reduce((s, p) => s + get(p), 0)));
+  }
   return { c, tick, runs: () => runs };
 }

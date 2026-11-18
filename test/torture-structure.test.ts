@@ -133,6 +133,7 @@ describe("torture: tracking index under failure", () => {
     });
 
     get(c);
+    for (let i = 0; i < 2; i++) get(computed(() => sources.reduce((sum, source) => sum + get(source), 0)));
 
     const node = c as unknown as Node;
     const expectedEdges = n + 2; // tick + failing + sources
@@ -183,7 +184,7 @@ it("dispose during an indexed reordered pass restores every slot", () => {
     runs++;
 
     const order = get(flip)
-      ? [...range(n)].reverse()
+      ? scatter(n)
       : range(n);
 
     for (let k = 0; k < order.length; k++) {
@@ -195,6 +196,7 @@ it("dispose during an indexed reordered pass restores every slot", () => {
     }
   });
 
+  for (let i = 0; i < 2; i++) get(computed(() => sources.reduce((sum, source) => sum + get(source), 0)));
   expect(runs).toBe(1);
 
   resetStats();
@@ -292,6 +294,7 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
   });
 
   get(outer);
+  for (let i = 0; i < 2; i++) get(computed(() => sources.reduce((sum, source) => sum + get(source), 0)));
 
   set(failInner, true);
   set(innerTick, 1);

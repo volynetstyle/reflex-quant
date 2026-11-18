@@ -8,6 +8,7 @@ import { cpus } from "node:os";
 import path from "node:path";
 import { permutation } from "../scaling.mjs";
 import { scenarios } from "./locality.mjs";
+import { scenarios as rankScenarios } from "./exact.mjs";
 
 const [group, count = "7"] = process.argv.slice(2);
 const rounds = Number(count);
@@ -69,6 +70,43 @@ if (["walk", "splice", "pages"].includes(group)) {
       ...(candidate === "thread" && group === "global" ? { suffix: "reorder-suffix/api" } : {}),
     })) add(label, suite, id, bundle);
   }
+} else if (group.startsWith("exact-")) {
+  const fanouts = {
+    "exact-low": [4, 8, 9],
+    "exact-middle": [16, 32],
+    "exact-high": [64],
+  };
+  const controls = group === "exact-controls" || group === "exact-residual-controls";
+  const programs = controls
+    ? [
+      ["mechanisms", "track.stable-1"], ["mechanisms", "track.stable-64"],
+      ["scenarios", "stable.wide-256"], ["scenarios", "branch.switch-100"],
+      ["scenarios", "edit.insert-one-256"], ["scenarios", "reorder.rotate-256"],
+      ["scenarios", "replace-half.256"], ["tradeoffs", "swaps-nested@8"],
+      ["cost", "lb.shuffle@4096"], ["cost", "lb.reverse@4096"],
+    ]
+    : rankScenarios.filter(({ n, id }) => group === "exact-residual"
+      ? /^rank\.(16\.9|32\.16|64\.(33|random|63))@4096$|^rank\.64\.random@1024$/.test(id)
+      : n === 4096 && fanouts[group]?.includes(Number(id.split(".")[1])))
+      .map(({ id }) => ["exact", id]);
+  assert.ok(programs.length > 0, "unknown exact group " + group);
+  if (group === "exact-low")
+    programs.push(["learning", "deep-shuffle@1024"], ["learning", "deep-shuffle@4096"]);
+  for (const [suite, id] of programs) {
+    add("quant", suite, id, "bench/quant");
+    add("A/A", suite, id, "bench/quant");
+    add("tail", suite, id, "reorder-exact/tail/api");
+    if (group === "exact-controls")
+      for (const label of ["skipped", "tail-skipped"])
+        add(label, suite, id, `reorder-exact/${label}/api`);
+    if (group === "exact-residual" || group === "exact-residual-controls")
+      for (const label of ["tail-window", "transaction", "resident"])
+        add(label, suite, id, `reorder-exact/${label}/api`);
+    if (!controls && /^(rank\.9\.9|rank\.16\.9|rank\.32\.16|rank\.64\.(33|random)|deep-shuffle)@/.test(id)) {
+      add("indexed-only", suite, id, "reorder-learning/indexed-only/api");
+      add("tail-vector", suite, id, "reorder-exact/tail-vector/api");
+    }
+  }
 } else if (group.startsWith("learn-") || group.startsWith("indexed-")) {
   const programs = {
     "learn-private": [
@@ -125,7 +163,7 @@ for (const cell of cells) {
   if (checks.has(comparison)) assert.equal(checksum, checks.get(comparison), id);
   checks.set(comparison, checksum);
   hashes[bundle] ??= createHash("sha256").update(readFileSync(path.join(dir, "index.mjs"))).digest("hex");
-  const learningStructure = (group.startsWith("learn-") || group.startsWith("indexed-")) && label !== "A/A";
+  const learningStructure = /^(learn|indexed|exact)-/.test(group) && label !== "A/A";
   const suffixStructure = ["runtime", "global", "local", "neighbors"].includes(group) &&
     ["quant", "slots", "suffix", "thread"].includes(label);
   if (learningStructure || suffixStructure) {

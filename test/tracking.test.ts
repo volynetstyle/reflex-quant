@@ -324,6 +324,7 @@ describe("tracking", () => {
       return s + (read(ps[order[0]!]!) as number); // re-read across the nesting
     });
     read(outer);
+    for (let i = 0; i < 2; i++) read(computed(() => ps.reduce((s, p) => s + (read(p) as number), 0)));
     resetStats();
     for (let t = 1; t < 12; t++) {
       write(tick, t);
