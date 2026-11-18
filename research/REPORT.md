@@ -7,6 +7,14 @@
 > [product README](../README.md), [benchmark snapshots](https://volynetstyle.github.io/reflex-quant/benchmarks/)
 > and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien-signals-comparison/).
 
+**Dependency permutation study (LOG 59).** D1 can distinguish any two
+committed dependency orders by a changed-versus-throwing pair of computed
+sources. Two executable reconciliation schemes preserve that order while
+deferring removal from the old dependency list. A controlled historical
+shuffle isolates the cost of dependent address enumeration in a complete
+pass. Neither experimental scheme passes the CI acceptance gates.
+[Research report and evidence](./REORDER-LOCALITY.md)
+
 Experiment: derive a reactive runtime from a frozen contract (invariants
 T1–W5, bounds S1–S8, decisions D1, D2 and D6, precondition C1 in
 [CONTRACT.md](../CONTRACT.md)) that

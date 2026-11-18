@@ -1927,6 +1927,31 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   PROD plus seven diagnostic skips; source and strict oracle typechecks pass.
   No Quant defect or new core admission follows from this map.
 
+## 59. Dependency order and physical traversal under permutation
+
+- **Classification:** investigation of two equivalent tracking implementations
+  and an information lower bound for D1. The experimental builds use source
+  copies and the production benchmark adapters.
+- **Witness:** two committed orders of the same computed sources can differ in
+  whether validation first encounters a changed source or a throwing source.
+  Pairwise continuations distinguish all permutations in the worst case.
+  Separately, the current reverse uses tail hits, while the historical slot
+  shuffle revisits scattered edges and sources when indexing and clearing.
+- **Physical evidence:** holding target order fixed and supplying addresses for
+  both slot walks reduced the historical complete shuffle at 4096 to 0.769 of
+  its paired control. Independent walk and splice probes isolate dependent
+  enumeration and timing sensitivity to address scheduling. The residual of
+  the original decomposition varies by runner.
+- **Alternative representations:** detach the old unread suffix and append
+  first observations. One variant saves the suffix in a transient vector, the
+  other retains the original backward links until reconciliation and uses
+  three scalar registers. Both preserve edge identity and pass the contract
+  suites. At 4096 the second variant gives 0.944 and 0.963 of Quant on shuffle
+  and 1.118 and 1.096 on the narrow stable workload. Both miss the acceptance
+  gates, with a repeated regression on nested swaps.
+- **Record:** [report and reproduction](./REORDER-LOCALITY.md) ·
+  [per-round measurements](./REORDER-RESULTS.json)
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.
