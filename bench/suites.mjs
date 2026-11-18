@@ -11,8 +11,9 @@ import { scenarios as mechanisms } from "./mechanisms.mjs";
 import { scenarios as scaling } from "./scaling.mjs";
 import { scenarios as cost } from "./cost/scenarios.mjs";
 import { scenarios as tradeoffs } from "./tradeoffs.mjs";
+import { scenarios as locality } from "./cost/locality.mjs";
 
-export const suites = { scenarios: graph, mechanisms, scaling, cost, tradeoffs };
+export const suites = { scenarios: graph, mechanisms, scaling, cost, tradeoffs, locality };
 
 export function suiteOf(argv) {
   const i = argv.indexOf("--suite");

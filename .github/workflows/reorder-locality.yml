@@ -1,0 +1,44 @@
+name: Reorder locality
+on:
+  workflow_dispatch:
+  push:
+    branches: [research/reorder-locality]
+    paths:
+      - "bench/cost/locality*.mjs"
+      - "bench/suites.mjs"
+      - ".github/workflows/reorder-locality.yml"
+permissions:
+  contents: read
+jobs:
+  physical:
+    name: ${{ matrix.group }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [walk, splice, pages, runtime]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - run: node bench/build.mjs
+      - run: node bench/cost/build.mjs
+      - name: Machine and counter availability
+        run: |
+          mkdir -p .cache/locality-results
+          lscpu > .cache/locality-results/cpu.txt
+          lscpu -C >> .cache/locality-results/cpu.txt
+          cat /proc/sys/kernel/perf_event_paranoid >> .cache/locality-results/cpu.txt
+          (perf stat -e cycles,branches,branch-misses,dTLB-load-misses true || true) 2>> .cache/locality-results/cpu.txt
+      - run: node bench/cost/locality-run.mjs "${{ matrix.group }}" 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: locality-${{ matrix.group }}
+          path: .cache/locality-results
+          include-hidden-files: true
