@@ -69,6 +69,30 @@ if (["walk", "splice", "pages"].includes(group)) {
       ...(candidate === "thread" && group === "global" ? { suffix: "reorder-suffix/api" } : {}),
     })) add(label, suite, id, bundle);
   }
+} else if (group.startsWith("learn-")) {
+  const programs = {
+    "learn-private": [
+      ["cost", "lb.shuffle@256"], ["cost", "lb.shuffle@1024"], ["cost", "lb.shuffle@4096"],
+      ["cost", "regime.shuffle@8192"], ["cost", "lb.reverse@4096"], ["learning", "phases@512"],
+    ],
+    "learn-deep": [
+      ["learning", "deep-shuffle@1024"], ["learning", "deep-shuffle@4096"],
+      ["scenarios", "shared-chaotic.64x32"], ["scenarios", "long-reorder.256"],
+      ["learning", "mixed@512"],
+    ],
+    "learn-local": [
+      ["mechanisms", "track.stable-1"], ["mechanisms", "track.stable-64"], ["scenarios", "stable.wide-256"],
+      ["scenarios", "branch.switch-100"], ["scenarios", "edit.insert-one-256"], ["scenarios", "reorder.rotate-256"],
+      ["scenarios", "replace-half.256"], ["scenarios", "value-sort.256x32"], ["tradeoffs", "swaps-nested@8"],
+    ],
+  };
+  assert.ok(programs[group], "unknown learning group " + group);
+  for (const [suite, id] of programs[group]) {
+    add("quant", suite, id, "bench/quant");
+    add("A/A", suite, id, "bench/quant");
+    for (const label of ["observe", "thread", "witness"])
+      add(label, suite, id, `reorder-learning/${label}/api`);
+  }
 } else {
   throw new Error(`unknown group ${group}`);
 }
@@ -82,13 +106,16 @@ function worker(script, args) {
 const checks = new Map(), structure = [], hashes = {};
 const timingWorker = group === "vintage" ? ".cache/reorder-vintage/bench/worker.mjs" : "bench/worker.mjs";
 for (const cell of cells) {
-  const { bundle, suite, id, comparison } = cell;
+  const { label, bundle, suite, id, comparison } = cell;
   const dir = path.join(cache, bundle);
   const { checksum } = worker(timingWorker, [dir, id, "--suite", suite, "--verify"]);
   if (checks.has(comparison)) assert.equal(checksum, checks.get(comparison), id);
   checks.set(comparison, checksum);
   hashes[bundle] ??= createHash("sha256").update(readFileSync(path.join(dir, "index.mjs"))).digest("hex");
-  if (["runtime", "global", "local", "neighbors"].includes(group) && ["quant", "slots", "suffix", "thread"].includes(cell.label)) {
+  const learningStructure = group.startsWith("learn-") && label !== "A/A";
+  const suffixStructure = ["runtime", "global", "local", "neighbors"].includes(group) &&
+    ["quant", "slots", "suffix", "thread"].includes(label);
+  if (learningStructure || suffixStructure) {
     structure.push({ label: cell.label, ...worker("bench/cost/structure-worker.mjs", [
       id, "--suite", suite, "--bundle", dir + "-stats",
     ]) });
