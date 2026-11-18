@@ -1971,7 +1971,11 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
 - **CI:** the vector measures 0.779 and 0.778 of Quant on deep shuffle at
   4,096 on separate runners. Broad observation slows private shuffle and
   the mixed control. The indexed-only source copy limits enrollment to
-  actual slot indexing and has separate numerical gates.
+  actual slot indexing. It measures 0.905 and 0.737 on deep shuffle at
+  4,096. Private shuffle and the mixed control pass both 1.05 gates
+  with zero training. One wide stable control measures 1.059 with
+  same-bundle A/A at 0.998. The indexed-only variant misses the deep
+  0.85 gate on one runner and the local 1.05 gate on another.
 - **Record:** [protocol, evidence and reproduction](./REORDER-LEARNING.md)
 
 ## Representation and edge removal note
