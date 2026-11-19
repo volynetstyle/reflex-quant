@@ -90,7 +90,7 @@ function deliver(w: Node, flags: Flags): void {
     try {
       if ((check(w, flags) & Flag.Dirty) === 0) return;
     } catch (error) {
-      w.flags |= Flag.Stale;
+      if (w.fn !== null) w.flags |= Flag.Stale;
       throw error;
     }
   }

@@ -74,7 +74,7 @@ export const mutants = [
     [K, "      n.flags = f | Flag.Dirty | Flag.Woken;\n      wake(n);", "      n.flags = f | Flag.Dirty | Flag.Woken;\n      if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"],
     [K, "        n.flags = f | Flag.Stale;\n        wake(n);", "        n.flags = f | Flag.Stale;\n        if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"]],
   ["no-retry", "a watcher whose validation threw stays runnable by a plain run (V1)",
-    [H, "      w.flags |= Flag.Stale;\n      throw error;", "      throw error;"]],
+    [H, "      if (w.fn !== null) w.flags |= Flag.Stale;\n      throw error;", "      throw error;"]],
   ["idle-after-failure", "a failed watcher keeps its execution obligation (R2)",
     [K, "  n.flags |= Flag.Dirty;\n  const tentative", "  if ((n.flags & Flag.Watch) === 0) n.flags |= Flag.Dirty;\n  const tentative"]],
   ["existential-watcher", "watcher validation covers every committed source (V3)",
@@ -82,6 +82,12 @@ export const mutants = [
     [K, "          w.flags |= Flag.Dirty;\n          e = e.nextDep;\n          break;", "          w.flags |= Flag.Dirty;\n          return w.flags;"]],
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & Flag.Busy) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
+  ["check-after-dispose", "W3: a pull that disposes the watcher ends version comparison",
+    [K, "          pull(s);\n          if (w.fn === null) return 0;", "          pull(s);"]],
+  ["pull-after-dispose", "W3: disposal ends validation when execution is already owed",
+    [K, "        pull(s);\n        if (w.fn === null) return 0;", "        pull(s);"]],
+  ["retry-disposed", "W3: a failed pull leaves a disposed watcher terminal",
+    [H, "      if (w.fn !== null) w.flags |= Flag.Stale;", "      w.flags |= Flag.Stale;"]],
   ["no-cursor-restore", "T3: nested execution restores the enclosing pass's cursor on success and failure",
     [K, "    cursor = prevCursor;\n    fail(n, base, last);", "    fail(n, base, last);"],
     [K, "  cursor = prevCursor;\n  const f = n.flags;", "  const f = n.flags;"]],
@@ -223,6 +229,9 @@ if (process.argv.includes("--validation")) {
   const delivery = "test/validation-delivery.test.ts";
   const retry = "retries an interrupted validation on demand and preserves cutoff (D8)";
   const witnesses = [
+    ["check-after-dispose", delivery, "ends a disposed watcher's validation after the current pull (Q1, changed)"],
+    ["pull-after-dispose", delivery, "ends a disposed watcher's validation after the current pull (Q1, owed)"],
+    ["retry-disposed", delivery, "ends a disposed watcher's validation after the current pull (Q1, pull throws)"],
     ["validation-stale", interrupted, "delivers again through the interrupted path after a causal write (D8)"],
     ["validation-dirty", interrupted, retry],
     ["validation-clean", interrupted, retry],

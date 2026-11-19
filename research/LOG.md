@@ -1709,6 +1709,24 @@ The local runner and raw samples are in `.cache/validation-timing/`
 and `pending-read-vs-main.json`). These timings apply to this machine
 and engine.
 
+### Disposal during watcher validation (Q1)
+
+On `5e7e80d`, a source can dispose its watcher during a pull. In both
+validation phases the detached next source still runs and can throw.
+The changed, unchanged and already-owed witnesses each observe that
+extra error. The cleanup-throws and pull-throws witnesses preserve the
+first error and expose a restored wake flag on the disposed watcher.
+
+The P4/W3 boundary ends delivery after the in-progress pull. Each
+kernel check has a named ablation for its validation phase. The host
+ablates separately by restoring the wake flag after disposal. All five
+witnesses check that teardown consumed cleanup exactly once, removed
+the dependency list and left no wake or execution obligation.
+
+Node 25.2.0 passed 218 development tests and 211 production tests with
+seven diagnostics skipped. All three Q1 ablations failed their named
+witnesses in each mode. The release package check passed.
+
 ### Interrupted-validation merge candidate
 
 [Benchmark run 44552818253](https://github.com/volynetstyle/reflex-quant/actions/runs/44552818253)

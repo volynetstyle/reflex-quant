@@ -1,6 +1,63 @@
 import { expect, it } from "vitest";
+import { Flag } from "../src/graph";
 import type { Node } from "../src/graph";
-import { computed, dispose, effect, get, set, signal } from "../src/index";
+import {
+  batch,
+  computed,
+  dispose,
+  effect,
+  get,
+  set,
+  signal,
+} from "../src/index";
+import type { Effect } from "../src/index";
+
+it.each(["changed", "unchanged", "owed", "cleanup throws", "pull throws"])(
+  "ends a disposed watcher's validation after the current pull (Q1, %s)",
+  (mode) => {
+    const source = signal(0);
+    const direct = signal(0);
+    const failure = new Error(mode);
+    const events: string[] = [];
+    let watcher: Effect;
+    const first = computed(() => {
+      const value = get(source);
+      if (value === 1) {
+        dispose(watcher);
+        if (mode === "pull throws") throw failure;
+      }
+      return mode === "unchanged" ? 0 : value;
+    });
+    const later = computed(() => {
+      if (get(source) === 1) throw new Error("detached source");
+      return 0;
+    });
+    watcher = effect(() => {
+      events.push("body");
+      get(first);
+      get(later);
+      get(direct);
+      return () => {
+        events.push("cleanup");
+        if (mode === "cleanup throws") throw failure;
+      };
+    });
+
+    const invalidate = () =>
+      batch(() => {
+        set(source, 1);
+        if (mode === "owed") set(direct, 1);
+      });
+    if (mode.endsWith("throws")) expect(invalidate).toThrow(failure);
+    else expect(invalidate).not.toThrow();
+
+    set(source, 2);
+    expect(events).toEqual(["body", "cleanup"]);
+    const node = watcher as unknown as Node;
+    expect(node.firstDep).toBeNull();
+    expect(node.flags & (Flag.Wake | Flag.Dirty)).toBe(0);
+  },
+);
 
 it("rechecks a committed source made stale by a later source before cleanup (RQ3, P4)", () => {
   const trigger = signal(0);

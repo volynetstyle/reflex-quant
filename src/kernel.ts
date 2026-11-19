@@ -321,7 +321,7 @@ function verify(root: Node, f: Flags): void {
 }
 
 /**
- * Validate a watcher's committed frontier before any lifecycle step (P4).
+ * Validate a live watcher's committed frontier before a rerun (P4).
  * A fresh STALE mark restarts the pass. Return the final flags or zero if
  * the watcher was disposed. Tentative edges from failed runs only wake.
  */
@@ -338,7 +338,10 @@ export function check(w: Node, flags: Flags): Flags {
 
         if (__STATS__) stats.checks++;
 
-        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) pull(s);
+        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) {
+          pull(s);
+          if (w.fn === null) return 0;
+        }
 
         if (s.ver !== e.ver) {
           w.flags |= Flag.Dirty;
@@ -356,11 +359,12 @@ export function check(w: Node, flags: Flags): Flags {
       if (
         (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
         e.gen !== tentative
-      )
+      ) {
         pull(s);
+        if (w.fn === null) return 0;
+      }
     }
 
-    if (w.fn === null) return 0;
     flags = w.flags;
 
     if ((flags & Flag.Stale) === 0) return flags;
