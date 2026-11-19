@@ -1781,6 +1781,8 @@ call, or the frame that made it undoes it without a call:
   `deliver`. A refused delivery keeps its wake flags, and the next push
   queues the watcher again. One extra flag store per delivery.
 - `drainNow` closes the drain in `finally`. `drain` still closes it itself.
+  This is the only one of the four repairs that is lexical rather than a
+  store order, and the only one with a measured cost (below).
 
 `start` is unchanged. Its `drain` call runs where `exec`'s frame was refused
 or has returned, and `exec`'s interpreter frame is 104 bytes against
@@ -1795,6 +1797,48 @@ witness in both builds (`mutants.mjs --validation`). `cut-on-failure`,
 stores; all 62 anchors resolve. Node 25.2.0 passed 217 development tests and
 210 production tests with seven diagnostics skipped, and the 64-case D7
 oracle. The release check passed; the production bundle stays 2,749 gzip bytes.
+
+**Engines.** [Benchmark run 44572981025](https://github.com/volynetstyle/reflex-quant/actions/runs/44572981025)
+ran the ablations on Node 22.23.4 (V8 12.4.254.21-node.57). There
+`hold-in-drain-now` survived every witness, and so did `13b7c93`: the hold
+window never opened on that engine. The other three windows wedge
+`13b7c93` and are repaired on both engines. On Node 25.2.0 the `enqueue`
+witness wedged `13b7c93` in 12 of 12 runs and this candidate in 0 of 12.
+
+| Mechanism | Node 22.23.4 | Node 25.2.0 |
+|---|---|---|
+| `busy-in-fail` | killed | killed |
+| `queued-in-deliver` | killed | killed |
+| `queued-before-grow` | killed | killed |
+| `hold-in-drain-now` | window absent | killed |
+
+The ablation job now runs on both engines. A mechanism must be killed on
+at least one supported engine that exposes its window; its ablation may
+survive where the window is absent (ARCHITECTURE.md, admission rule). The
+runner reports such a survivor as UNEXPOSED and fails only where the
+mechanism declares its window exposed.
+
+**Cheaper placements falsified (Node 25.2.0, `enqueue`).** `drain` storing
+`hold = 1` itself, with `drainNow` storing nothing, still wedged.
+`hold = 0` moved before `shrink` still wedged. `try`/`finally` around the
+loop inside `drain` wedged 5 of 12 runs. With counters in that variant,
+`drain` had stored `hold = 1` and its own `finally` never ran, while the
+`RangeError` pointed at the loop header inside the `try`. The observation
+disappeared with `--no-use-osr`, with `--no-maglev` and with `--no-opt`.
+A standalone loop with the same shape outside Quant ran its `finally` in all
+21,140 attempts on both engines. This is recorded as an engine observation
+for V8 14.1, not as V8 semantics: an overflow while `drain` runs optimized
+code entered by OSR can leave that frame without its `finally` observably
+running. A `finally` in the caller's frame, which existed before the loop
+was entered, recovered in every tested run. The repair stays there.
+
+**Cost.** The same run paired the candidate with `13b7c93` over nine rounds:
+geometric mean 1.003 over 101 timed rows. The only rows whose whole pair
+range lies above 1 are `batch.writes-32` 1.036 [1.024, 1.042] and
+`batch.coalesce-64` 1.027 [1.009, 1.050], the path that ends in
+`drainNow`. `push.effects-1000` was 1.005 and `effect.rerun-1` 0.992.
+If that cost shows up in real batched workloads, F6 is to be reconsidered
+as a whole, not repaired with a narrower trick.
 
 **Not covered.** The engine may also throw at loop stack checks, so code
 without calls narrows the windows but does not make them atomic. `write` and
