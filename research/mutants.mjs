@@ -80,6 +80,8 @@ export const mutants = [
   ["existential-watcher", "watcher validation covers every committed source (V3)",
     [K, "    let e = w.firstDep;", "    if ((flags & Flag.Dirty) !== 0) return flags;\n    let e = w.firstDep;"],
     [K, "          w.flags |= Flag.Dirty;\n          e = e.nextDep;\n          break;", "          w.flags |= Flag.Dirty;\n          return w.flags;"]],
+  ["watcher-detach-keeps-chain", "W3: a disposed watcher's teardown ends the dependency chain, so its validation pulls no further source",
+    [K, "  if ((n.flags & Flag.Watch) === 0) cutDeps(n, null);", "  if (true) cutDeps(n, null);"]],
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & Flag.Busy) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
   ["no-cursor-restore", "T3: nested execution restores the enclosing pass's cursor on success and failure",
@@ -237,6 +239,7 @@ if (process.argv.includes("--validation")) {
   const drained = "a drain at the stack limit leaves the host open and its watchers wakeable (RQ6)";
   const enqueued = "a watcher whose enqueue grows the ring at the stack limit stays wakeable (RQ6)";
   const witnesses = [
+    ["watcher-detach-keeps-chain", delivery, "ends a disposed watcher's validation after the current pull (Q1, changed)"],
     ["validation-stale", interrupted, "delivers again through the interrupted path after a causal write (D8)"],
     ["validation-dirty", interrupted, retry],
     ["validation-clean", interrupted, retry],

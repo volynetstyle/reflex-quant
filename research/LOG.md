@@ -1709,6 +1709,36 @@ The local runner and raw samples are in `.cache/validation-timing/`
 and `pending-read-vs-main.json`). These timings apply to this machine
 and engine.
 
+### Disposal during watcher validation (Q1)
+
+On `13b7c93`, a source can dispose its watcher during a pull. In both
+validation phases the detached next source still runs and can throw:
+`cutDeps` leaves the removed run's `nextDep` chain, and `check` follows
+it. The changed, unchanged and already-owed witnesses each observe that
+extra error. In the cleanup-throws and pull-throws controls the first
+error already ends the walk.
+
+An earlier candidate (`c793b49`) tested the `fn` tombstone after each pull
+in both phases and kept the host from restoring STALE on a disposed
+watcher. The host part had no observable witness: a disposed watcher has
+no edges, and `deliver`, `stop` and `typeOf` read `fn` or WATCH, never its
+pending bits. Only assertions on those bits killed it.
+
+The repair moves to teardown. A watcher's `detach` clears each removed
+edge's `nextDep` (and `prevDep`), so the walk in progress reaches the end
+of its list after the pull that disposed it, and the existing tombstone
+test at the end of `check` returns. `check` gains no test on its path;
+the cost is paid once per disposed watcher. A computed keeps the chain:
+its validation belongs to the demand in progress, and the pinned W3 tests
+require that demand to go on and surface a later source's error
+(`test/semantics.test.ts`, `test/disposal-retention.test.ts`). Clearing
+the chain for every node broke exactly those three tests.
+
+The ablation `watcher-detach-keeps-chain` restores the shared cut and
+fails the changed witness in each mode. Node 25.2.0 passed 218
+development tests and 211 production tests with seven diagnostics
+skipped. The production bundle is 2,756 gzip bytes, as for `c793b49`.
+
 ### Interrupted-validation merge candidate
 
 [Benchmark run 44552818253](https://github.com/volynetstyle/reflex-quant/actions/runs/44552818253)
