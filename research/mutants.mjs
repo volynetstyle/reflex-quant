@@ -71,7 +71,7 @@ export const mutants = [
   ["no-attachment-handoff", "P5: a new observer receives the invalidation that preceded its edge",
     [K, "  if ((s.flags & Flag.Stale) !== 0) mark(e);\n", ""]],
   ["no-version-expiry", "P1/P5: an observation survives its producer's version wrap",
-    [K, "    for (let e = n.firstSub; e !== null; e = e.nextSub) if (e.ver >= 0) e.ver = EXPIRED;\n", ""]],
+    [K, "  if (version === 0) expire(n);\n", ""]],
   ["wake-guard", "the kernel wakes a watcher only when it is neither STALE nor WOKEN (re-delivery after a failed validation)",
     [K, "      n.flags = f | Flag.Dirty | Flag.Woken;\n      wake(n);", "      n.flags = f | Flag.Dirty | Flag.Woken;\n      if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"],
     [K, "        n.flags = f | Flag.Stale;\n        wake(n);", "        n.flags = f | Flag.Stale;\n        if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"]],

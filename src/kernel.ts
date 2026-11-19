@@ -143,10 +143,13 @@ export function write(s: Node, value: unknown): void {
 function bump(n: Node): void {
   const version = (n.ver + 1) & CounterLimit.Mask;
 
-  if (version === 0) {
-    for (let e = n.firstSub; e !== null; e = e.nextSub) if (e.ver >= 0) e.ver = EXPIRED;
-  }
+  if (version === 0) expire(n);
   n.ver = version;
+}
+
+/** The wrap's scan, kept out of `bump` so that `bump` stays inlinable. */
+function expire(n: Node): void {
+  for (let e = n.firstSub; e !== null; e = e.nextSub) if (e.ver >= 0) e.ver = EXPIRED;
 }
 
 /** Mark everything below the subscriber list `first` STALE, depth first. */

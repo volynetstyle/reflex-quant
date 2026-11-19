@@ -1756,11 +1756,15 @@ An earlier candidate (`aa7209b`) repeated the zero test and the expiry
 call at both commit sites, through a separate `expireObservations`, and
 grew the production bundle from 2,749 to 2,822 gzip bytes. Both commits
 now go through one `bump(n)`, which tests the next version for zero and
-expires the producer's numeric observations before publishing it. The
-mechanism is the same: one test per changed commit and one subscriber
-scan per 2^30 changes. The bundle is 2,782 gzip bytes.
+calls `expire` before publishing it. The mechanism is the same: one test
+per changed commit and one subscriber scan per 2^30 changes. The bundle
+is 2,800 gzip bytes. A first shape with the scan inside `bump` (2,782
+bytes, `6b29014`) cost `write.no-subscribers` 1.140 [1.128, 1.152] in
+[run 44581151614](https://github.com/volynetstyle/reflex-quant/actions/runs/44581151614):
+the loop kept `bump` from being inlined into `write`. The scan stays out
+of line.
 
-The ablation `no-version-expiry` removes the scan from `bump` and fails
+The ablation `no-version-expiry` removes the call from `bump` and fails
 both witnesses, the signal (P5) and the computed (P1) one, in each mode.
 Node 25.2.0 passed 215 development tests and 208 production tests with
 seven diagnostics skipped. Local timings of `aa7209b` showed
