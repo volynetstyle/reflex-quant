@@ -1629,11 +1629,13 @@ these flags on push would require another mask operation in the ordinary
 propagation store. The representation preserves the existing `STALE`
 suppression test and consumes redundant flags in the existing clear step.
 
-**RQ1b/c link.** A new edge is appended after the source was pulled. If the
-source is still `STALE`, marking from the appended edge transmits the pending
-validation to the new subscriber and any downstream consumers. With
-`nextSub === null`, the mark starts with that edge alone. The existing
-version check determines whether the reader actually executes again.
+**RQ1b/c attachment.** Tracking calls `attach` after a successful `peek`.
+The list operation `link` returns the appended edge. If the source is still
+`STALE`, `attach` hands its pending validation to the new subscriber and any
+downstream consumers. This check uses `STALE` because it represents a push
+that preceded the new edge. `UNVERIFIED` concerns the source's own validation.
+With `nextSub === null`, the mark starts with the appended edge alone. The
+existing version check determines whether the reader executes again.
 
 **RQ3 delivery.** The host consumes `STALE` before checking the watcher.
 If the check sets `STALE` again, another pass validates the committed

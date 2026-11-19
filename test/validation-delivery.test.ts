@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import type { Node } from "../src/graph";
 import { computed, dispose, effect, get, set, signal } from "../src/index";
 
 it("rechecks a committed source made stale by a later source before cleanup (RQ3, P4)", () => {
@@ -61,6 +62,38 @@ it("preserves cutoff when a newly linked pending source validates unchanged (RQ1
   expect(checks).toBe(2);
   expect(observed).toEqual([0]);
   dispose(watcher);
+});
+
+it("hands off pending validation for an edge added during indexed tracking (RQ1b)", () => {
+  const reorder = signal(false);
+  const inputs = Array.from({ length: 24 }, () => signal(0));
+  const pivot = inputs[12]!;
+  const firstReader = computed(() => get(pivot));
+  get(firstReader);
+
+  const input = signal(0);
+  const source = computed(() => {
+    const value = get(input);
+    if (value === 0) set(input, 1);
+    return value;
+  });
+  let indexedAttachment = false;
+  const reader = computed(() => {
+    let value = 0;
+    if (get(reorder)) {
+      get(pivot);
+      indexedAttachment ||= (pivot as unknown as Node).slot !== null;
+      value = get(source);
+    }
+    for (const input of inputs) get(input);
+    return value;
+  });
+
+  expect(get(reader)).toBe(0);
+  set(reorder, true);
+  expect(get(reader)).toBe(0);
+  expect(indexedAttachment).toBe(true);
+  expect(get(reader)).toBe(1);
 });
 
 it.each(["execution", "validation"])(

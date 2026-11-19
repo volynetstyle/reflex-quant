@@ -200,7 +200,7 @@ export function read(n: Node): unknown {
       else if (__STATS__) stats.repeats++;
     } else if (next !== null) miss(c, n, last, next);
     // No relation yet: the first read of a first run links at once.
-    else link(c, n, null, null);
+    else attach(c, n, null, null);
   }
   return value;
 }
@@ -526,7 +526,7 @@ export function link(
   s: Node,
   last: Edge | null,
   next: Edge | null,
-): void {
+): Edge {
   if (__STATS__) stats.links++;
 
   const first = s.firstSub;
@@ -556,8 +556,15 @@ export function link(
     e.prevSub = e;
   }
   cursor = e;
-  // A source invalidated during peek already marked its old subscribers.
-  // The newly appended edge still needs that pending validation (P5).
+  return e;
+}
+
+/** Attach an observation after a successful peek. */
+function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
+  const e = link(c, s, last, next);
+
+  // If the source is still STALE after peek, its push preceded this edge.
+  // Pass that pending validation to the new subscriber (P5).
   if ((s.flags & Flag.Stale) !== 0) mark(e);
 }
 
@@ -582,7 +589,7 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 
   // Absent, whatever the unread suffix mode: a source nobody reads, or one
   // whose first and last subscribers, all it has, are other readers.
-  if (first === null || alien(first, c)) return link(c, s, last, next);
+  if (first === null || alien(first, c)) return attach(c, s, last, next);
 
   // Marking, moves and links preserve a continuous UNREAD suffix.
   if (next !== null && next.ver === UNREAD)
@@ -656,7 +663,7 @@ function near(
     return;
   }
 
-  if (e === null && p === null) return link(c, s, last, next);
+  if (e === null && p === null) return attach(c, s, last, next);
 
   lookup(c, s, last, next, first);
 }
@@ -709,7 +716,7 @@ function settle(
   next: Edge | null,
   found: Edge | null | undefined,
 ): void {
-  if (found === null) return link(c, s, last, next);
+  if (found === null) return attach(c, s, last, next);
 
   if (found !== undefined) return take(c, found, s, last, next);
   // Past the budget: index the pass, and the slot decides from here on.
@@ -724,7 +731,7 @@ function slot(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   const cell = s.slot;
 
   if (cell !== null && cell.to === c) return take(c, cell, s, last, next);
-  link(c, s, last, next);
+  attach(c, s, last, next);
   claim(s, cursor as Edge);
 }
 
