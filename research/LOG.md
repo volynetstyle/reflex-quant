@@ -1728,6 +1728,10 @@ The CI median on fresh relations was +1.0%. The earlier Windows repeats
 showed +4.5% and +5.6% on an earlier attachment shape. The CI pair spread
 allows a regression on individual rounds.
 
+The historical ablation runner now targets the current flag masks and
+validation unwind. All 58 mutant anchors and the Reflex idle emulation
+resolve against the candidate.
+
 The candidate declares native stack exhaustion from synchronous user
 callback nesting a resource limit. The RQ6 recovery study remains available
 at `472a42b`. This decision changes the written boundary only. The runtime
