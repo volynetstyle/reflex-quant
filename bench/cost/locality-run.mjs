@@ -107,6 +107,16 @@ if (["walk", "splice", "pages"].includes(group)) {
       add("tail-vector", suite, id, "reorder-exact/tail-vector/api");
     }
   }
+} else if (group === "shape") {
+  // Which transaction edit makes a run that never indexes slower?
+  for (const [suite, id] of [["cost", "lb.shuffle@4096"], ["cost", "lb.reverse@4096"]]) {
+    add("quant", suite, id, "bench/quant");
+    add("A/A", suite, id, "bench/quant");
+    for (const label of ["tail-window", "transaction",
+      "tx-no-miss", "tx-no-index", "tx-no-unindex", "tx-no-link", "tx-no-dispose",
+      "tx-only-miss", "tx-only-index", "tx-only-unindex"])
+      add(label, suite, id, `reorder-exact/${label}/api`);
+  }
 } else if (group.startsWith("learn-") || group.startsWith("indexed-")) {
   const programs = {
     "learn-private": [

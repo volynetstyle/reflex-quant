@@ -19,10 +19,16 @@ function functionSource(source, start) {
 }
 
 for (const variant of variants) {
-  assert.ok(["tail", "skipped", "tail-skipped", "tail-vector", "tail-window", "transaction", "resident"].includes(variant), variant);
+  // Code-shape ablations: tx-no-<group> drops one transaction edit group,
+  // tx-only-<group> keeps only that one (on top of tail-window).
+  const groups = ["miss", "index", "unindex", "link", "dispose"];
+  const ablation = /^tx-(no|only)-(\w+)$/.exec(variant);
+  assert.ok(["tail", "skipped", "tail-skipped", "tail-vector", "tail-window", "transaction", "resident"].includes(variant) ||
+    (ablation !== null && groups.includes(ablation[2])), variant);
+  const keep = (group) => ablation === null || (ablation[1] === "no" ? ablation[2] !== group : ablation[2] === group);
   const tail = variant !== "skipped";
   const resident = variant === "resident";
-  const transaction = variant === "transaction" || resident;
+  const transaction = variant === "transaction" || resident || ablation !== null;
   const window = variant === "tail-window" || transaction;
   const skipped = variant === "skipped" || variant === "tail-skipped";
   const source = variant === "tail-vector"
@@ -80,15 +86,17 @@ for (const variant of variants) {
   }
   if (transaction) {
     const before = "if (last !== null && last.from.slot === last) unindex(n, base);";
-    assert.equal(kernel.split(before).length, 3);
-    kernel = kernel.replace(before, "if (last !== null && last.from.slot === last) unindex(n, base, last, true);");
-    edit(before, "if (last !== null && last.from.slot === last) unindex(n, base, last, false);");
-    edit("  let unread = false;", `  const state = active === c && next !== null ? startObservation(c) : null;
+    if (keep("unindex")) {
+      assert.equal(kernel.split(before).length, 3);
+      kernel = kernel.replace(before, "if (last !== null && last.from.slot === last) unindex(n, base, last, true);");
+      edit(before, "if (last !== null && last.from.slot === last) unindex(n, base, last, false);");
+    }
+    if (keep("index")) edit("  let unread = false;", `  const state = active === c && next !== null ? startObservation(c) : null;
   const pending = (c.gen + 1) & CounterLimit.Mask;
   let unread = false;`);
-    edit("    if (unread) e.ver = UNREAD;\n\n    claim(e.from, e);",
+    if (keep("index")) edit("    if (unread) e.ver = UNREAD;\n\n    claim(e.from, e);",
       "    if (unread) e.ver = UNREAD;\n    if (state !== null) observeIndexEdge(state, e, unread, pending);\n\n    claim(e.from, e);");
-    edit(`function unindex(n: Node, base: number): void {
+    if (keep("unindex")) edit(`function unindex(n: Node, base: number): void {
   for (let e = n.firstDep; e !== null; e = e.nextDep) e.from.slot = null;
 
   while (top > base) {`, `function unindex(n: Node, base: number, last: Edge | null, ok: boolean): void {
@@ -109,13 +117,13 @@ for (const variant of variants) {
 
 function restoreDisplacedSlots(base: number): void {
   while (top > base) {`);
-    edit("  const first = s.firstSub;\n\n  // Absent", `  if (last === null && captured?.consumer === c) return slot(c, s, null, next);
+    if (keep("miss")) edit("  const first = s.firstSub;\n\n  // Absent", `  if (last === null && captured?.consumer === c) return slot(c, s, null, next);
   const first = s.firstSub;
 
   // Absent`);
-    edit("  link(c, s, last, next);\n  claim(s, cursor as Edge);",
+    if (keep("link")) edit("  link(c, s, last, next);\n  claim(s, cursor as Edge);",
       "  if (captured?.consumer === c) captured.born = true;\n  link(c, s, last, next);\n  claim(s, cursor as Edge);");
-    edit("  n.fn = null;\n\n  if ((n.flags & Flag.Busy)", "  releaseIdleCapture(n);\n  n.fn = null;\n\n  if ((n.flags & Flag.Busy)");
+    if (keep("dispose")) edit("  n.fn = null;\n\n  if ((n.flags & Flag.Busy)", "  releaseIdleCapture(n);\n  n.fn = null;\n\n  if ((n.flags & Flag.Busy)");
     if (resident) {
       edit("  if (cell !== null) stack[top++] = cell;", "  if (cell !== null && !evictIdleResident(cell.to)) stack[top++] = cell;");
       edit("  const state = observing;", `  const owner = resident?.deref();

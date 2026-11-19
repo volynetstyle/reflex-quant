@@ -1,0 +1,37 @@
+name: Code-shape ablation of the index transaction
+# Which transaction edit slows a run that never indexes (lb.shuffle@4096),
+# and on which engine? Leave-one-out and add-one builds, Node 22 and 25.
+on:
+  push:
+    branches: [research/reorder-code-shape]
+permissions:
+  contents: read
+jobs:
+  timing:
+    name: shape node ${{ matrix.node }} repeat ${{ matrix.repeat }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22.23.4", "25.2.0"]
+        repeat: [1, 2]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      - run: node bench/build.mjs
+      - run: node research/reorder-exact-build.mjs tail-window transaction tx-no-miss tx-no-index tx-no-unindex tx-no-link tx-no-dispose tx-only-miss tx-only-index tx-only-unindex
+      - run: node bench/cost/locality-run.mjs shape 7
+        env:
+          REPETITION: ${{ matrix.repeat }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shape-node${{ matrix.node }}-${{ matrix.repeat }}
+          path: .cache/locality-results
+          include-hidden-files: true
