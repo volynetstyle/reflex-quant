@@ -197,32 +197,46 @@ function mark(first: Edge): void {
 
 // -------------------------------------------------------------------- read
 
-/** Bring `n` up to date if it is a stale computed, then track it. */
+/**
+ * Bring `n` up to date if it is a stale computed, then track it. Each
+ * outcome returns on its own and loads the value last: tracking runs no user
+ * code, and V8 then keeps no value in a stack slot across `miss`.
+ */
 export function read(n: Node): unknown {
-  const value = peek(n);
+  if ((n.flags & Flag.Pull) !== 0) pull(n);
+
   const c = active;
 
-  if (c !== null) {
-    if (__STATS__) stats.reads++;
+  if (c === null) return n.value;
 
-    const last = cursor;
-    const next = last === null ? c.firstDep : last.nextDep;
+  if (__STATS__) stats.reads++;
 
-    if (next !== null && next.from === n) {
-      if (__STATS__) stats.hits++;
+  const last = cursor;
+  const next = last === null ? c.firstDep : last.nextDep;
 
-      cursor = next;
-      next.ver = n.ver;
-    } else if (last !== null) {
-      // The cursor's own source again: a repeat keeps its first observation
-      // (P5); anything else is resolved by `miss`.
-      if (last.from !== n) miss(c, n, last, next);
-      else if (__STATS__) stats.repeats++;
-    } else if (next !== null) miss(c, n, last, next);
-    // No relation yet: the first read of a first run links at once.
-    else attach(c, n, null, null);
+  if (next !== null && next.from === n) {
+    if (__STATS__) stats.hits++;
+
+    cursor = next;
+    next.ver = n.ver;
+
+    return n.value;
   }
-  return value;
+
+  if (last !== null) {
+    // The cursor's own source again: a repeat keeps its first observation
+    // (P5); anything else is resolved by `miss`.
+    if (last.from === n) {
+      if (__STATS__) stats.repeats++;
+
+      return n.value;
+    }
+    miss(c, n, last, next);
+  } else if (next !== null) miss(c, n, last, next);
+  // No relation yet: the first read of a first run links at once.
+  else attach(c, n, null, null);
+
+  return n.value;
 }
 
 /** `read` without its tracking half: bring `n` up to date, record no relation. */
@@ -278,7 +292,15 @@ function verify(root: Node, f: Flags): void {
 
           if (__STATS__) stats.checks++;
 
-          if ((sf & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) {
+          // A settled, unchanged source loops back on its own edge: had it
+          // shared the comparison after `exec`, V8 would reload the walk's
+          // edge from a stack slot on every source.
+          if ((sf & (__DEV__ ? Flag.Pull : Flag.Pending)) === 0) {
+            if (s.ver === e.ver) {
+              e = e.nextDep;
+              continue;
+            }
+          } else {
             if ((sf & Flag.Active) !== 0) throw new Error("Cycle detected");
 
             if ((sf & Flag.Dirty) === 0) {
@@ -291,13 +313,14 @@ function verify(root: Node, f: Flags): void {
               continue;
             }
             exec(s);
-          }
 
-          if (s.ver !== e.ver) {
-            if (n.fn !== null) exec(n);
-            break settled;
+            if (s.ver === e.ver) {
+              e = e.nextDep;
+              continue;
+            }
           }
-          e = e.nextDep;
+          if (n.fn !== null) exec(n);
+          break settled;
         }
         // Every source unchanged: clean, and no longer on the walk.
         if (__DEV__) n.flags &= ~Flag.Checking;
@@ -353,31 +376,45 @@ export function check(w: Node, flags: Flags): Flags {
 
     // A watcher without an execution obligation has only committed edges.
     if ((flags & Flag.Dirty) === 0) {
-      for (; e !== null; e = e.nextDep) {
+      while (e !== null) {
         const s = e.from;
 
         if (__STATS__) stats.checks++;
 
-        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) pull(s);
+        // Separate back edges for a settled and a pulled source (see verify).
+        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) === 0) {
+          if (s.ver === e.ver) {
+            e = e.nextDep;
+            continue;
+          }
+        } else {
+          pull(s);
 
-        if (s.ver !== e.ver) {
-          w.flags |= Flag.Dirty;
-          e = e.nextDep;
-          break;
+          if (s.ver === e.ver) {
+            e = e.nextDep;
+            continue;
+          }
         }
+        w.flags |= Flag.Dirty;
+        e = e.nextDep;
+        break;
       }
     }
 
-    for (; e !== null; e = e.nextDep) {
+    while (e !== null) {
       if (__STATS__) stats.checks++;
 
       const s = e.from;
 
       if (
-        (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
-        e.gen !== tentative
-      )
-        pull(s);
+        (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) === 0 ||
+        e.gen === tentative
+      ) {
+        e = e.nextDep;
+        continue;
+      }
+      pull(s);
+      e = e.nextDep;
     }
 
     if (w.fn === null) return 0;
