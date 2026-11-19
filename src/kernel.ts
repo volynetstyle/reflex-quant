@@ -278,7 +278,15 @@ function verify(root: Node, f: Flags): void {
 
           if (__STATS__) stats.checks++;
 
-          if ((sf & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) {
+          // A settled, unchanged source loops back on its own edge: had it
+          // shared the comparison after `exec`, V8 would reload the walk's
+          // edge from a stack slot on every source.
+          if ((sf & (__DEV__ ? Flag.Pull : Flag.Pending)) === 0) {
+            if (s.ver === e.ver) {
+              e = e.nextDep;
+              continue;
+            }
+          } else {
             if ((sf & Flag.Active) !== 0) throw new Error("Cycle detected");
 
             if ((sf & Flag.Dirty) === 0) {
@@ -291,13 +299,14 @@ function verify(root: Node, f: Flags): void {
               continue;
             }
             exec(s);
-          }
 
-          if (s.ver !== e.ver) {
-            if (n.fn !== null) exec(n);
-            break settled;
+            if (s.ver === e.ver) {
+              e = e.nextDep;
+              continue;
+            }
           }
-          e = e.nextDep;
+          if (n.fn !== null) exec(n);
+          break settled;
         }
         // Every source unchanged: clean, and no longer on the walk.
         if (__DEV__) n.flags &= ~Flag.Checking;
@@ -353,31 +362,45 @@ export function check(w: Node, flags: Flags): Flags {
 
     // A watcher without an execution obligation has only committed edges.
     if ((flags & Flag.Dirty) === 0) {
-      for (; e !== null; e = e.nextDep) {
+      while (e !== null) {
         const s = e.from;
 
         if (__STATS__) stats.checks++;
 
-        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) pull(s);
+        // Separate back edges for a settled and a pulled source (see verify).
+        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) === 0) {
+          if (s.ver === e.ver) {
+            e = e.nextDep;
+            continue;
+          }
+        } else {
+          pull(s);
 
-        if (s.ver !== e.ver) {
-          w.flags |= Flag.Dirty;
-          e = e.nextDep;
-          break;
+          if (s.ver === e.ver) {
+            e = e.nextDep;
+            continue;
+          }
         }
+        w.flags |= Flag.Dirty;
+        e = e.nextDep;
+        break;
       }
     }
 
-    for (; e !== null; e = e.nextDep) {
+    while (e !== null) {
       if (__STATS__) stats.checks++;
 
       const s = e.from;
 
       if (
-        (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
-        e.gen !== tentative
-      )
-        pull(s);
+        (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) === 0 ||
+        e.gen === tentative
+      ) {
+        e = e.nextDep;
+        continue;
+      }
+      pull(s);
+      e = e.nextDep;
     }
 
     if (w.fn === null) return 0;
