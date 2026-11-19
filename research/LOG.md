@@ -1936,3 +1936,77 @@ seven diagnostics skipped. Local timings of `aa7209b` showed
 `write.no-subscribers` +3.6% (Node 25) and +10.2% (Node 24); CI run
 44562854881 showed 1.000 for it against an older `main`. The paired CI
 run against current `main` decides.
+
+## Marked-pass escalation and a proof audit of the tracking walks (2026-11-19)
+
+Research only, on top of `perf/skipped-accept` (05960b7). Nothing here is
+proposed for `main`.
+
+### `begin`'s rule inside a marked pass (rejected)
+
+- **Question.** `begin` picks the continuation from where the pair was
+  found: the first subscriber marks the suffix, a deeper one indexes. In a
+  marked pass the same evidence was ignored: a pair found deeper, within
+  SCAN, kept the pass marked, and every later lookup walked other readers'
+  edges. The candidate applies the rule again: in the UNREAD branch of
+  `miss`, a pair found deeper than `first` counts as unknown, so `settle`
+  indexes the rest. One line, no state.
+- **Prediction, recorded before timing.** An index costs about 2d slot
+  stores (fill and clear) for the whole list. It pays only when the
+  remaining deep lookups walk more than that. The rule reacts to one deep
+  find, so it should lose when deep pairs are rare and win when they are
+  common.
+- **Workload.** `marked-deep2` and `marked-deep8` in
+  `bench/tradeoffs.mjs`: 1,024 sources, a fresh random order per pass,
+  every source has k subscribers, and the reader is the k-th of N sources
+  and the first of the rest.
+- **Structure.** With a single deep source (N = 1) the candidate marks
+  and then indexes every pass: 2,049 edges walked against 1,024. At
+  N = 896 both builds index on the first miss.
+- **Local timing** (Node 25.2.0, 7 paired rounds, candidate / base):
+
+  | N of 1,024 | k = 2 | k = 8 |
+  | ---: | ---: | ---: |
+  | 1 | 1.303 | 1.421 |
+  | 16 | 1.249 | 1.198 |
+  | 128 | 1.119 | 1.049 |
+  | 512 | 0.883 | 0.873 |
+  | 896 | 1.002 | 0.986 |
+
+  `swaps-nested` stays within 0.975–1.039.
+- **Decision.** Rejected. The break-even lies between a quarter and a half
+  of the reads going deep. A rule that waits for that density needs a
+  per-pass counter, saved and restored across nested passes like
+  `cursor`: a global register, so a mechanism. Marked lookups are bounded
+  by SCAN, so a marked pass is O(d) already. There is no asymptotic witness
+  to admit it (AGENTS.md). The 12% at N = 512 is a constant.
+
+### Proof audit of the walks wider than SCAN
+
+For each walk: the fact it establishes, and whether that fact is already
+encoded somewhere else.
+
+| Walk | Establishes | Already encoded? | Verdict |
+| --- | --- | --- | --- |
+| `begin` mark, Θ(u) | that a found pair is unread; the mode for the rest of the pass | for a pair tagged `SKIPPED`, yes (lemma, `perf/skipped-accept`); for an untagged pair, no | kept, see below |
+| `index`, Θ(d) | source → edge for the prefix (repeats) and the suffix | no: slots are empty at rest | kept; `UNREAD` stores on an already marked suffix are redundant (continuity), stores only |
+| `unindex`, Θ(d) | the empty-slot invariant at rest | no | kept; on success its walk over the dropped suffix repeats `cutDeps`, a constant |
+| `cutDeps`, Θ(u) | removes relations not read again | — | required (D1) |
+| `fail`'s suffix walk | removes earlier failed runs' tentative edges | `gen === tentative` per edge; no per-node fact says none exist | failure path, not hot |
+| `expire`, `settleDeps` | version and generation wrap | — | once per 2^30 / 2^29 commits |
+
+The untagged case is a real gap, not a missed proof. `swaps-nested@32`
+still marks once per pass (761 edges). The trace shows why. Only `next`
+is deferred, so the edges a forward scan passes over stay in place. The
+distance from `next` to the next odd source grows by one every two reads,
+and the 16th odd read exhausts the SCAN budget. `lookup` then finds the
+pair untagged. Its version equals the previous run's, which is also what
+a prefix edge would carry if the source did not change. Its generation is
+the birth generation, and tentative edges can sit on both sides. No field
+separates prefix from suffix for this edge. This is the same
+indistinguishability as for bounded windows. The mark stays.
+
+A later candidate, not tried: a forward scan could tag every edge it
+passes `SKIPPED`. The lemma allows this, since they all lie in the suffix,
+but it changes the deferral policy, which reads the same tag as "skipped
+once". It would not reach the 16th odd source here either.

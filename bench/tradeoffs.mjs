@@ -15,7 +15,7 @@
 //   move-later        one source moved d places later: two misses, was d
 //   burst-waves       one wave of W effects, then four of one effect: the
 //                     ring's give-back policy (LOG 48)
-import { range } from "./scaling.mjs";
+import { permutation, range } from "./scaling.mjs";
 
 const SMI = 0x3fffffff;
 const L = 1024;
@@ -133,6 +133,16 @@ export const families = {
       return alternating(api, ps, [plain, moved(plain, 512, 512 + n)]);
     },
   },
+  "marked-deep2": {
+    sizes: [1, 16, 128, 512, 896],
+    note: `${L} sources read in a fresh random order; the reader is the second subscriber of N sources and the first of the rest`,
+    build: (api, n) => markedDeep(api, n, 2),
+  },
+  "marked-deep8": {
+    sizes: [1, 16, 128, 512, 896],
+    note: `${L} sources read in a fresh random order; the reader is the eighth subscriber of N sources and the first of the rest`,
+    build: (api, n) => markedDeep(api, n, 8),
+  },
   "burst-waves": {
     sizes: [256, 1024, 4096, 16384],
     note: "one write reaching N effects, then four writes reaching one effect, per step",
@@ -150,6 +160,36 @@ export const families = {
     },
   },
 };
+
+/**
+ * A marked pass meets deeper pairs: every source has k subscribers; the
+ * reader is the k-th of `deep` sources (spread over the list) and the first
+ * of the others. A pass starts marked when its first miss is a shallow one.
+ */
+function markedDeep(api, deep, k) {
+  const ps = range(L).map((i) => api.signal(i));
+  const isDeep = range(L).map((i) => (i * deep) % L < deep);
+  const holders = (pick) => {
+    const input = ps.filter((_, i) => pick(i));
+    for (let j = 1; j < k; j++) api.computed(() => {
+      let t = 0;
+      for (const s of input) t = (t + s.get()) & SMI;
+      return t;
+    }).get();
+  };
+  holders((i) => isDeep[i]);
+  const tick = api.signal(0);
+  const orders = range(4).map((i) => permutation(L, 0x2c1b3d5 + i));
+  const c = api.computed(() => {
+    const order = orders[tick.get() & 3];
+    let t = 0;
+    for (let i = 0; i < L; i++) t = (Math.imul(t, 31) + ps[order[i]].get()) | 0;
+    return t;
+  });
+  c.get();
+  holders((i) => !isDeep[i]);
+  return (i) => (tick.set(i), c.get());
+}
 
 function replaceAll(api, n, others) {
   const cond = api.signal(true);

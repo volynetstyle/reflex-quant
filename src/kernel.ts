@@ -622,9 +622,14 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   // whose first and last subscribers, all it has, are other readers.
   if (first === null || alien(first, c)) return attach(c, s, last, next);
 
-  // Marking, moves and links preserve a continuous UNREAD suffix.
-  if (next !== null && next.ver === UNREAD)
-    return settle(c, s, last, next, pair(first, c));
+  // Marking, moves and links preserve a continuous UNREAD suffix. `begin`'s
+  // rule holds in a marked pass too: a pair deeper than the first subscriber
+  // would make every later lookup walk other readers, so the rest is indexed.
+  if (next !== null && next.ver === UNREAD) {
+    const found = pair(first, c);
+
+    return settle(c, s, last, next, found === first || found === null ? found : undefined);
+  }
 
   if (next !== null) {
     let e = next.nextDep;
