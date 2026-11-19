@@ -80,7 +80,7 @@ of `c`, its accepted prefix records the first observations of this
 attempt. It runs from `c.firstDep` through `cursor` and is empty when
 `cursor` is null.
 
-The lemma relies on four premises.
+The lemma relies on five premises.
 
 1. **Exact pair identity.** Establish `e.from === s` and `e.to === c`
    independently of the `SKIPPED` tag.
@@ -91,6 +91,9 @@ The lemma relies on four premises.
    nonnegative `s.ver` replaces any `SKIPPED` tag on that edge.
 4. **Repeats.** A reread preserves the version of the first observation,
    including when `s.ver` has since changed (D6 and P5).
+5. **Expiry.** The only other write that can reach an accepted edge is the
+   version wrap of its source (RQ5). It turns a nonnegative version into
+   `EXPIRED` and leaves every negative tag in place.
 
 Let `exactPair(e, s, c)` denote the first two premises.
 
@@ -98,14 +101,17 @@ Let `exactPair(e, s, c)` denote the first two premises.
 exactPair(e, s, c) and e.ver == SKIPPED  ⇒  e is in c's unread suffix
 ```
 
-**Proof.** The prefix starts empty. First acceptances and repeats keep
-its versions nonnegative. `skip` assigns `SKIPPED` only to the first unread
-edge. Other sentinel writes also stay in the unread suffix, and nested
-passes preserve the enclosing prefix (T3). Since `SKIPPED` is negative,
-an exact live edge with that tag lies outside the prefix. A tag that
-survived a failed execution gives the same evidence in the new attempt.
-The implication is one-way because unread edges can also carry
-nonnegative versions from earlier executions.
+**Proof.** The invariant is that no edge of the accepted prefix carries
+`SKIPPED`. The prefix starts empty. A first acceptance writes a
+nonnegative version, a repeat writes nothing, and expiry writes `EXPIRED`,
+never `SKIPPED`. `skip` assigns `SKIPPED` only to the first unread edge.
+The other sentinel writes (`UNREAD` in a mark, an index or a deferral)
+also stay in the unread suffix, and nested passes preserve the enclosing
+prefix (T3). So an exact live edge tagged `SKIPPED` lies outside the
+prefix. A tag that survived a failed execution gives the same evidence in
+the new attempt, whose prefix starts empty again, and so does a tag that
+survived its source's wrap. The implication is one-way: unread edges can
+also carry versions from earlier executions, `UNREAD` or `EXPIRED`.
 
 **Consequence.** Once `s` has been read successfully and the pair is known,
 the tracker can accept `e` directly. If `e` is the first unread edge

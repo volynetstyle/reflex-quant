@@ -1,4 +1,4 @@
-import { Flag, KEEP, SKIPPED, TRIM } from "../src/graph";
+import { CounterLimit, EXPIRED, Flag, KEEP, SKIPPED, TRIM } from "../src/graph";
 // Level 1, complexity class: structural work bounds that are not semantics.
 // Each assertion pins an optimization (O1, O2) or an asymptotic property;
 // removing the mechanism keeps every value correct and fails here.
@@ -169,6 +169,57 @@ describe("structural bounds", () => {
     expect([stats.dups, stats.sweeps, stats.indexes]).toEqual([1, 0, 0]);
     expect(read(c)).toBe(sum + change);
     expect(edge.ver).toBe(source.ver);
+  });
+
+  it("a version wrap expires the accepted prefix and keeps SKIPPED in the suffix (RQ5)", () => {
+    const n = 1024;
+    const ps = range(n).map(signal);
+    const tick = signal(0);
+    const [plain, nested] = nestedSwapOrders(n);
+    const early = ps[0]!;
+    const source = ps[swapOffset]!;
+    const lastOdd = swapOffset + 2 * swapCount - 1;
+    const change = 1000;
+    let wrapped = 0;
+    let tag: number | null = null;
+    const c = computed(() => {
+      const phase = read(tick);
+      let sum = 0;
+      for (const id of phase === 0 ? plain : nested) {
+        sum += read(ps[id]!) as number;
+        if (phase !== 1) continue;
+        if (id === 0 && wrapped === 0) {
+          // Accepted: the wrap turns the prefix edge EXPIRED, not SKIPPED.
+          wrapped = 1;
+          early.ver = CounterLimit.Mask;
+          write(early, change);
+          tag = early.firstSub!.ver;
+        }
+        if (id === lastOdd && wrapped === 1) {
+          // Skipped, not yet read: the wrap leaves the tag in place.
+          wrapped = 2;
+          source.ver = CounterLimit.Mask;
+          write(source, swapOffset + change);
+          tag = source.firstSub!.ver;
+        }
+      }
+      return sum;
+    });
+    const sum = n * (n - 1) / 2;
+    expect(read(c)).toBe(sum);
+    const edge = source.firstSub!;
+
+    write(tick, 1);
+    resetStats();
+    expect(read(c)).toBe(sum + change);
+    expect(tag).toBe(SKIPPED);
+    expect(source.firstSub === edge).toBe(true);
+    expect(edge.ver).toBe(0);
+    expect(early.firstSub!.ver).toBe(EXPIRED);
+    expect([stats.sweeps, stats.indexes]).toEqual([0, 0]);
+    // The expired observation of `early` cannot validate: P5 reruns.
+    expect(read(c)).toBe(sum + 2 * change);
+    expect(early.firstSub!.ver).toBe(early.ver);
   });
 
   it("O1: new private sources are proven absent without indexing", () => {

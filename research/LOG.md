@@ -1539,6 +1539,21 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   measured 0.839 and 0.896 of Quant for `swaps-nested@8` and met the
   1.03 local gate on both runners.
   [Research run](https://github.com/volynetstyle/reflex-quant/actions/runs/44412795005)
+- **Rebase on RQ5 (2026-11-19).** The version wrap writes `EXPIRED` into
+  an accepted prefix, so the lemma's former step "prefix versions stay
+  nonnegative" no longer holds. The invariant it needs is weaker: no
+  prefix edge carries `SKIPPED`. Expiry writes only over nonnegative
+  versions, so it never writes the tag and never erases it; the lemma
+  gains that premise. A new witness wraps an accepted source and a skipped
+  one in the same pass: the prefix edge reads `EXPIRED` and reruns (P5),
+  the skipped edge keeps its tag and is accepted with the wrapped version,
+  with no mark and no index. The `next !== null` guard is dropped: a
+  `SKIPPED` pair lies in a nonempty suffix.
+- **Ablations.** `no-skipped-accept` fails the three width witnesses;
+  `accept-any-found` (take any found pair as unread) fails P5 and repeat
+  witnesses in `semantics`, `structure` and `disposal-differential`, so the
+  tag test carries the soundness. 229 dev / 222 production tests; 2,866 B
+  gzip (main 2,857).
 
 ## Representation and edge removal note
 
