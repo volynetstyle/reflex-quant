@@ -56,7 +56,7 @@ export const mutants = [
   ["keep-tentative", "removal of earlier failed runs' unread edges",
     [K, "    if (e.gen === tentative) {\n      const before", "    if (false) {\n      const before"]],
   ["cut-on-failure", "committed edges kept after a failure (wake set)",
-    [K, "  n.flags |= Flag.Dirty;\n  const tentative", "  n.flags |= Flag.Dirty;\n  cutDeps(n, last);\n  return;\n  const tentative"]],
+    [K, "  if (n.fn === null) return detach(n);\n  const tentative", "  if (n.fn === null) return detach(n);\n  cutDeps(n, last);\n  return;\n  const tentative"]],
   ["clear-after", "STALE cleared before the run, so pushes during it survive",
     [K, "n.flags = (n.flags & ~Flag.PendingMarked) | Flag.Busy;", "n.flags = (n.flags & ~(Flag.PendingMarked & ~Flag.Stale)) | Flag.Busy;"],
     [K, "  n.flags = f & ~Flag.Busy;", "  n.flags = f & ~(Flag.Busy | Flag.Stale);"]],
@@ -76,15 +76,26 @@ export const mutants = [
   ["no-retry", "a watcher whose validation threw stays runnable by a plain run (V1)",
     [H, "      w.flags |= Flag.Stale;\n      throw error;", "      throw error;"]],
   ["idle-after-failure", "a failed watcher keeps its execution obligation (R2)",
-    [K, "  n.flags |= Flag.Dirty;\n  const tentative", "  if ((n.flags & Flag.Watch) === 0) n.flags |= Flag.Dirty;\n  const tentative"]],
+    [K, "(n.fn !== null ? Flag.Dirty : 0);", "(n.fn !== null && (n.flags & Flag.Watch) === 0 ? Flag.Dirty : 0);"]],
   ["existential-watcher", "watcher validation covers every committed source (V3)",
     [K, "    let e = w.firstDep;", "    if ((flags & Flag.Dirty) !== 0) return flags;\n    let e = w.firstDep;"],
     [K, "          w.flags |= Flag.Dirty;\n          e = e.nextDep;\n          break;", "          w.flags |= Flag.Dirty;\n          return w.flags;"]],
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & Flag.Busy) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
   ["no-cursor-restore", "T3: nested execution restores the enclosing pass's cursor on success and failure",
-    [K, "    cursor = prevCursor;\n    fail(n, base, last);", "    fail(n, base, last);"],
+    [K, "    cursor = prevCursor;\n    // RQ6 commit point: the activation ends here", "    // RQ6 commit point: the activation ends here"],
     [K, "  cursor = prevCursor;\n  const f = n.flags;", "  const f = n.flags;"]],
+  ["busy-in-fail", "RQ6: a failed activation ends (BUSY off, a run owed) before the call to its cleanup",
+    [K, "    n.flags = (n.flags & ~Flag.Busy) | (n.fn !== null ? Flag.Dirty : 0);\n    fail(n, base, last);", "    fail(n, base, last);"],
+    [K, "  if (last !== null && last.from.slot === last) unindex(n, base);\n  if (n.fn === null) return detach(n);\n  const tentative",
+      "  if (last !== null && last.from.slot === last) unindex(n, base);\n  n.flags &= ~Flag.Busy;\n  if (n.fn === null) return detach(n);\n  n.flags |= Flag.Dirty;\n  const tentative"]],
+  ["queued-before-grow", "RQ6: a woken watcher is QUEUED only once it holds its slot, after the ring grew",
+    [H, "  if (size > mask) grow();\n  queue[(head + size++) & mask] = w;\n  w.flags = flags | Flag.Queued;",
+      "  w.flags = flags | Flag.Queued;\n  if (size > mask) grow();\n  queue[(head + size++) & mask] = w;"]],
+  ["queued-in-deliver", "RQ6: a watcher taken off the ring loses QUEUED before the call that delivers it",
+    [H, "    queuedWatcher.flags = flags;\n", ""]],
+  ["hold-in-drain-now", "RQ6: the frame that opens a drain from a write also closes it (finally), if the drain is refused",
+    [H, "  try {\n    drain(false, undefined);\n  } finally {\n    hold = 0;\n  }", "  drain(false, undefined);"]],
   ["no-cycle-check", "BUSY checked on read (cycle detection)",
     [K, "  if ((n.flags & Flag.Pull) !== 0) pull(n);", "  if ((n.flags & (Flag.Pull & ~Flag.Busy)) !== 0) pull(n);"]],
   ["no-checking-read", "C1 (development diagnostic): CHECKING on read, so a node under validation is a cycle, not its previous value",
@@ -221,15 +232,22 @@ if (process.argv.includes("--validation")) {
   mkdirSync(cache, { recursive: true });
   const interrupted = "test/interrupted-validation.test.ts";
   const delivery = "test/validation-delivery.test.ts";
+  const stack = "test/stack-commit-points.test.ts";
   const retry = "retries an interrupted validation on demand and preserves cutoff (D8)";
+  const drained = "a drain at the stack limit leaves the host open and its watchers wakeable (RQ6)";
+  const enqueued = "a watcher whose enqueue grows the ring at the stack limit stays wakeable (RQ6)";
   const witnesses = [
     ["validation-stale", interrupted, "delivers again through the interrupted path after a causal write (D8)"],
     ["validation-dirty", interrupted, retry],
     ["validation-clean", interrupted, retry],
     ["no-check-restart", delivery, "rechecks a committed source made stale by a later source before cleanup (RQ3, P4)"],
     ["no-attachment-handoff", delivery, "checks a pending source on demand after the first computed subscription (RQ1b)"],
+    ["busy-in-fail", stack, "an abandoned computed activation does not stay BUSY (RQ6)"],
+    ["queued-before-grow", stack, enqueued],
+    ["queued-in-deliver", stack, drained],
+    ["hold-in-drain-now", stack, enqueued],
   ];
-  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery] });
+  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery, stack] });
   if (baseline.status !== 0 || baseline.total === 0 || baseline.failed.length || baseline.error) {
     throw new Error(`validation baseline failed in ${mode}: ${JSON.stringify(baseline)}`);
   }

@@ -13,6 +13,7 @@ and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien
 - [ACCESS-AUDIT.md](ACCESS-AUDIT.md) records object-access reuse, callback boundaries, stable-read budgets and rejected hot-path reshapes.
 - [WITNESS-AUDIT.md](WITNESS-AUDIT.md), [mutants.mjs](mutants.mjs) and [mutants.json](mutants.json) record and reproduce ablations.
 - [watcher-validation.mjs](watcher-validation.mjs) checks F4, F5 and the D7 validation barrier against the existing runtime.
+- [stack-commit-points.mjs](stack-commit-points.mjs) checks F6 at the actual native stack limit, against a bundle of `src/` or of `--src <dir>`.
 - [HISTORY.md](HISTORY.md) and [HISTORY.html](HISTORY.html) show benchmark history.
 - [versions/](versions/) contains archived intermediate implementations referred to by the design log; these are research artifacts, not the current runtime.
 

@@ -405,6 +405,10 @@ export function exec(n: Node): void {
     const last = cursor as Edge | null;
     active = prev;
     cursor = prevCursor;
+    // RQ6 commit point: the activation ends here, before any call. If the
+    // native stack refuses `fail`, the node is neither BUSY (a false cycle)
+    // nor owed nothing; only its cleanup is lost.
+    n.flags = (n.flags & ~Flag.Busy) | (n.fn !== null ? Flag.Dirty : 0);
     fail(n, base, last);
     throw error;
   }
@@ -434,17 +438,15 @@ export function exec(n: Node): void {
 }
 
 /**
- * A failed run: keep committed edges and this run's reads as the wake set,
- * drop unread edges earlier failed runs left behind, owe a run.
+ * A failed run's cleanup, after `exec` ended the activation and owed a run:
+ * keep committed edges and this run's reads as the wake set, drop unread
+ * edges earlier failed runs left behind.
  */
 function fail(n: Node, base: number, last: Edge | null): void {
   if (last !== null && last.from.slot === last) unindex(n, base);
 
-  n.flags &= ~Flag.Busy;
-
   if (n.fn === null) return detach(n);
 
-  n.flags |= Flag.Dirty;
   const tentative = (n.gen + 1) & CounterLimit.Mask;
   for (let e = last === null ? n.firstDep : last.nextDep; e !== null;) {
     const after: Edge | null = e.nextDep;

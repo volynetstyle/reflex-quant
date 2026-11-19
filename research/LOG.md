@@ -1743,3 +1743,62 @@ recovery. Node 25.2.0 passed
 213 development tests, 206 production tests with seven diagnostics skipped,
 all 64 validation oracle cases across both modes, and all five named
 ablations in each mode. The release package check passed.
+
+## RQ6 commit points (2026-11-19)
+
+The contract no longer calls the state after a caught native stack overflow
+fail-stop. Quant keeps running and the program may observe what the overflow
+left. F6 narrows that undefined state to one guarantee: Quant is not wedged.
+This F6 replaces the recovery clause of the `472a42b` experiment, which is
+still rejected.
+
+**Witnesses.** `research/stack-commit-points.mjs` bundles the source with the
+release options and runs each witness in its own process. A sweep exhausts
+the stack and runs attempts in the eight frames above the limit, shifting each
+sweep by one stack slot through the number of actual arguments. A whole
+recursion frame is coarser than the windows. Vitest is not used for the
+sweeps: its module wrappers turned an overflow inside a cross-module call
+into `TypeError: … is not a function`, also inside the runtime. The suite
+runs the script per witness and honours `QUANT_SRC`.
+
+On `13b7c93` (Node 25.2.0, V8 14.1.146.11-node.13), in both builds:
+
+| Witness | Window | `13b7c93` |
+|---|---|---|
+| `activation` | `exec` stores BUSY; `catch` calls `fail` | 67–68 of 512 computeds stay BUSY: `Cycle detected` |
+| `drain` | `drain` takes a watcher off the ring; calls `deliver` | 63–64 of 512 watchers stay QUEUED and never run again |
+| `enqueue` | `wake` stores QUEUED; calls `grow`. `batch` end calls `drainNow` → `drain` | `hold` stays 1: none of 512 targets runs again |
+| `create` | `start` stores `hold`; calls `exec`, then `drain` | held |
+
+**Change.** Every store that a refused call would strand now follows the
+call, or the frame that made it undoes it without a call:
+
+- `exec`'s `catch` ends the activation (BUSY off, DIRTY unless disposed)
+  before calling `fail`. `fail` keeps the cleanup: slot restore, disposal,
+  tentative edges. A refused `fail` loses that cleanup only.
+- `wake` grows the ring first, then takes the slot and stores QUEUED.
+- `drain` clears QUEUED as it takes the watcher off the ring, before
+  `deliver`. A refused delivery keeps its wake flags, and the next push
+  queues the watcher again. One extra flag store per delivery.
+- `drainNow` closes the drain in `finally`. `drain` still closes it itself.
+
+`start` is unchanged. Its `drain` call runs where `exec`'s frame was refused
+or has returned, and `exec`'s interpreter frame is 104 bytes against
+`drain`'s 40. The `create` witness held under default flags, `--jitless`,
+`--no-opt --no-maglev`, `--always-sparkplug` and `--max-lazy` with the
+pre-change `start`. This rests on V8's frame sizes, not on a guarantee.
+
+**Ablations.** `busy-in-fail`, `queued-before-grow`, `queued-in-deliver` and
+`hold-in-drain-now` restore one store order each. Each fails its named
+witness in both builds (`mutants.mjs --validation`). `cut-on-failure`,
+`idle-after-failure` and `no-cursor-restore` were re-anchored on the moved
+stores; all 62 anchors resolve. Node 25.2.0 passed 217 development tests and
+210 production tests with seven diagnostics skipped, and the 64-case D7
+oracle. The release check passed; the production bundle stays 2,749 gzip bytes.
+
+**Not covered.** The engine may also throw at loop stack checks, so code
+without calls narrows the windows but does not make them atomic. `write` and
+`mark` still publish STALE before marking below it. An overflow there leaves
+a STALE node whose subscribers were never marked, and every later push stops
+at it. F6 leaves that cone undefined. Certificate-last propagation (STALE
+stored after the walk below the node) is the next study.
