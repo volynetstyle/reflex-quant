@@ -1757,3 +1757,30 @@ and the O(out-degree) wrap cost.
 Node 25.2.0 passed 215 development tests and 208 production tests with
 seven diagnostics skipped. Both RQ5 ablations failed their named
 witnesses in each mode. The release package check passed.
+
+The production benchmark paired RQ5 with `research/interrupted-validation`
+on Windows x64, on one logical processor of an Intel Core i5-1235U.
+The stock mechanism runner took nine pairs per case in fresh processes,
+alternating candidate and baseline order. The selected workloads had
+matching checksums. The table gives the median time ratio and the range
+of individual pairs. A ratio above 1 means RQ5 took longer.
+
+| Workload | Node 25.2.0 | Node 24.22.2 |
+|---|---:|---:|
+| `write.no-subscribers` | 1.036 [0.988, 1.074] | 1.102 [0.992, 1.183] |
+| `write.same-value` | 0.998 [0.913, 1.016] | 0.965 [0.865, 1.124] |
+| `track.stable-1` | 1.043 [0.939, 1.075] | 1.015 [0.978, 1.049] |
+| `read.computed-clean` | 0.996 [0.772, 1.067] | — |
+| `pull.recompute-chain-100` | 1.017 [0.925, 1.046] | — |
+| `effect.through-computed` | 0.996 [0.934, 1.094] | — |
+
+The isolated changed-write workload had the largest measured slowdown,
++3.6% and +10.2% by paired median. The same-value control exits before
+the rollover check. These timings cover ordinary commits. The rollover
+tests exercise the rare subscriber scan. The checked production ESM
+grew from 2,749 to 2,822 gzip bytes.
+
+Raw samples are in `.cache/rq5-benchmark.json` and
+`.cache/rq5-benchmark-node24.json` in the RQ5 worktree. The timed
+source trees were `125a7d780bd2078c1117c720d499953b12cd6aeb` (RQ5)
+and `9456083a5ee6500181cf2bc83bbe08ff1d0e7619` (baseline).
