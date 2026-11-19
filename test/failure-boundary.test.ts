@@ -34,11 +34,15 @@ it.each([0, 1])(
     model.writeProducer(broken, false);
     expect(model.readComputed(root)).toBe(recovered);
     const ancestorRuns = recovered === 0 ? 1 : 2;
-    expect([leafRuns, middleRuns, rootRuns]).toEqual([3, ancestorRuns, ancestorRuns]);
+    expect([leafRuns, middleRuns, rootRuns]).toEqual([
+      3,
+      ancestorRuns,
+      ancestorRuns,
+    ]);
   },
 );
 
-it("resumes tracking in the enclosing callback after a caught failure (F6)", () => {
+it("resumes tracking in the enclosing callback after a caught failure (T3)", () => {
   const broken = signal(true);
   const tail = signal(10);
   const failure = new RangeError("inner");

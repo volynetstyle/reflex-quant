@@ -85,7 +85,7 @@ public API controls and concrete `DIRTY` assertions are in
 delivery with both release build settings. The separate stack and rollover
 candidates are retained in `research/fault-recovery-candidate`.
 
-### Failure boundary (D8, F6 and S7)
+### Interrupted computed validation (D8 and S7)
 
 F4 applies to computed validators and their ancestors. Only a confirmed
 change or a previously established obligation justifies executing a body.
@@ -100,16 +100,24 @@ unchanged recovery. The returned value alone concealed the D8 violation.
 existing flag word. The evidence and representation limits are in
 [the transition study](LOG.md#interrupted-validation-and-pending-delivery).
 
+### Native stack recovery (RQ6)
+
+The proposed F6 obligation concerns transient Quant state after a catchable
+native stack overflow. An abandoned activation must release its transient
+state and restore any enclosing activation so that later valid work can run.
+Its adoption belongs with the RQ6 implementation and witnesses.
+
 S7 covers Quant's own graph walks. User callbacks can synchronously demand
-each other until the native stack is exhausted. F6 applies once the stack
-unwinds. On Node 25.2.0 with `--stack-size=256`, a cold chain of 10,000
+each other until the native stack is exhausted. On Node 25.2.0 with
+`--stack-size=256`, a cold chain of 10,000
 computeds threw a `RangeError` and subsequently recovered when read from leaf
 to root. A warm chain of the same length with a shared signal and reordered
 indexed reads also overflowed. Its subsequent leaf-to-root reads reported
 `Cycle detected` on the acyclic graph in both release configurations of
 `66ed54e`. The first exception is permitted by S7. The later cycle error
-violates F6. The indexed-chain witness and candidate cleanup are available
-in `437e2f6`, in `test/fault-boundaries.test.ts` and `src/kernel.ts`.
+violates the proposed obligation. The indexed-chain witness and candidate
+cleanup are available in `437e2f6`, in `test/fault-boundaries.test.ts` and
+`src/kernel.ts`.
 
 ### Provenance
 
