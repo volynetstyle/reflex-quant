@@ -151,7 +151,7 @@ Do not add a mechanism unless all of the following are recorded:
 
 2. **Witness**  
    Provide a minimized program, graph, or workload that violates the obligation without the mechanism.
-   A failure window that depends on the engine (stack-limit behaviour, tiering) needs a witness on at least one supported engine configuration that exposes it. Its ablation may survive on an engine where the window is absent; record which engines expose it.
+   A window that opens only when the engine refuses a call (native stack exhaustion) is not a witness: that state lies outside the contract. Such a window is evidence for a research probe only.
 
 3. **Failure mode**  
    Show exactly what breaks: observable semantics, graph integrity, uniqueness, asymptotic work, retained memory, allocation bound, or stack-depth bound.
@@ -185,6 +185,25 @@ Examples include bounded fast paths, proven absence shortcuts, pointer cleanup t
 Such optimizations must be classified as **optimization**, not counted as mechanisms forced by the contract.
 
 A benchmark win can choose between admissible implementations. It cannot expand the semantic contract.
+
+## Truthful transient state
+
+A transient flag says what is true at every point of normal execution:
+BUSY while an activation exists, QUEUED while a watcher holds a queue slot.
+Where two normal-path orders cost the same, store the flag before the call
+that could fail, not after it. A failed body ends its activation (BUSY off,
+the owed run stored) before `fail` cleans up. A woken watcher grows the
+ring and takes its slot before it is flagged QUEUED. A delivered watcher
+leaves the ring and loses QUEUED before the delivery runs user code.
+
+These are **conventions**, not a recovery guarantee. They also leave the
+runtime less stranded when an operation is interrupted, but only because
+they cost nothing. Robustness after a failure outside the contract never
+justifies a hot-path branch, a `try/finally`, a queue hop, a continuation
+or a field. Each of those needs a semantic or structural obligation under
+the admission rule. `research/stack-commit-points.mjs` observes how the
+runtime degrades at the native stack limit; it is no admission criterion
+(research/LOG.md, "RQ6 closed").
 
 ### Hot-path access discipline
 

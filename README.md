@@ -413,13 +413,11 @@ and the computed keeps its last good value as `prev`. Once its inputs are fixed,
 it recovers on the next read. If an effect throws during creation, it leaves
 nothing running.
 
-The stack-safety guarantee covers Quant's graph walks. If synchronous nesting
-of callbacks exhausts the native JavaScript stack and the program catches the
-overflow, Quant keeps running but guarantees only that it is not wedged: no
-false `Cycle detected`, effects still run, and an effect the overflow dropped
-from the queue is scheduled again when a later change reaches it. Values and
-deliveries in the part of the graph the overflow interrupted are otherwise
-undefined: a later change may not reach it at all.
+The stack-safety guarantee covers Quant's graph walks: a chain of 100,000
+computeds is fine. It does not cover callbacks that call each other until
+the native JavaScript stack runs out. That is a resource failure of the
+host, and Quant promises nothing after a program catches it and goes on.
+An error a callback throws itself is an ordinary failure, handled as above.
 
 **Use the development build to catch cycles.** Bundlers that resolve the
 `development` export condition (Vite, webpack, and Node with

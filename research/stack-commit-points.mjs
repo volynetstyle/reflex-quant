@@ -1,5 +1,7 @@
-// RQ6 commit points: actual native stack exhaustion at the calls that follow
-// a runtime store. Each witness runs in a fresh process against an esbuild
+// Research probe, not a contract test (research/LOG.md, "RQ6 closed"): how
+// the runtime degrades after native stack exhaustion, which lies outside the
+// contract. It runs actual stack exhaustion at the calls that follow a
+// runtime store. Each witness runs in a fresh process against an esbuild
 // bundle of the source (Vitest's module wrappers turn an overflow inside a
 // cross-module call into a TypeError, so the suite cannot observe these
 // windows itself), with optimization state of its own.
@@ -7,7 +9,8 @@
 //   node research/stack-commit-points.mjs [--mode development|production]
 //        [--src <dir>] [--only <witness>]
 //
-// Exit 0: every witness held. Exit 1: a witness observed a wedge.
+// Exit 0: no wedge observed. Exit 1: a probe observed a wedge (a finding,
+// not a failure of the contract).
 // Exit 2: a sweep never reached the stack limit, or the harness failed.
 import { spawnSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
