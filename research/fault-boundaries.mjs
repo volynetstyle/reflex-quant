@@ -137,10 +137,23 @@ function delivery(
     set(writeTo === "A" ? a : b, 2);
     return null;
   }, injected);
+  const afterNext = seen.slice();
+  const recovery = attempt(() => {
+    set(a, 3);
+    return null;
+  }, injected);
   armed = false;
   dispose(watcher);
   if (sibling !== null) dispose(sibling);
-  return { first, afterBatch, afterSibling, next, seen };
+  return {
+    first,
+    afterBatch,
+    afterSibling,
+    next,
+    seen: afterNext,
+    recovery,
+    afterRecovery: seen,
+  };
 }
 
 function spine(api, depth, topology, inject, continuation) {
@@ -261,10 +274,20 @@ for (const mode of options.mode === undefined ? modes : [options.mode]) {
                   [1, 1],
                 ]
               : [[0, 0]];
+          // A failed check before B was visited consumed this delivery.
+          // Another write into B's already-pending path coalesces (D7).
+          const coalesced =
+            phase === "validation" &&
+            firstRead === "A" &&
+            !secondWatcher &&
+            writeTo === "B";
+          const afterNext = coalesced
+            ? afterBatch
+            : [...afterBatch, writeTo === "A" ? [2, 1] : [1, 2]];
           report(
             {
               family: "delivery",
-              contract: ["F4", "F5"],
+              contract: ["F4", "F5", "D7"],
               mode,
               phase,
               firstRead,
@@ -276,7 +299,9 @@ for (const mode of options.mode === undefined ? modes : [options.mode]) {
               afterBatch,
               afterSibling: secondWatcher ? [0, 1] : [],
               next: null,
-              seen: [...afterBatch, writeTo === "A" ? [2, 1] : [1, 2]],
+              seen: afterNext,
+              recovery: null,
+              afterRecovery: [...afterNext, [3, writeTo === "A" ? 1 : 2]],
             },
             delivery(
               await freshRuntime(runtime),

@@ -8,7 +8,7 @@
 > and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien-signals-comparison/).
 
 Experiment: derive a reactive runtime from a frozen contract (invariants
-T1–W5, bounds S1–S8, decisions D1, D2 and D6, precondition C1 in
+T1–W5, bounds S1–S8, decisions D1, D2, D6 and D7, precondition C1 in
 [CONTRACT.md](../CONTRACT.md)) that
 was extracted from Reflex's semantic contract and executable spec, not from
 its implementation; Reflex is provenance, not authority; keep every mechanism
@@ -60,6 +60,32 @@ all 18 scenarios and faster than both on 8; geometric mean 0.97 of the
 better one, 0.95 of Reflex and 0.42 of alien-signals (Q6).
 
 ## 1. Contract inventory (phase 0)
+
+**Watcher validation clarification, 2026-11-19 (D7).** The fault-boundary
+research initially classified a coalesced delivery as a lost F4 execution
+obligation. In that witness the first committed source throws during validation
+before a semantic change has been confirmed. The demand-based executable
+model retains `executionPending = false`. A control that confirms a change
+before the throwing source retains `executionPending = true` through the same
+failure. The presence of a queue entry alone establishes neither result.
+
+F4 now explicitly refers to established execution obligations. D7 fixes the
+automatic delivery interpretation left open by the demand-based spec. A failed
+validation consumes that delivery before lifecycle begins. An unvisited
+pending sibling can continue coalescing source changes. When a later
+invalidation reaches the watcher, P4 validates the full committed frontier
+using the latest values. An established obligation still survives even if
+every computed cuts off during recovery. This decision preserves causal
+recovery while leaving eager retries on every pending sibling write outside
+the selected guarantee.
+
+The original finding is reclassified as a proposed stronger retry policy.
+The `Rewake` prototype is rejected. `test/fault-boundaries.test.ts` covers
+coalescing, reactive repair, recovery with cutoff, an already-owed execution
+and explicit next demand of a failed computed (F1). These delivery cases pass
+with the unmodified `f9be2d0` runtime in DEV and PROD. The research runner
+checks a causal continuation after every delivery case. Its separate stack
+and version witnesses keep their existing obligations.
 
 **Provenance and ID map.** The contract was extracted from the Reflex
 material listed below. The comparison snapshot is Reflex `dev` `bf71877`;

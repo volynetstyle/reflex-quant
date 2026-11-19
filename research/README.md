@@ -32,7 +32,7 @@ mismatch exit with code 1. The runner is opt-in while the known cases diverge.
 
 | Contract | Factors and controls |
 | --- | --- |
-| F4, F5 | No error or a one-shot error during validation, cleanup or body. Vary committed read order and the presence of a second watcher that reads `B`. Replay the batch separately before writing to `A` and to `B`, so recovery in one continuation cannot repair the other. Compare the first error by identity and check the sibling's delivery in the original drain. |
+| F4, F5, D7 | No error or a one-shot error during validation, cleanup or body. Vary committed read order and the presence of a second watcher that reads `B`. Replay the batch separately before writing to `A` and to `B`. A write to the unvisited pending branch can coalesce after failed validation. Then write to `A` and require the new delivery to observe both branches' latest values. Compare the first error by identity and check the sibling watcher's delivery in the original drain. |
 | S7 | Warm chains of 32 and 100,000 computeds. Compare a leaf-only source, a one-shot leaf failure and a shared signal read by every node. Replay the first demand for each continuation: another demand, another write, bottom-up recovery or an independent graph. Record errors from both steps. |
 | P1, P5 | Hold one observation across a series of changes. Compare a watcher reading a signal with a computed reading another computed. The default run narrows the shared producer version counter and checks 7, 8 and 9 commits around the shortened period. `--full-period` uses the original runtime and checks exactly `2^30` commits for each source type. |
 
@@ -48,12 +48,15 @@ counter reveals aliasing, confirm the same history with the original counter.
 
 ### Repairs and remaining boundary
 
-- **F4 remains open for paths validation never entered.** The `Rewake`
-  prototype showed that pending validation and outstanding delivery can
-  diverge. It used a backward walk from the watcher, a temporary `Set`, and
-  a new push test on every pending computed. That prototype is rejected as
-  a runtime mechanism. The unvisited-branch regression remains an expected
-  failure in the focused suite and a mismatch in the research runner.
+- **F4 and D7.** The original lost-delivery claim required an independent
+  retry from each change to an unvisited pending branch. F4 preserves an
+  established execution obligation. D7 permits those sibling changes to
+  coalesce after failed validation and requires a later delivered
+  invalidation to validate the whole committed frontier. The `Rewake`
+  prototype implemented the stronger retry policy with a backward walk,
+  a temporary `Set`, and new push tests. That prototype is rejected.
+  Public API tests now cover reactive repair with the latest sibling state,
+  exact cutoff after repair, and retention of an already-owed execution.
 - **P1, P5.** At rollover the producer expires existing version observations
   on its subscriber list. `EXPIRED` compares unequal to every producer version
   and is distinct from both tracking markers. Expiring only observations of
@@ -68,13 +71,19 @@ counter reveals aliasing, confirm the same history with the original counter.
   owes execution on demand (D2). The execution frame clears `BUSY` and
   restores the tracking context and index slots in `catch` before calling
   graph cleanup helpers, including when the error is a stack overflow.
+  The `Unverified` encoding remains a candidate pending comparison with
+  combinations of the existing flags and phase transitions.
 
-### F4 design constraints
+### Watcher validation after failure
 
-The rejected `Rewake` prototype is a counterexample to admitting a mechanism
-on the strength of a passing reproducer alone. An error at the host boundary
-should not require repairing notification history through the dependency graph
-or teaching the normal push to interpret that repair.
+The demand-based spec already tracks validation and established execution
+separately. A failed first pull can leave execution unowed. If a previous
+source has confirmed a change, or an earlier body failed, the execution
+obligation survives the failed check. D7 clarifies automatic scheduling at
+this boundary. The focused tests exercise it on the original `f9be2d0`
+runtime as well as this candidate.
+
+The following alternatives implement stronger retry policies.
 
 - Keeping a failed delivery ready for the next write changes which public
   operation throws. In the two-branch fixture an independent write returns
@@ -90,11 +99,12 @@ or teaching the normal push to interpret that repair.
   The existing push takes `k + d − 1` on that fixture. At `k = d = 1024`,
   the measured counts were 1,048,576 and 2,047 respectively.
 
-In the witness, the next write to either the stranded branch or a separate
+In the witness, the next write to either the unvisited branch or a separate
 branch stops on a stale computed. The host sees no delivery in either case.
-A fix must distinguish those writes through information that the current
-push discards or through a different delivery protocol. The rejected
-experiments establish that requirement, rather than excluding every protocol.
+Repairing the throwing source through a reactive dependency opens a new
+delivery and exposes the sibling's latest state. A failed computed also
+executes on its next explicit demand (F1). Its own nonreactive state change
+creates no notification.
 
 A chain whose synchronous callbacks recursively enter other `DIRTY` callbacks
 can still exhaust the engine’s stack. Pre-running the old frontier would

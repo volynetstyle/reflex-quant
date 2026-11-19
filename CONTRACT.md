@@ -13,7 +13,7 @@ Nothing outside this contract defines correctness: not explanatory documents, no
 
 ### Semantic invariants
 
-P5, F5 and W5 lie outside the executable spec: its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API.
+P5, F5 and W5 lie outside the executable spec: its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API. D7 additionally describes automatic watcher delivery, which that spec leaves to its caller. `test/fault-boundaries.test.ts` executes D7 through the public API.
 
 Graph and tracking
 - **T1 exact tracking.** A computation observes exactly the sources it read; dynamic branches add and drop relations.
@@ -31,7 +31,7 @@ Failure
 - **F1 failed computed.** A failed computed commits nothing and executes on its next demand.
 - **F2 failed read.** A read that threw is not an observation.
 - **F3 failed watcher.** An established watcher (W5) whose run fails is cold and wakes on committed sources ∪ last-attempt reads.
-- **F4 obligation survives.** An execution obligation survives a failure.
+- **F4 established obligation survives.** Once execution is owed, a failure does not discharge that obligation. Validation failure before execution becomes owed does not itself create an execution obligation. Retaining an obligation does not independently schedule another delivery (D7).
 - **F5 first error.** An operation that fails rethrows the first error raised in it. Obligations it still discharges afterwards run, and their errors do not replace that first error. Those obligations are the later watchers of the same drain, the watchers a failing batch body deferred, and the rollback of a failed `effect()` call (W5).
 
 Watchers and lifecycle
@@ -55,6 +55,7 @@ A program that breaks a precondition is erroneous, and no invariant covers it. T
 - **D1 existential validation.** Computed validation stops at the first changed committed source, in read order, and executes: if an earlier source changed and a later one now throws, the computed executes rather than throwing from validation. The provenance spec validates the whole frontier and throws (research/REPORT.md).
 - **D2 failed computed re-entry.** A failed computed executes on its next demand without validating its old frontier first, even if that frontier now throws (F1). The provenance spec validates the old frontier first (research/REPORT.md).
 - **D6 in-pass invalidation.** A relation keeps the version of its source's first successful observation in an execution, and an execution is validated as of its start (P5). The provenance spec refreshes the version on every reread and stamps its validation after the execution, so a change an execution makes to a source it already observed is never seen (research/REPORT.md).
+- **D7 failed watcher validation is a barrier.** Failed validation aborts that delivery before any watcher lifecycle step (P4). Invalidations already coalesced into it remain pending and create no independent retry obligation. A later delivered invalidation retries the full committed source set, using the latest states of pending branches and preserving any established execution obligation (F4). The barrier alone schedules no further attempt. F1 continues to require execution of a failed computed on its next demand.
 
 ### Implementation lemma for SKIPPED
 

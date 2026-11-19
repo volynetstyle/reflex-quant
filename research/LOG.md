@@ -1569,3 +1569,42 @@ slot cells have been restored (LOG 43, superseding LOG 39's node-field reset).
 Written for V8: one node shape and one edge shape, each built at a single
 site; numeric fields are SMI counters (masked); conditions are explicit
 comparisons, so no ToBoolean runs on mixed values; the graph walks avoid recursion and allocation per stable read.
+
+## Failed watcher validation and established obligations (2026-11-19)
+
+The original two-branch fault-boundary test required every write to an
+unvisited pending branch to retry a failed watcher check. It was labelled an
+F4 defect. That classification treated a coalesced validation request as an
+established execution obligation.
+
+The contract model has an explicit `executionPending` fact. A validation
+failure before any confirmed change leaves it false. A confirmed change before
+the throwing source leaves it true. Both cases are now exercised directly.
+Public API controls also retain an obligation from a failed body through a
+later validation failure, then execute on a new delivery despite unchanged
+computed versions.
+
+F4's wording now names an established obligation. D7 records the selected
+automatic delivery policy. A failed validation consumes its delivery before
+lifecycle work, pending sibling changes may keep coalescing, and the next
+delivered invalidation checks the full committed frontier with the latest
+states. A test with a reactive failure source repairs that source and observes
+the pending sibling's latest value. A cutoff control confirms that failed
+validation alone establishes no execution obligation. An explicit computed
+demand still exercises F1.
+
+The stronger retry policy is rejected as a contract extension. The former
+expected-failure test has been replaced by passing D7 controls. The research
+runner now distinguishes the coalesced step from the later causal delivery.
+All four public delivery controls pass with the unmodified `f9be2d0` runtime
+in DEV and PROD. This clarification changes the contract wording, its tests
+and the research oracle. The candidate's stack and rollover changes remain
+separate research work.
+
+Validation on Node 25.2.0 and V8 14.1.146.11-node.13 passed 203 development
+tests and 196 production tests with seven diagnostic cases skipped. All six
+F4/D7 model and public controls passed against the original runtime in both
+build modes. The research runner recorded 64 delivery cases with zero
+mismatches. Its eight remaining mismatches concern deep synchronous callback
+recursion. The `Unverified` encoding in the saved candidate still requires
+comparison with existing flag combinations and phase transitions.
