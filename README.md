@@ -417,9 +417,11 @@ The stack-safety guarantee covers Quant's graph walks. If synchronous nesting
 of callbacks exhausts the native JavaScript stack and the program catches the
 overflow, Quant keeps running but guarantees only that it is not wedged: no
 false `Cycle detected`, effects still run, and an effect the overflow dropped
-from the queue is scheduled again when a later change reaches it. Values and
-deliveries in the part of the graph the overflow interrupted are otherwise
-undefined: a later change may not reach it at all.
+from the queue is scheduled again when a later change reaches it. An
+interrupted propagation never blocks the next one: a later change to the same
+source reaches every computed below it again. Values in the part of the graph
+the overflow interrupted may be stale until then, and an effect whose run the
+overflow dropped waits like one whose check threw.
 
 **Use the development build to catch cycles.** Bundlers that resolve the
 `development` export condition (Vite, webpack, and Node with

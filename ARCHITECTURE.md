@@ -206,6 +206,12 @@ change compilation. Compare production bundles repeatedly, including narrow
 stable reads and negative controls, before accepting a hot-path reshape.
 Record regressions and rejected candidates with the evidence for the result.
 
+## Commit points
+
+Persistent state that lets the machine skip future work is published only after the work it certifies is complete. `STALE` on a computed tells every later push that everything below it is marked; it is stored as the walk leaves the node, not as it enters (research/LOG.md, certificate-last propagation).
+
+Any store that a refused call or an engine-level interruption could strand comes after that call, or is undone by a frame that existed before it. A loop's back edge counts as such a point. A new suppressing fact (validated, scheduled, indexed, settled) needs the same argument.
+
 ## Conventions
 
 An implementation choice may remain for determinism or reproducibility even when the contract does not require it.

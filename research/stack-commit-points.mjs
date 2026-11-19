@@ -166,6 +166,34 @@ const witnesses = {
     for (const filler of fillers) dispose(filler.watcher);
     return { run, bad };
   },
+  // write stores STALE on a computed, then marks below it (mark); mark
+  // stores STALE, then descends. A STALE computed stops every later push,
+  // so an interrupted walk must not leave one above unmarked consumers.
+  // Only computeds: a lost watcher delivery leaves its sources STALE by
+  // design (D7), which is a different question. s -> a -> {b -> c, d}; an
+  // unmarked computed returns its cached value, so reads observe the cone.
+  cone(q) {
+    const { signal, computed, get, set } = q;
+    const trials = Array.from({ length: 512 }, () => {
+      const s = signal(0);
+      const a = computed(() => get(s));
+      const b = computed(() => get(a));
+      const c = computed(() => get(b));
+      const d = computed(() => get(a));
+      get(c);
+      get(d);
+      return { s, c, d };
+    });
+    const run = sweep((i) => set(trials[i].s, 1), trials.length);
+    const bad = [];
+    if (run.foreign) bad.push(`attempt threw ${run.foreign.message}`);
+    trials.forEach((trial, i) => {
+      set(trial.s, 2);
+      const seen = [get(trial.c), get(trial.d)];
+      if (seen.join() !== "2,2") bad.push(`trial ${i} read [${seen}]`);
+    });
+    return { run, bad };
+  },
 };
 
 const { values: options } = parseArgs({

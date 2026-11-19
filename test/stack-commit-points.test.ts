@@ -35,3 +35,7 @@ it("a drain at the stack limit leaves the host open and its watchers wakeable (R
 it("a watcher whose enqueue grows the ring at the stack limit stays wakeable (RQ6)", () => {
   witness("enqueue");
 });
+
+it("an interrupted propagation leaves no STALE barrier above unmarked computeds (RQ6)", () => {
+  witness("cone");
+});

@@ -1875,7 +1875,8 @@ without calls narrows the windows but does not make them atomic. `write` and
 `mark` still publish STALE before marking below it. An overflow there leaves
 a STALE node whose subscribers were never marked, and every later push stops
 at it. F6 leaves that cone undefined. Certificate-last propagation (STALE
-stored after the walk below the node) is the next study.
+stored after the walk below the node) is the next study. (Done: see
+"Certificate-last propagation" below.)
 
 ### Producer version rollover (RQ5)
 
@@ -1904,3 +1905,59 @@ seven diagnostics skipped. Local timings of `aa7209b` showed
 `write.no-subscribers` +3.6% (Node 25) and +10.2% (Node 24); CI run
 44562854881 showed 1.000 for it against an older `main`. The paired CI
 run against current `main` decides.
+
+## Certificate-last propagation (2026-11-20)
+
+A computed's STALE carries two facts: the node must validate, and
+everything below it is marked, so a later push may stop there (`write`'s
+STALE branch and `mark`'s test both skip it). `write` and `mark` stored
+STALE before marking below the node. A native stack overflow at the next
+call (`mark`, `wake`) or at a back edge left a STALE computed above
+consumers that were never marked, and every later change stopped at it.
+
+**Witness.** The `cone` sweep in `research/stack-commit-points.mjs` builds
+`s -> a -> {b -> c, d}` from computeds only, interrupts `set(s, 1)` at the
+stack limit, then writes `s = 2` at normal depth and reads `c` and `d`. An
+unmarked computed returns its cached value, so the reads observe the cone.
+On `7c11e9d`, 95-99 of 512 trials read `[0, 0]` on Node 25.2.0 and 28-32
+on Node 22.23.4, in both builds.
+
+A first version of the witness also had watchers in the cone. With the
+repair it still failed in a few trials, and the flags showed why: the
+walk had finished and every certificate was true, but the drain had lost
+the watchers' deliveries, so nothing validated the STALE computeds above
+them. That is the state D7 accepts after an ordinary failed validation,
+not a propagation defect, and the witness now uses computeds only.
+
+**Change.** STALE is stored as the walk leaves a computed. `mark` pushes
+the edge into each entered computed on the work stack, which gives both
+the node to certify and the sibling to continue with; a computed without
+subscribers is certified at once, in the single store it had before.
+`write` stores DIRTY first and STALE after `mark` returns, for a direct
+subscriber and for a running one. Watchers keep STALE before `wake`: `mark`
+wakes a watcher on every visit, so their STALE suppresses nothing.
+
+No visited marker is needed. The graph is acyclic (a read of a BUSY node
+is a cycle error and a failed read is not an observation), so a node the
+walk is still inside is never reached again, and a node reached twice is
+already certified. Each node is entered once, as before. The work stack
+now holds one edge per entered computed on the current path, instead of
+one per pending sibling, so its high-water mark follows depth; it is still
+heap, given back by `trim` (S7, LOG 35).
+
+After an interruption, the computeds the walk had entered stay uncertified
+and passable; the ones it finished carry true certificates. Their values
+may be stale until the next change of the source.
+
+**Evidence.** Ablations `mark-certificate-first` and
+`write-certificate-first` restore the early store at one site each and fail
+the `cone` witness in both builds. `direct-dirty-running` and
+`no-direct-dirty` were re-anchored on the split stores and are killed.
+Node 25.2.0 passed 225 development tests and 218 production tests with
+seven diagnostics skipped; the unchanged differential suites agree with
+the references. The production bundle is 2,859 gzip bytes (2,857 before).
+
+F6 now also states that an interrupted propagation leaves no computed
+marked above consumers it did not reach. ARCHITECTURE.md records the rule
+behind it: a fact that lets the machine skip work is published only after
+that work is complete.

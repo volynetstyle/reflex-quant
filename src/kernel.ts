@@ -109,13 +109,15 @@ export function write(s: Node, value: unknown): void {
     if ((f & Flag.Busy) !== 0) {
       // Running: it may not have read s yet, so versions decide.
       if ((f & Flag.Stale) === 0) {
-        n.flags = f | Flag.Stale;
-
-        if ((f & Flag.Watch) !== 0) wake(n);
-        else {
+        if ((f & Flag.Watch) !== 0) {
+          n.flags = f | Flag.Stale;
+          wake(n);
+        } else {
           const subs = n.firstSub;
 
+          // Certificate last (see `mark`). Nothing below can change n.
           if (subs !== null) mark(subs);
+          n.flags = f | Flag.Stale;
         }
       }
     } else if ((f & Flag.Watch) !== 0) {
@@ -125,11 +127,14 @@ export function write(s: Node, value: unknown): void {
     } else if ((f & Flag.Stale) !== 0) {
       n.flags = f | Flag.Dirty;
     } else {
-      n.flags = f | Flag.Dirty | Flag.Stale;
-
       const subs = n.firstSub;
 
-      if (subs !== null) mark(subs);
+      // Certificate last (see `mark`): owed first, STALE once below is marked.
+      if (subs !== null) {
+        n.flags = f | Flag.Dirty;
+        mark(subs);
+      }
+      n.flags = f | Flag.Dirty | Flag.Stale;
     }
   }
 }
@@ -152,7 +157,18 @@ function expire(n: Node): void {
   for (let e = n.firstSub; e !== null; e = e.nextSub) if (e.ver >= 0) e.ver = EXPIRED;
 }
 
-/** Mark everything below the subscriber list `first` STALE, depth first. */
+/**
+ * Mark everything below the subscriber list `first` STALE, depth first.
+ *
+ * A computed's STALE certifies that everything below it is marked, so a
+ * later push stops there. It is therefore stored last, as the walk leaves
+ * the node: an interrupted walk (a stack overflow at a call or a back edge)
+ * leaves the nodes it had entered unmarked and passable, never a STALE node
+ * above unmarked consumers (F6). The graph is acyclic, so a node the walk is
+ * still inside is never reached again; a node reached twice is already
+ * STALE. The stack holds the edge into each entered node, which gives both
+ * the node to certify and the sibling to continue with.
+ */
 function mark(first: Edge): void {
   const base = top;
   let e: Edge | null = first;
@@ -168,18 +184,14 @@ function mark(first: Edge): void {
         n.flags = f | Flag.Stale;
         wake(n);
       } else if ((f & Flag.Stale) === 0) {
-        n.flags = f | Flag.Stale;
-
         const subs = n.firstSub;
 
         if (subs !== null) {
-          const next = e.nextSub;
-
-          if (next !== null) stack[top++] = next;
-
+          stack[top++] = e;
           e = subs;
           continue;
         }
+        n.flags = f | Flag.Stale;
       }
       e = e.nextSub;
     }
@@ -191,6 +203,8 @@ function mark(first: Edge): void {
 
     e = stack[--top] as Edge;
     stack[top] = null;
+    e.to.flags |= Flag.Stale;
+    e = e.nextSub;
   }
 }
 
