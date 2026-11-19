@@ -197,32 +197,46 @@ function mark(first: Edge): void {
 
 // -------------------------------------------------------------------- read
 
-/** Bring `n` up to date if it is a stale computed, then track it. */
+/**
+ * Bring `n` up to date if it is a stale computed, then track it. Each
+ * outcome returns on its own and loads the value last: tracking runs no user
+ * code, and V8 then keeps no value in a stack slot across `miss`.
+ */
 export function read(n: Node): unknown {
-  const value = peek(n);
+  if ((n.flags & Flag.Pull) !== 0) pull(n);
+
   const c = active;
 
-  if (c !== null) {
-    if (__STATS__) stats.reads++;
+  if (c === null) return n.value;
 
-    const last = cursor;
-    const next = last === null ? c.firstDep : last.nextDep;
+  if (__STATS__) stats.reads++;
 
-    if (next !== null && next.from === n) {
-      if (__STATS__) stats.hits++;
+  const last = cursor;
+  const next = last === null ? c.firstDep : last.nextDep;
 
-      cursor = next;
-      next.ver = n.ver;
-    } else if (last !== null) {
-      // The cursor's own source again: a repeat keeps its first observation
-      // (P5); anything else is resolved by `miss`.
-      if (last.from !== n) miss(c, n, last, next);
-      else if (__STATS__) stats.repeats++;
-    } else if (next !== null) miss(c, n, last, next);
-    // No relation yet: the first read of a first run links at once.
-    else attach(c, n, null, null);
+  if (next !== null && next.from === n) {
+    if (__STATS__) stats.hits++;
+
+    cursor = next;
+    next.ver = n.ver;
+
+    return n.value;
   }
-  return value;
+
+  if (last !== null) {
+    // The cursor's own source again: a repeat keeps its first observation
+    // (P5); anything else is resolved by `miss`.
+    if (last.from === n) {
+      if (__STATS__) stats.repeats++;
+
+      return n.value;
+    }
+    miss(c, n, last, next);
+  } else if (next !== null) miss(c, n, last, next);
+  // No relation yet: the first read of a first run links at once.
+  else attach(c, n, null, null);
+
+  return n.value;
 }
 
 /** `read` without its tracking half: bring `n` up to date, record no relation. */

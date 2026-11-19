@@ -90,7 +90,7 @@ export const reorderVariants = {
   ],
   "refresh-repeats": [
     "release dd13a76, before P5: a repeated read refreshes the observed version (fails the P5 semantic tests; kept to time the change)",
-    [T, "      else if (__STATS__) stats.repeats++;", "      else last.ver = n.ver;"],
+    [T, "      if (__STATS__) stats.repeats++;\n      return n.value;", "      last.ver = n.ver;\n      return n.value;"],
     [T, "  if (p !== null && p.from === s) {\n    if (__STATS__) stats.dups++;\n    return;", "  if (p !== null && p.from === s) {\n    if (__STATS__) stats.dups++;\n    p.ver = s.ver;\n    return;"],
     [T, "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    return;", "  if (e.ver !== UNREAD) {\n    if (__STATS__) stats.dups++;\n    e.ver = s.ver;\n    return;"],
   ],
