@@ -321,48 +321,50 @@ function verify(root: Node, f: Flags): void {
 }
 
 /**
- * Universal check of a watcher: pull every committed source, so a throwing
- * one surfaces before any irreversible step. Marks DIRTY on change. Tentative
- * edges (reads of a failed run) only wake; they exist only while a run is
- * owed, and then versions need no comparison.
+ * Validate a watcher's committed frontier before any lifecycle step (P4).
+ * A fresh STALE mark restarts the pass. Return the final flags or zero if
+ * the watcher was disposed. Tentative edges from failed runs only wake.
  */
-export function check(w: Node): void {
+export function check(w: Node, flags: Flags): Flags {
   const tentative = (w.gen + 1) & CounterLimit.Mask;
-  let e = w.firstDep;
 
-  // Until a run is owed, versions decide; then only the pulls remain. A
-  // development build pulls a source on the stack too, so the C1 diagnosis
-  // fails here, before the cleanup (P4).
-  if ((w.flags & Flag.Dirty) === 0) {
+  for (;;) {
+    let e = w.firstDep;
+
+    // A watcher without an execution obligation has only committed edges.
+    if ((flags & Flag.Dirty) === 0) {
+      for (; e !== null; e = e.nextDep) {
+        const s = e.from;
+
+        if (__STATS__) stats.checks++;
+
+        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) pull(s);
+
+        if (s.ver !== e.ver) {
+          w.flags |= Flag.Dirty;
+          e = e.nextDep;
+          break;
+        }
+      }
+    }
+
     for (; e !== null; e = e.nextDep) {
-      const s = e.from;
-
       if (__STATS__) stats.checks++;
+
+      const s = e.from;
 
       if (
         (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
         e.gen !== tentative
       )
         pull(s);
-
-      if (s.ver !== e.ver) {
-        w.flags |= Flag.Dirty;
-        e = e.nextDep;
-        break;
-      }
     }
-  }
 
-  for (; e !== null; e = e.nextDep) {
-    if (__STATS__) stats.checks++;
+    if (w.fn === null) return 0;
+    flags = w.flags;
 
-    const s = e.from;
-
-    if (
-      (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
-      e.gen !== tentative
-    )
-      pull(s);
+    if ((flags & Flag.Stale) === 0) return flags;
+    w.flags = flags & ~Flag.Stale;
   }
 }
 

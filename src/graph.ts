@@ -65,7 +65,7 @@ export const enum Flag {
   Dirty = 1 << 1,
   /** Its run is on the stack. */
   Busy = 1 << 2,
-  /** Validation was interrupted. It needs checking but does not stop a push. */
+  /** Interrupted computed validation. A demand rechecks it and a push passes through. */
   Unverified = 1 << 3,
   /** A watcher: handed to the host, never read. */
   Watch = 1 << 4,
@@ -83,7 +83,7 @@ export const enum Flag {
   Auto = 1 << 6,
   /** Host policy: already in its queue. */
   Queued = 1 << 7,
-  // Combined masks used when testing or clearing flags; all remain within a byte.
+  // Pull masks. Computed push suppression tests STALE alone.
   Validate = Stale | Unverified,
   Pending = Validate | Dirty,
   Active = Busy | Checking,

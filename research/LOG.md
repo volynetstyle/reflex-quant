@@ -1637,14 +1637,74 @@ that preceded the new edge. `UNVERIFIED` concerns the source's own validation.
 With `nextSub === null`, the mark starts with the appended edge alone. The
 existing version check determines whether the reader executes again.
 
-**RQ3 delivery.** The host consumes `STALE` before checking the watcher.
-If the check sets `STALE` again, another pass validates the committed
-frontier before cleanup or execution. Each pass consumes its mark and
-retains any established `DIRTY`. The existing termination behavior applies
-when user callbacks keep producing new invalidations.
+**RQ3 delivery.** The host consumes the delivery mark and passes its flag
+snapshot to `check`. The kernel restarts validation if a fresh `STALE`
+arrives before the committed frontier settles. It returns the final flags
+or zero after disposal. The first phase compares versions and establishes
+`DIRTY` before a later source can throw. This phase has only committed
+edges, since a failed run with tentative edges already owes execution. Once
+execution is owed, the second phase pulls remaining committed sources
+without comparing versions. The host owns error delivery and lifecycle.
 
 The DEV and PROD builds passed the audit's `ledger-b-link-to-pending`,
 `ledger-b-recheck-skipped` and `neon-verify-dirty-recovery` scripts,
 including their controls. Local tests additionally cover overlapping flags,
 cutoff, disposal, established execution during validation and 100,000 warm
 nodes. The D7 oracle passed all 64 cases.
+
+### Watcher validation size and regression screen
+
+Compared local `main` (`909c6af`), the previous candidate (`424096e`) and
+kernel-owned validation on Windows, Intel i5-1235U, Node 22.23.4, V8
+12.4.254.21-node.57 and esbuild 0.25.12. Both timing bundles use the same
+Quant adapter and production defines. Measurements run the stock
+`bench/worker.mjs` protocol in fresh processes pinned to one logical
+processor. The 20-workload run alternates the variant order in successive
+pairs. The 64-step checksums agree
+for every measured workload. The table reports V8 Ignition bytecode for
+the name-retaining inspection bundles and ESM size from identical builds.
+
+| Metric | `909c6af` | `424096e` | Kernel-owned validation |
+|---|---:|---:|---:|
+| `check` bytecode (bytes) | 177 | 177 | 200 |
+| `deliver` bytecode (bytes) | 143 | 181 | 134 |
+| `check` + `deliver` (bytes) | 320 | 358 | 334 |
+| `read` / `write` bytecode (bytes) | 146 / 226 | 146 / 226 | 146 / 226 |
+| Minified ESM (bytes) | 7,455 | 7,599 | 7,577 |
+| Minified ESM (gzip bytes) | 2,718 | 2,761 | 2,761 |
+
+A single scan with one additional per-edge test for an established
+obligation produced a smaller bundle. It cost +5.7% in both
+`effect.through-computed` and the 256-source watcher cutoff probe in seven
+pinned pairs. The retained two phases let the comparison loop assume
+committed edges and let the remaining loop omit version comparisons.
+
+The final candidate was screened against `main` over seven pairs for each
+of 20 workloads. The watcher frontier probes share a watcher with 256
+computed sources. A write through the first source either cuts off or
+establishes execution before the remaining 255 are checked.
+
+| Scenario | Median paired time delta | Pair range |
+|---|---:|---:|
+| `read.computed-clean` | +0.3% | -0.1% to +5.7% |
+| `track.fresh-after-reorder-64` | +4.6% | +1.1% to +9.8% |
+| `track.link-shared-1` | -1.6% | -6.0% to +3.9% |
+| `track.replace-all-256` | +2.7% | -2.1% to +24.5% |
+| `pull.validate-wide-256` | -1.5% | -4.7% to +2.8% |
+| `effect.through-computed` | +3.0% | -1.5% to +34.6% |
+| `effect.frontier-256-cutoff` | 0% | -2.4% to +4.2% |
+| `effect.frontier-256-dirty` | -0.9% | -2.6% to +1.4% |
+| `edit.insert-one-256` | -11.2% | -17.1% to -9.2% |
+
+Two focused repeats gave +4.5% and +5.6% for
+`track.fresh-after-reorder-64`. The identical-`main` control in the first
+repeat was -0.3%. Passing the new edge directly to the slot claim still
+gave +4.9%. A dedicated pending-read path gave -3.9% in the second repeat
+and compiled to 7,693 bytes, 94 more than `424096e`. The retained candidate
+has a repeatable regression on this fresh-relation workload. The same
+repeats gave +0.5% and +0.7% for `effect.through-computed`.
+
+The local runner and raw samples are in `.cache/validation-timing/`
+(`final-vs-main.json`, `validation-pinned.json`, `attachment-vs-main.json`
+and `pending-read-vs-main.json`). These timings apply to this machine
+and engine.
