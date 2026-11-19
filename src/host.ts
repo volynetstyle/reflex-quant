@@ -33,8 +33,7 @@ export function wake(w: Node): void {
   const flags = w.flags;
 
   if ((flags & Flag.AutoQueued) !== Flag.Auto) return;
-  // RQ6 commit point: grow first. QUEUED is stored only once the watcher
-  // holds its slot, so a refused `grow` leaves it wakeable.
+  // QUEUED means the watcher holds a slot: grow, take the slot, then flag.
   if (size > mask) grow();
 
   queue[(head + size++) & mask] = w;
@@ -130,13 +129,7 @@ export function flush(): void {
  */
 export function drainNow(): void {
   hold = 1;
-  // RQ6 commit point: the frame that opens the drain closes it, even when
-  // the native stack refuses `drain` itself.
-  try {
-    drain(false, undefined);
-  } finally {
-    hold = 0;
-  }
+  drain(false, undefined);
 }
 
 /**
@@ -150,8 +143,6 @@ export function start(w: Node): void {
     wake(w);
     return flush();
   }
-  // No RQ6 commit point is needed here: `drain` is called where `exec`'s
-  // larger frame was refused or has returned (LOG, RQ6 commit points).
   hold = 1;
 
   try {
@@ -164,8 +155,7 @@ export function start(w: Node): void {
 
 /**
  * The drain loop, opened by the caller (`hold` is 1): FIFO, the first error
- * rethrown at the end. It closes the drain itself; `drainNow` also closes
- * it when the native stack refuses the call.
+ * rethrown at the end. It closes the drain itself.
  *
  * A drain whose deliveries (which bound its watchers queued at once) fill
  * less than a quarter of the ring is small. The ring is cut back at rest,
@@ -183,9 +173,7 @@ function drain(failed: boolean, first: unknown): void {
     queue[head] = null;
     head = (head + 1) & mask;
     size--;
-    // RQ6 commit point: off the ring means not QUEUED, before any call. A
-    // delivery the native stack refuses leaves its wake flags for the next
-    // push, which queues the watcher again.
+    // Off the ring means not QUEUED, before the delivery runs user code.
     const flags = queuedWatcher.flags & ~Flag.Queued;
     queuedWatcher.flags = flags;
 

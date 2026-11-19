@@ -153,6 +153,16 @@ the selected contract, so the F6 recovery mechanisms have no admission
 obligation. Reopening F6 would require an explicit contract decision and a
 design that accounts for all these interruption points.
 
+A narrower F6 ("no wedge": no false BUSY, no closed host, no QUEUED
+without a slot) entered the contract in `1b3af10` and left it in the
+contract reset (LOG, "RQ6 closed"). The window it closed in `drainNow`
+depended on V8 tiering. The window it left in `start` depended on frame
+sizes, and macOS with Node 24 opened it: `hold` stayed 1 and a new watcher
+was never delivered. A guarantee that holds only for the windows found on
+the engines tried is not a property of the runtime. Three store orders it
+introduced cost nothing and keep transient flags truthful; they stay as
+conventions (ARCHITECTURE, "Truthful transient state").
+
 ### Disposal during watcher validation (Q1)
 
 P4 orders rerun cleanup and execution after validation while the

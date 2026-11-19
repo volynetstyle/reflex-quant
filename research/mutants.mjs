@@ -91,19 +91,17 @@ export const mutants = [
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & Flag.Busy) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
   ["no-cursor-restore", "T3: nested execution restores the enclosing pass's cursor on success and failure",
-    [K, "    cursor = prevCursor;\n    // RQ6 commit point: the activation ends here", "    // RQ6 commit point: the activation ends here"],
+    [K, "    cursor = prevCursor;\n    // The activation has ended", "    // The activation has ended"],
     [K, "  cursor = prevCursor;\n  const f = n.flags;", "  const f = n.flags;"]],
-  ["busy-in-fail", "RQ6: a failed activation ends (BUSY off, a run owed) before the call to its cleanup",
+  ["busy-in-fail", "convention (truthful state): a failed activation ends (BUSY off, a run owed) before the call to its cleanup",
     [K, "    n.flags = (n.flags & ~Flag.Busy) | (n.fn !== null ? Flag.Dirty : 0);\n    fail(n, base, last);", "    fail(n, base, last);"],
     [K, "  if (last !== null && last.from.slot === last) unindex(n, base);\n  if (n.fn === null) return detach(n);\n  const tentative",
       "  if (last !== null && last.from.slot === last) unindex(n, base);\n  n.flags &= ~Flag.Busy;\n  if (n.fn === null) return detach(n);\n  n.flags |= Flag.Dirty;\n  const tentative"]],
-  ["queued-before-grow", "RQ6: a woken watcher is QUEUED only once it holds its slot, after the ring grew",
+  ["queued-before-grow", "convention (truthful state): a woken watcher is QUEUED only once it holds its slot, after the ring grew",
     [H, "  if (size > mask) grow();\n  queue[(head + size++) & mask] = w;\n  w.flags = flags | Flag.Queued;",
       "  w.flags = flags | Flag.Queued;\n  if (size > mask) grow();\n  queue[(head + size++) & mask] = w;"]],
-  ["queued-in-deliver", "RQ6: a watcher taken off the ring loses QUEUED before the call that delivers it",
+  ["queued-in-deliver", "convention (truthful state): a watcher taken off the ring loses QUEUED before the call that delivers it",
     [H, "    queuedWatcher.flags = flags;\n", ""]],
-  ["hold-in-drain-now", "RQ6: the frame that opens a drain from a write also closes it (finally), if the drain is refused",
-    [H, "  try {\n    drain(false, undefined);\n  } finally {\n    hold = 0;\n  }", "  drain(false, undefined);"]],
   ["no-cycle-check", "BUSY checked on read (cycle detection)",
     [K, "  if ((n.flags & Flag.Pull) !== 0) pull(n);", "  if ((n.flags & (Flag.Pull & ~Flag.Busy)) !== 0) pull(n);"]],
   ["no-checking-read", "C1 (development diagnostic): CHECKING on read, so a node under validation is a cycle, not its previous value",
@@ -240,11 +238,8 @@ if (process.argv.includes("--validation")) {
   mkdirSync(cache, { recursive: true });
   const interrupted = "test/interrupted-validation.test.ts";
   const delivery = "test/validation-delivery.test.ts";
-  const stack = "test/stack-commit-points.test.ts";
   const rollover = "test/version-rollover.test.ts";
   const retry = "retries an interrupted validation on demand and preserves cutoff (D8)";
-  const drained = "a drain at the stack limit leaves the host open and its watchers wakeable (RQ6)";
-  const enqueued = "a watcher whose enqueue grows the ring at the stack limit stays wakeable (RQ6)";
   const witnesses = [
     ["watcher-detach-keeps-chain", delivery, "ends a disposed watcher's validation after the current pull (Q1, changed)"],
     ["no-version-expiry", rollover, "retains an in-pass obligation across a signal version wrap (RQ5, P5)"],
@@ -254,30 +249,20 @@ if (process.argv.includes("--validation")) {
     ["validation-clean", interrupted, retry],
     ["no-check-restart", delivery, "rechecks a committed source made stale by a later source before cleanup (RQ3, P4)"],
     ["no-attachment-handoff", delivery, "checks a pending source on demand after the first computed subscription (RQ1b)"],
-    ["busy-in-fail", stack, "an abandoned computed activation does not stay BUSY (RQ6)"],
-    ["queued-before-grow", stack, enqueued],
-    ["queued-in-deliver", stack, drained],
-    // The hold window opens only where the engine throws inside `drain` at
-    // the stack limit (OSR, LOG "RQ6 commit points"): observed on Node 25,
-    // never on Node 22. A mechanism must be killed on at least one supported
-    // engine that exposes its window; elsewhere its mutant may survive.
-    ["hold-in-drain-now", stack, enqueued, { exposed: (major) => major >= 25 }],
   ];
-  const major = Number(process.versions.node.split(".")[0]);
-  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery, stack, rollover] });
+  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery, rollover] });
   if (baseline.status !== 0 || baseline.total === 0 || baseline.failed.length || baseline.error) {
     throw new Error(`validation baseline failed in ${mode}: ${JSON.stringify(baseline)}`);
   }
   const results = [];
-  for (const [id, file, test, { exposed = () => true } = {}] of witnesses) {
+  for (const [id, file, test] of witnesses) {
     const [, mechanism, ...edits] = mutants.find((candidate) => candidate[0] === id);
     const cacheId = `${id}-${mode}`;
     const suite = runSuite(build(cacheId, edits), cacheId, { mode, files: [file] });
     const witness = `${path.basename(file)} > ${test}`;
     const killed = suite.status === 1 && !suite.error && suite.failed.includes(witness);
-    const required = exposed(major);
-    const verdict = killed ? "KILLED" : suite.error || required ? "FAILED" : "UNEXPOSED";
-    results.push({ id, mechanism, witness, node: process.versions.node, required, killed, verdict, ...suite });
+    const verdict = killed ? "KILLED" : "FAILED";
+    results.push({ id, mechanism, witness, node: process.versions.node, killed, verdict, ...suite });
     console.log(`${verdict} ${id} (${mode}, node ${process.versions.node}) ${suite.error || witness}`);
   }
   writeFileSync(path.join(cache, `validation-${mode}.json`), JSON.stringify({ mode, baseline, results }, null, 2) + "\n");

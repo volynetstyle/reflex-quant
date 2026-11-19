@@ -33,13 +33,12 @@ Failure
 
 Quant owns the reactive evidence and obligations established by its machine, and the transient state of its own activations. A failure alone establishes no change, execution obligation, demand, delivery, or retry. Recovery proceeds when the contract supplies a cause, such as an explicit demand or a newly delivered invalidation. An established obligation survives until it can be discharged. Hidden JavaScript state, external side effects, and unrelated activity supply no evidence that a failed computation will now succeed.
 
-Actual exhaustion of the native JavaScript stack through synchronous user
-callback nesting (S7) is a resource limit. Quant does not stop there: the
-overflow propagates as a `RangeError`, and a program that catches it keeps
-using the same runtime state. Beyond F6 that state is undefined and may be
-observed, including the values and deliveries of any part of the graph whose
-propagation, validation or execution the overflow interrupted. An ordinary
-exception thrown by a callback, including a user-thrown `RangeError`, remains
+The contract ends where synchronous nesting of user callbacks exhausts the
+native JavaScript stack. That is a host resource failure, not a callback
+failure. If the program catches the overflow and goes on, the runtime state
+that follows is outside this contract. S7 still bounds Quant's own graph
+walks. The boundary is a condition on the program, not on the exception: an
+exception a callback throws, including a user-thrown `RangeError`, remains
 subject to F1–F5.
 
 - **F1 failed computed.** A failed computed commits nothing and executes on its next demand.
@@ -47,7 +46,6 @@ subject to F1–F5.
 - **F3 failed watcher.** An established watcher (W5) whose run fails is cold and wakes on committed sources ∪ last-attempt reads.
 - **F4 established obligation survives.** Once execution is owed, a failure does not discharge that obligation. Validation interrupted before a change is established creates no execution obligation for the validator or any ancestor solely because of the interruption. Retaining an obligation does not independently schedule delivery (D7).
 - **F5 first error.** An operation that fails rethrows the first error raised in it. Obligations it still discharges afterwards run, and their errors do not replace that first error. Those obligations are the later watchers of the same drain, the watchers a failing batch body deferred, and the rollback of a failed `effect()` call (W5).
-- **F6 no wedge after stack exhaustion.** After a caught native stack overflow, no abandoned computed activation stays active (a false cycle), the host does not stay closed to later deliveries, and no watcher stays marked queued without a queue slot. A delivery the overflow interrupted may be lost; a later push to the watcher schedules it again. `research/stack-commit-points.mjs` exercises F6 at the actual stack limit.
 
 Watchers and lifecycle
 - **W1 cleanup first.** The previous cleanup is consumed before a rerun.

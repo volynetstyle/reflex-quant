@@ -1946,3 +1946,57 @@ seven diagnostics skipped. Local timings of `aa7209b` showed
 `write.no-subscribers` +3.6% (Node 25) and +10.2% (Node 24); CI run
 44562854881 showed 1.000 for it against an older `main`. The paired CI
 run against current `main` decides.
+
+## RQ6 closed: contract reset (2026-11-19)
+
+**Result.** Not wedging the runtime after native stack exhaustion is not a
+portable property of this representation. The local store-order lemmas
+survive as conventions. The global recovery guarantee does not.
+
+- **Witness against F6 on `main`.** CI run 44597299506 on `7c11e9d`,
+  macOS with Node 24, production build: `WEDGED create (production)
+  {"overflows":456,"violations":2,"first":["hold 1","new watcher saw []"]}`.
+  `start` sets `hold = 1`, and the native stack refused the `drain` call
+  after `exec`. The RQ6 entry had left `start` without a commit point
+  because the `exec` frame (104 B) is larger than the `drain` frame
+  (40 B). That is an observation about one V8 build, and this
+  configuration contradicts it. The `drainNow` window it did close was
+  itself exposed only by OSR tiering on Node 25.
+- **Why not close `start` as well.** `wake(w); drainNow()` would close this
+  window for one queue-slot store per effect creation. F6 would still be a
+  list of windows found on the engines tried, because any call between a
+  store and its undo can be refused. Every closure so far has cost the
+  normal path: `drainNow`'s `try/finally` measured batch.writes-32 +3.6%
+  and batch.coalesce-64 +2.7% (CI #41).
+- **Contract.** F6 is removed, not weakened. The failure preamble now ends
+  the contract where synchronous callback nesting exhausts the native
+  stack: a host resource failure, after which caught-and-continued state
+  is outside the contract. The boundary is a condition on the program; an
+  exception a callback throws, including a user-thrown `RangeError`, stays
+  under F1–F5. S7 is unchanged: Quant's own walks stay stack-safe.
+- **Kept, reclassified as conventions** (ARCHITECTURE, "Truthful transient
+  state"): BUSY off and the owed run stored before `fail`; grow, slot, then
+  QUEUED on enqueue; slot cleared, then QUEUED cleared, then deliver. They
+  cost nothing and keep the flags true at every point of normal execution.
+  Mutants `busy-in-fail`, `queued-before-grow` and `queued-in-deliver` stay
+  as ablations. Without the stack witnesses no normative test kills them,
+  which is consistent with their class.
+- **Removed.** `drainNow`'s `try/finally` (back to `hold = 1; drain()`),
+  the `hold-in-drain-now` mutant, `test/stack-commit-points.test.ts`, the
+  stack witnesses and the UNEXPOSED verdict in `mutants.mjs --validation`,
+  and the engine-window clause of the admission rule.
+- **Kept as a probe.** `research/stack-commit-points.mjs` maps how the
+  runtime degrades at the stack limit across engines. A wedge it observes
+  is a finding, not a contract failure.
+- **certificate-last rejected.** `research/certificate-last` (`11b5017`)
+  published STALE postorder so that an interrupted mark leaves no false
+  certificate. It removed the poisoned cone in its witness (95–99 of 512
+  trials on Node 25 before, none after), at about +30% on ordinary push in
+  chain workloads (CI #48). The poisoned cone is now a documented boundary
+  after a resource failure, not a bug. It shows that STALE certifies a
+  completed propagation and that prefix publication is not
+  interruption-consistent. Open question, with no planned work: can
+  propagation be made interruption-consistent without persistent state or
+  O(depth) continuation storage?
+- **Unchanged.** F3, D7, D8 (UNVERIFIED), RQ1b/c, RQ3, Q1, RQ5, SETTLE,
+  slot/UNREAD/SKIPPED.

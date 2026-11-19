@@ -149,7 +149,8 @@ function bump(n: Node): void {
 
 /** The wrap's scan, kept out of `bump` so that `bump` stays inlinable. */
 function expire(n: Node): void {
-  for (let e = n.firstSub; e !== null; e = e.nextSub) if (e.ver >= 0) e.ver = EXPIRED;
+  for (let e = n.firstSub; e !== null; e = e.nextSub)
+    if (e.ver >= 0) e.ver = EXPIRED;
 }
 
 /** Mark everything below the subscriber list `first` STALE, depth first. */
@@ -424,9 +425,8 @@ export function exec(n: Node): void {
     const last = cursor as Edge | null;
     active = prev;
     cursor = prevCursor;
-    // RQ6 commit point: the activation ends here, before any call. If the
-    // native stack refuses `fail`, the node is neither BUSY (a false cycle)
-    // nor owed nothing; only its cleanup is lost.
+    // The activation has ended: BUSY goes and the owed run is stored here,
+    // so the flags are true before `fail` cleans up (truthful state).
     n.flags = (n.flags & ~Flag.Busy) | (n.fn !== null ? Flag.Dirty : 0);
     fail(n, base, last);
     throw error;

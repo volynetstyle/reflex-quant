@@ -107,8 +107,7 @@ jobs:
       fail-fast: false
       matrix:
         mode: [development, production]
-        # RQ6 stack windows depend on the engine's tiering: the hold window
-        # is exposed on Node 25 and absent on Node 22 (research/LOG.md).
+        # The oldest and newest supported engines.
         node: ["22.23.4", "25.2.0"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
