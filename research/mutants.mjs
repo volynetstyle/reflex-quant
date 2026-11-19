@@ -70,6 +70,8 @@ export const mutants = [
     [K, "    if ((flags & Flag.Stale) === 0) return flags;\n    w.flags = flags & ~Flag.Stale;", "    return flags;"]],
   ["no-attachment-handoff", "P5: a new observer receives the invalidation that preceded its edge",
     [K, "  if ((s.flags & Flag.Stale) !== 0) mark(e);\n", ""]],
+  ["no-version-expiry", "P1/P5: an observation survives its producer's version wrap",
+    [K, "  if (version === 0) expire(n);\n", ""]],
   ["wake-guard", "the kernel wakes a watcher only when it is neither STALE nor WOKEN (re-delivery after a failed validation)",
     [K, "      n.flags = f | Flag.Dirty | Flag.Woken;\n      wake(n);", "      n.flags = f | Flag.Dirty | Flag.Woken;\n      if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"],
     [K, "        n.flags = f | Flag.Stale;\n        wake(n);", "        n.flags = f | Flag.Stale;\n        if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"]],
@@ -235,11 +237,14 @@ if (process.argv.includes("--validation")) {
   const interrupted = "test/interrupted-validation.test.ts";
   const delivery = "test/validation-delivery.test.ts";
   const stack = "test/stack-commit-points.test.ts";
+  const rollover = "test/version-rollover.test.ts";
   const retry = "retries an interrupted validation on demand and preserves cutoff (D8)";
   const drained = "a drain at the stack limit leaves the host open and its watchers wakeable (RQ6)";
   const enqueued = "a watcher whose enqueue grows the ring at the stack limit stays wakeable (RQ6)";
   const witnesses = [
     ["watcher-detach-keeps-chain", delivery, "ends a disposed watcher's validation after the current pull (Q1, changed)"],
+    ["no-version-expiry", rollover, "retains an in-pass obligation across a signal version wrap (RQ5, P5)"],
+    ["no-version-expiry", rollover, "expires an unvalidated computed observation when its source wraps (RQ5, P1)"],
     ["validation-stale", interrupted, "delivers again through the interrupted path after a causal write (D8)"],
     ["validation-dirty", interrupted, retry],
     ["validation-clean", interrupted, retry],
@@ -255,7 +260,7 @@ if (process.argv.includes("--validation")) {
     ["hold-in-drain-now", stack, enqueued, { exposed: (major) => major >= 25 }],
   ];
   const major = Number(process.versions.node.split(".")[0]);
-  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery, stack] });
+  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery, stack, rollover] });
   if (baseline.status !== 0 || baseline.total === 0 || baseline.failed.length || baseline.error) {
     throw new Error(`validation baseline failed in ${mode}: ${JSON.stringify(baseline)}`);
   }
