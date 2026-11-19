@@ -215,8 +215,8 @@ export function peek(n: Node): unknown {
 /**
  * Pull a computed up to date. Existential, in read order: sources are
  * checked first to last and the first changed one makes the node run. A
- * STALE source is descended into (the stack keeps the edge to climb back
- * through); a DIRTY one runs. A throw leaves every node on the walk DIRTY.
+ * STALE or UNVERIFIED source is descended into (the stack keeps the edge to
+ * climb back through). A DIRTY source runs.
  * A node whose run is on the stack is a cycle. A development build also
  * diagnoses a node whose validation is on the stack (CHECKING): C1 is a
  * precondition, so its committed value never answers such a demand there.
@@ -232,19 +232,19 @@ function pull(root: Node): void {
 }
 
 /**
- * The walk of `pull` for a STALE node that is not DIRTY, BUSY or CHECKING;
- * kept apart so `pull` stays small. A node disposed during the walk is not
- * run (W3), nor left DIRTY.
+ * The walk of `pull` for a pending validation, kept apart so `pull` stays
+ * small. Disposing a node during the walk clears its pending flags (W3).
  *
  * Development builds diagnose C1: a node on the walk is CHECKING until it is
  * clean or runs, and a source on the stack (BUSY or CHECKING) is a cycle
  * even when no push marked it again, since its version is not yet a fact.
- * CHECKING is set by the store that clears STALE and cleared by `exec` as it
- * sets BUSY; only a node found clean pays a store of its own. Production
- * builds compile all of it away.
+ * The store that consumes the validation flags sets CHECKING. `exec` clears
+ * CHECKING as it sets BUSY. Production builds omit this active marker.
  */
 function verify(root: Node, f: Flags): void {
-  root.flags = __DEV__ ? (f & ~Flag.Stale) | Flag.Checking : f & ~Flag.Stale;
+  root.flags = __DEV__
+    ? (f & ~Flag.Validate) | Flag.Checking
+    : f & ~Flag.Validate;
   const base = top;
   let n = root;
   let e = root.firstDep;
@@ -263,8 +263,8 @@ function verify(root: Node, f: Flags): void {
 
             if ((sf & Flag.Dirty) === 0) {
               s.flags = __DEV__
-                ? (sf & ~Flag.Stale) | Flag.Checking
-                : sf & ~Flag.Stale;
+                ? (sf & ~Flag.Validate) | Flag.Checking
+                : sf & ~Flag.Validate;
               stack[top++] = e;
               n = s;
               e = s.firstDep;
@@ -304,18 +304,15 @@ function verify(root: Node, f: Flags): void {
       }
     }
   } catch (error) {
-    if (n.fn !== null)
-      n.flags = __DEV__
-        ? (n.flags | Flag.Dirty) & ~Flag.Checking
-        : n.flags | Flag.Dirty;
-
-    while (top > base) {
-      const p = (stack[--top] as Edge).to;
-
-      if (p.fn !== null)
-        p.flags = __DEV__
-          ? (p.flags | Flag.Dirty) & ~Flag.Checking
-          : p.flags | Flag.Dirty;
+    for (;;) {
+      // D8: reopen this path to a later push. A direct write during
+      // validation or a failed execution can already have established DIRTY.
+      if (n.fn !== null) {
+        const flags = n.flags & ~(Flag.Validate | Flag.Checking);
+        n.flags = (flags & Flag.Dirty) === 0 ? flags | Flag.Unverified : flags;
+      }
+      if (top === base) break;
+      n = (stack[--top] as Edge).to;
       stack[top] = null;
     }
     trim();
@@ -559,6 +556,9 @@ export function link(
     e.prevSub = e;
   }
   cursor = e;
+  // A source invalidated during peek already marked its old subscribers.
+  // The newly appended edge still needs that pending validation (P5).
+  if ((s.flags & Flag.Stale) !== 0) mark(e);
 }
 
 // Exact dependency tracking: resolve a read outside the stable cursor path.

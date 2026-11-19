@@ -1585,3 +1585,64 @@ The D7-only branch uses the `f9be2d0` source tree. Validation on Node 25.2.0
 and V8 14.1.146.11-node.13 passed 201 development tests and 194 production
 tests with seven diagnostic cases skipped. The strict research runner passed
 all 64 cases. The selected clarification requires zero runtime changes.
+
+## Interrupted validation and pending delivery
+
+The [consolidated audit](https://github.com/PeshoVurtoleta/reflex-quant/blob/research/audit-2026-11-19/research/audit-2026-11-19/README.md)
+identifies three relevant transitions. RQ4's failed warm validation violates
+D8 and S7. RQ3 violates P4 when a later source invalidates an earlier source
+during a watcher check. RQ1b/c exposes a missing notification when an edge is
+linked after its source was invalidated during the pull. D7 governs RQ1a.
+
+**D8 unwind.** The shared stack identifies the interrupted validators.
+The unwind clears their validation and active flags and preserves any
+established `DIRTY`. Otherwise it sets `UNVERIFIED` in the existing flag word.
+This marker asks the next demand to validate and leaves the path open to a
+causal push. Only the interrupted path receives the marker. The kernel
+already has the interrupted path and owns the evidence needed for this
+transition.
+
+With the RQ1b/c and RQ3 repairs enabled, changing just the D8 unwind store
+produced the same result in DEV and PROD:
+
+| Unwind with no execution owed | Leaf calls after explicit recovery | Parent calls | Watcher values after a later causal write |
+|---|---:|---:|---|
+| `UNVERIFIED` | 3 | 1 | `[0, 2]` |
+| `STALE` | 3 | 1 | `[0]` |
+| `DIRTY` | 3 | 2 | `[0, 2]` |
+| Clear | 2 | 1 | `[0, 2]` |
+
+The explicit demand scenario recovers a leaf to its previous value. The
+watcher scenario stays linked through the interruption and recovers to a
+changed value. `DIRTY | STALE` would inherit direct execution from `DIRTY`
+and push suppression from `STALE`. The local walker state ends at unwind.
+The new logical state is required by the current local decoding. The
+physical bit is one encoding.
+
+`UNVERIFIED` is consumed at validation or execution entry and cleared on
+disposal. A second failed validation refreshes it if execution is still
+unowed. A causal push can add `STALE`, and a direct write can add both
+`STALE` and `DIRTY`. These combinations decode as pending validation and
+owed execution, respectively, with the new push represented downstream.
+Tests exercise both combinations and their consumption. Canonicalizing
+these flags on push would require another mask operation in the ordinary
+propagation store. The representation preserves the existing `STALE`
+suppression test and consumes redundant flags in the existing clear step.
+
+**RQ1b/c link.** A new edge is appended after the source was pulled. If the
+source is still `STALE`, marking from the appended edge transmits the pending
+validation to the new subscriber and any downstream consumers. With
+`nextSub === null`, the mark starts with that edge alone. The existing
+version check determines whether the reader actually executes again.
+
+**RQ3 delivery.** The host consumes `STALE` before checking the watcher.
+If the check sets `STALE` again, another pass validates the committed
+frontier before cleanup or execution. Each pass consumes its mark and
+retains any established `DIRTY`. The existing termination behavior applies
+when user callbacks keep producing new invalidations.
+
+The DEV and PROD builds passed the audit's `ledger-b-link-to-pending`,
+`ledger-b-recheck-skipped` and `neon-verify-dirty-recovery` scripts,
+including their controls. Local tests additionally cover overlapping flags,
+cutoff, disposal, established execution during validation and 100,000 warm
+nodes. The D7 oracle passed all 64 cases.

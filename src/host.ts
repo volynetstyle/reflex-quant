@@ -88,7 +88,14 @@ function deliver(w: Node, flags: Flags): void {
 
   if ((flags & Flag.Stale) !== 0) {
     try {
-      check(w);
+      for (;;) {
+        check(w);
+        const checked = w.flags;
+
+        if (w.fn === null || (checked & Flag.Stale) === 0) break;
+        // A source invalidated the frontier during this pass (P4).
+        w.flags = checked & ~Flag.Stale;
+      }
     } catch (error) {
       w.flags |= Flag.Stale;
       throw error;

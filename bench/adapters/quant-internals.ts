@@ -12,7 +12,7 @@ export { moveDep as move } from "../../src/graph.ts";
 export const name = "quant-internals";
 
 /** The flags `read` tests before it pulls. */
-export const PULL_FLAGS: number = Flag.Stale | Flag.Dirty | Flag.Busy;
+export const PULL_FLAGS: number = Flag.Pending | Flag.Busy;
 export { UNREAD } from "../../src/graph.ts";
 export const VERSION_MASK: number = CounterLimit.Mask;
 

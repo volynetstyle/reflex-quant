@@ -96,8 +96,9 @@ stay at one invocation after unchanged recovery and reach two after changed
 recovery. On `66ed54e`, both release configurations reached two even for
 unchanged recovery. The returned value alone concealed the D8 violation.
 `verify` marks the interrupted spine dirty. Recording the interruption as
-`Unverified` is one candidate. The witness establishes the need to preserve
-cutoff and allow a later causal push, while leaving the encoding open.
+`Unverified` preserves cutoff and allows a later causal push using the
+existing flag word. The evidence and representation limits are in
+[the transition study](LOG.md#interrupted-validation-and-pending-delivery).
 
 S7 covers Quant's own graph walks. User callbacks can synchronously demand
 each other until the native stack is exhausted. F6 applies once the stack

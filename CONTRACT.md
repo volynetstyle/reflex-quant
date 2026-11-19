@@ -15,7 +15,7 @@ Nothing outside this contract defines correctness: not explanatory documents, no
 
 P5, F5 and W5 lie outside the executable spec: its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API. D7 additionally describes automatic watcher delivery, which that spec leaves to its caller. `test/watcher-validation.test.ts` executes D7 through the public API.
 
-`test/failure-boundary.test.ts` exercises D8 in the demand-based model and F6 for a caught exception in an enclosing callback. Known runtime gaps for interrupted validation and native stack exhaustion are recorded in [the research report](research/REPORT.md#failure-boundary-d8-f6-and-s7).
+`test/failure-boundary.test.ts` exercises D8 in the demand-based model and F6 for a caught exception in an enclosing callback. `test/interrupted-validation.test.ts` exercises D8 through the public API. Native stack exhaustion is covered in [the research report](research/REPORT.md#failure-boundary-d8-f6-and-s7).
 
 Graph and tracking
 - **T1 exact tracking.** A computation observes exactly the sources it read; dynamic branches add and drop relations.
