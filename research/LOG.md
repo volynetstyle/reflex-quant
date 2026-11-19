@@ -1630,7 +1630,7 @@ propagation store. The representation preserves the existing `STALE`
 suppression test and consumes redundant flags in the existing clear step.
 
 **RQ1b/c attachment.** Tracking calls `attach` after a successful `peek`.
-The list operation `link` returns the appended edge. If the source is still
+It installs the observation in both lists. If the source is still
 `STALE`, `attach` hands its pending validation to the new subscriber and any
 downstream consumers. This check uses `STALE` because it represents a push
 that preceded the new edge. `UNVERIFIED` concerns the source's own validation.
@@ -1655,7 +1655,7 @@ nodes. The D7 oracle passed all 64 cases.
 ### Watcher validation size and regression screen
 
 Compared local `main` (`909c6af`), the previous candidate (`424096e`) and
-kernel-owned validation on Windows, Intel i5-1235U, Node 22.23.4, V8
+kernel-owned validation (`2b29880`) on Windows, Intel i5-1235U, Node 22.23.4, V8
 12.4.254.21-node.57 and esbuild 0.25.12. Both timing bundles use the same
 Quant adapter and production defines. Measurements run the stock
 `bench/worker.mjs` protocol in fresh processes pinned to one logical

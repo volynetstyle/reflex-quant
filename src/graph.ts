@@ -48,7 +48,7 @@ export interface Edge {
   /**
    * Neighbours in the source's subscriber list. prevSub is the predecessor,
    * except on the source's firstSub, where it is the last subscriber (the
-   * tail: link appends there). Null only on a detached edge.
+   * tail: attach appends there). Null only on a detached edge.
    */
   prevSub: Edge | null;
   nextSub: Edge | null;

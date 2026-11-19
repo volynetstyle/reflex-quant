@@ -522,13 +522,8 @@ function unindex(n: Node, base: number): void {
   trim();
 }
 
-/** A new edge at the cursor, appended to the source's subscribers. */
-export function link(
-  c: Node,
-  s: Node,
-  last: Edge | null,
-  next: Edge | null,
-): Edge {
+/** Attach a new observation after a successful peek. */
+function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   if (__STATS__) stats.links++;
 
   const first = s.firstSub;
@@ -558,12 +553,6 @@ export function link(
     e.prevSub = e;
   }
   cursor = e;
-  return e;
-}
-
-/** Attach an observation after a successful peek. */
-function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
-  const e = link(c, s, last, next);
 
   // If the source is still STALE after peek, its push preceded this edge.
   // Pass that pending validation to the new subscriber (P5).
