@@ -73,6 +73,54 @@ A program that breaks a precondition is erroneous, and no invariant covers it. T
 - **D7 failed watcher validation is a barrier.** Failed validation aborts that delivery before rerun lifecycle begins (P4). Invalidations already coalesced into it remain pending and create no independent retry obligation. A later delivered invalidation of a live watcher retries the full committed source set, using the latest states of pending branches and preserving any established execution obligation (F4). The barrier alone schedules no further attempt. F1 continues to require execution of a failed computed on its next demand.
 - **D8 interrupted computed validation.** When validation is interrupted before a change is established, the computed validates its committed dependencies on its next demand in D1 order. If their versions are unchanged, cutoff is preserved (P2). An execution owed on independent evidence still runs (F1, F4). A later invalidation that would reach the consumer through the interrupted validation path must still be able to reach it. D7 governs branches already coalesced outside that path.
 
+### Implementation lemma for SKIPPED
+
+Before the version-tagged tracker resolves a read in an active execution
+of `c`, its accepted prefix records the first observations of this
+attempt. It runs from `c.firstDep` through `cursor` and is empty when
+`cursor` is null.
+
+The lemma relies on five premises.
+
+1. **Exact pair identity.** Establish `e.from === s` and `e.to === c`
+   independently of the `SKIPPED` tag.
+2. **Liveness.** At the point of use, `e` is still linked in both the
+   subscriber list of `s` and the dependency list of `c`.
+3. **First acceptance.** Every path that first accepts an edge in this
+   execution stores the version observed at that read. Writing the
+   nonnegative `s.ver` replaces any `SKIPPED` tag on that edge.
+4. **Repeats.** A reread preserves the version of the first observation,
+   including when `s.ver` has since changed (D6 and P5).
+5. **Expiry.** The only other write that can reach an accepted edge is the
+   version wrap of its source (RQ5). It turns a nonnegative version into
+   `EXPIRED` and leaves every negative tag in place.
+
+Let `exactPair(e, s, c)` denote the first two premises.
+
+```text
+exactPair(e, s, c) and e.ver == SKIPPED  ⇒  e is in c's unread suffix
+```
+
+**Proof.** The invariant is that no edge of the accepted prefix carries
+`SKIPPED`. The prefix starts empty. A first acceptance writes a
+nonnegative version, a repeat writes nothing, and expiry writes `EXPIRED`,
+never `SKIPPED`. `skip` assigns `SKIPPED` only to the first unread edge.
+The other sentinel writes (`UNREAD` in a mark, an index or a deferral)
+also stay in the unread suffix, and nested passes preserve the enclosing
+prefix (T3). So an exact live edge tagged `SKIPPED` lies outside the
+prefix. A tag that survived a failed execution gives the same evidence in
+the new attempt, whose prefix starts empty again, and so does a tag that
+survived its source's wrap. The implication is one-way: unread edges can
+also carry versions from earlier executions, `UNREAD` or `EXPIRED`.
+
+**Consequence.** Once `s` has been read successfully and the pair is known,
+the tracker can accept `e` directly. If `e` is the first unread edge
+(`next`), advance the cursor. If it lies strictly after `next`, splice it
+before `next` and advance the cursor. Record the observed version in
+both cases. This preserves first-read order for D1 and the first version
+for P5. Given the exact pair, acceptance costs O(1) and needs no
+Θ(u) marking pass over the unread suffix.
+
 ### Structural bounds
 
 - **S1** no allocation and no lookup per stable read;

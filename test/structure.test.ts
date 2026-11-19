@@ -1,11 +1,11 @@
-import { Flag, KEEP, TRIM } from "../src/graph";
+import { CounterLimit, EXPIRED, Flag, KEEP, SKIPPED, TRIM } from "../src/graph";
 // Level 1, complexity class: structural work bounds that are not semantics.
 // Each assertion pins an optimization (O1, O2) or an asymptotic property;
 // removing the mechanism keeps every value correct and fails here.
 import { beforeEach, describe, expect, it } from "vitest";
 import { idle, createNode, read, stackHighWater, stackLength, stats, write } from "../src/kernel";
 import type { Node } from "../src/graph";
-import { checkGraph, edgeCount, resetStats } from "./support/graph";
+import { check, checkGraph, edgeCount, resetStats } from "./support/graph";
 import { queueLength, run } from "../src/host";
 import { batch as publicBatch, dispose as publicDispose, effect as publicEffect, get as publicGet, set as publicSet, signal as publicSignal } from "../src/index";
 import { foundRepeat, prefixRepeat } from "./support/p5";
@@ -21,6 +21,21 @@ function reader(ps: Node[], orders: number[][], tick: Node) {
     for (const i of order) s += read(ps[i]!) as number;
     return s;
   });
+}
+
+const swapOffset = 256;
+const swapCount = 8;
+
+function nestedSwapOrders(n: number): [number[], number[]] {
+  const plain = range(n);
+  const end = swapOffset + 2 * swapCount;
+  const window = plain.slice(swapOffset, end);
+  return [plain, [
+    ...plain.slice(0, swapOffset),
+    ...window.filter((i) => i % 2 === 1),
+    ...window.filter((i) => i % 2 === 0),
+    ...plain.slice(end),
+  ]];
 }
 
 beforeEach(resetStats);
@@ -86,6 +101,125 @@ describe("structural bounds", () => {
     expect(stats.indexes).toBe(0);
     expect(stats.links).toBe(0);
     expect(edgeCount([rotate, swap])).toBe(2 * (n + 1));
+  });
+
+  it.each([1024, 4096, 8192])("nested swaps reuse edges without a suffix walk at width %i", (n) => {
+    const ps = range(n).map(signal);
+    const tick = signal(0);
+    const [plain, nested] = nestedSwapOrders(n);
+    const c = reader(ps, [plain, nested], tick);
+    const sum = n * (n - 1) / 2;
+    expect(read(c)).toBe(sum);
+    const edges = ps.map((s) => s.firstSub);
+
+    resetStats();
+    for (const [phase, order] of [[1, nested], [2, plain]] as const) {
+      write(tick, phase);
+      expect(read(c)).toBe(sum);
+      expect(c.firstDep!.from === tick).toBe(true);
+      let edge = c.firstDep!.nextDep;
+      for (const source of order) {
+        check(edge !== null && edge === edges[source], `wrong dependency at source ${source}`);
+        edge = edge!.nextDep;
+      }
+      expect(edge).toBeNull();
+    }
+    expect(stats.lookups).toBeGreaterThan(0);
+    expect([stats.sweeps, stats.indexes, stats.indexed, stats.links, stats.unlinks]).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  it("a SKIPPED edge survives a failed attempt and a repeat preserves P5", () => {
+    const n = 1024;
+    const ps = range(n).map(signal);
+    const tick = signal(0);
+    const [plain, nested] = nestedSwapOrders(n);
+    const source = ps[swapOffset]!;
+    const lastOdd = swapOffset + 2 * swapCount - 1;
+    const change = 1000;
+    let wrote = false;
+    const c = computed(() => {
+      const phase = read(tick);
+      let sum = 0;
+      for (const id of phase === 0 ? plain : nested) {
+        sum += read(ps[id]!) as number;
+        if (phase === 1 && id === lastOdd) throw new Error("retry after the skips");
+        if (phase === 2 && id === swapOffset && !wrote) {
+          wrote = true;
+          write(source, swapOffset + change);
+        }
+      }
+      // The source is past the prefix scan's budget at this point.
+      if (phase === 2) expect(read(source)).toBe(swapOffset + change);
+      return sum;
+    });
+    const sum = n * (n - 1) / 2;
+    expect(read(c)).toBe(sum);
+    const edge = source.firstSub!;
+    const version = source.ver;
+
+    write(tick, 1);
+    expect(() => read(c)).toThrow("retry after the skips");
+    expect(edge.ver).toBe(SKIPPED);
+
+    write(tick, 2);
+    resetStats();
+    expect(read(c)).toBe(sum);
+    expect(source.firstSub === edge).toBe(true);
+    expect(edge.ver).toBe(version);
+    expect([stats.dups, stats.sweeps, stats.indexes]).toEqual([1, 0, 0]);
+    expect(read(c)).toBe(sum + change);
+    expect(edge.ver).toBe(source.ver);
+  });
+
+  it("a version wrap expires the accepted prefix and keeps SKIPPED in the suffix (RQ5)", () => {
+    const n = 1024;
+    const ps = range(n).map(signal);
+    const tick = signal(0);
+    const [plain, nested] = nestedSwapOrders(n);
+    const early = ps[0]!;
+    const source = ps[swapOffset]!;
+    const lastOdd = swapOffset + 2 * swapCount - 1;
+    const change = 1000;
+    let wrapped = 0;
+    let tag: number | null = null;
+    const c = computed(() => {
+      const phase = read(tick);
+      let sum = 0;
+      for (const id of phase === 0 ? plain : nested) {
+        sum += read(ps[id]!) as number;
+        if (phase !== 1) continue;
+        if (id === 0 && wrapped === 0) {
+          // Accepted: the wrap turns the prefix edge EXPIRED, not SKIPPED.
+          wrapped = 1;
+          early.ver = CounterLimit.Mask;
+          write(early, change);
+          tag = early.firstSub!.ver;
+        }
+        if (id === lastOdd && wrapped === 1) {
+          // Skipped, not yet read: the wrap leaves the tag in place.
+          wrapped = 2;
+          source.ver = CounterLimit.Mask;
+          write(source, swapOffset + change);
+          tag = source.firstSub!.ver;
+        }
+      }
+      return sum;
+    });
+    const sum = n * (n - 1) / 2;
+    expect(read(c)).toBe(sum);
+    const edge = source.firstSub!;
+
+    write(tick, 1);
+    resetStats();
+    expect(read(c)).toBe(sum + change);
+    expect(tag).toBe(SKIPPED);
+    expect(source.firstSub === edge).toBe(true);
+    expect(edge.ver).toBe(0);
+    expect(early.firstSub!.ver).toBe(EXPIRED);
+    expect([stats.sweeps, stats.indexes]).toEqual([0, 0]);
+    // The expired observation of `early` cannot validate: P5 reruns.
+    expect(read(c)).toBe(sum + 2 * change);
+    expect(early.firstSub!.ver).toBe(early.ver);
   });
 
   it("O1: new private sources are proven absent without indexing", () => {

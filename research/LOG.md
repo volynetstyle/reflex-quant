@@ -1523,6 +1523,48 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   on research/history-independence. The regression fails on the previous
   production code, then passes in both builds after the repair.
 
+## Exact lookup of a skipped edge
+
+- **Structural witness.** For eight nested swaps at fixed edit size, the
+  former resolver visits an average of 380, 1,916 and 3,964 edges to mark
+  the suffix at widths 1,024, 4,096 and 8,192. The visit count is zero
+  when the resolver accepts the exact skipped edge directly.
+- **Implementation.** `lookup` already found the live pair. `SKIPPED`
+  certifies that this edge is outside the accepted prefix. Move it to the
+  cursor and store the observed version, using the existing relation.
+  [Implementation lemma](../CONTRACT.md#implementation-lemma-for-skipped)
+- **Evidence.** The regression checks edge identity, read order and the
+  work bound at all three widths. It also checks a tag left by a failed
+  run, then a write and reread after acceptance (P5). The research A/B
+  measured 0.839 and 0.896 of Quant for `swaps-nested@8` and met the
+  1.03 local gate on both runners.
+  [Research run](https://github.com/volynetstyle/reflex-quant/actions/runs/44412795005)
+- **Rebase on RQ5 (2026-11-19).** The version wrap writes `EXPIRED` into
+  an accepted prefix, so the lemma's former step "prefix versions stay
+  nonnegative" no longer holds. The invariant it needs is weaker: no
+  prefix edge carries `SKIPPED`. Expiry writes only over nonnegative
+  versions, so it never writes the tag and never erases it; the lemma
+  gains that premise. A new witness wraps an accepted source and a skipped
+  one in the same pass: the prefix edge reads `EXPIRED` and reruns (P5),
+  the skipped edge keeps its tag and is accepted with the wrapped version,
+  with no mark and no index. The `next !== null` guard is dropped: a
+  `SKIPPED` pair lies in a nonempty suffix.
+- **Ablations.** `no-skipped-accept` fails the three width witnesses;
+  `accept-any-found` (take any found pair as unread) fails P5 and repeat
+  witnesses in `semantics`, `structure` and `disposal-differential`, so the
+  tag test carries the soundness. 229 dev / 222 production tests; 2,866 B
+  gzip (main 2,857).
+- **CI against main 7c11e9d** (run 44602133669, 9 rounds). 101 paired
+  rows, geomean 1.001; validation ablations pass on Node 22 and 25 in
+  both builds. Highest: `mount-dispose@64` 1.047 [1.005, 1.256], a path
+  that never reaches `lookup`; `fan-out.computeds-1000` 1.031. The target
+  is not in the CI corpus. Locally (Node 25, 7 rounds) `swaps-nested@8`
+  is 0.912; other `swaps`, `move-earlier` and `move-later` sizes stay
+  within 0.964–1.066 with wide ranges.
+- **Boundary.** From `swaps-nested@32` on, one mark per pass remains
+  (761 edges): the forward scan runs out of budget and finds an untagged
+  pair, which no field places (research/marked-escalation, LOG).
+
 ## Representation and edge removal note
 
 Reactive kernel: nodes, edges, tracking, push, pull, failure.

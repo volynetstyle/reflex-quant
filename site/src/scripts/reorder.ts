@@ -8,8 +8,8 @@
 //            repeat  the relation behind the cursor, or one the prefix scan or a lookup finds
 //                    already read: nothing moves;
 //            new     a source with no relation: a new one at the cursor;
-//            move    in a marked pass, the relation found through the source's subscribers,
-//                    moved to the cursor;
+//            move    the relation found through the source's subscribers, with a mark that
+//                    proves it is unread, moved to the cursor;
 //            tail    one of the last 2 relations (an edge deferred earlier, or a source moved to
 //                    the front), moved to the cursor;
 //            skip    a relation up to 8 past the cursor's, while the relation under the cursor
@@ -18,8 +18,9 @@
 //            defer   the same with a marked relation under the cursor: it goes to the end of the
 //                    list (read later or never: a rotation, a deletion), and the found one,
 //                    unless it was right behind it, moves to the cursor.
-//          A read the scans do not settle marks the pass: from then on every out-of-place read is a
-//          move. After the pass, relations not read are removed.
+//          A read the scans do not settle can move a known skipped relation directly. Otherwise
+//          it can mark the pass so later out-of-place reads find their unread edges. After the
+//          pass, relations not read are removed.
 //   alien  alien-signals 3.2.1, link() and purgeDeps(): a read reuses the next link only if it is
 //          the very next one; otherwise a new link is inserted after the tail. Links left after the
 //          tail at the end of the pass are unlinked, including the old links of re-read sources.
@@ -81,8 +82,8 @@ export function quantPass(prev: readonly string[], reads: readonly string[]): Pa
       else if (c < n && at > c + 1 && at <= c + SCAN) kind = pass();
       else if (at < c && at >= c - 1 - SCAN) kind = "repeat";
       else {
-        // Not settled by the scans: the lookup finds the relation, and marks the unread suffix.
-        if (c < n) { marked = true; skipped.clear(); }
+        // The lookup finds the pair. A skipped edge already has a mark proving it is unread.
+        if (c < n && !skipped.has(s)) { marked = true; skipped.clear(); }
         if (at > c) { toCursor(at); c++; kind = "move"; } else kind = "repeat";
       }
     }

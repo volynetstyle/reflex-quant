@@ -79,6 +79,10 @@ field or flag (research/LOG.md, entry 43).
   `ver === UNREAD` certifies that it is already marked. Consuming, moving or
   inserting an edge preserves this shape; failure prunes tentative edges
   without breaking it.
+- Once the live pair is identified, its `SKIPPED` tag certifies that it is
+  unread in the current execution, even after a failure or its source's
+  version wrap.
+  [Implementation lemma](CONTRACT.md#implementation-lemma-for-skipped)
 - The shared work stack stores an existing `Edge` for each suspended walk or
   displaced slot. `edge.from` already identifies the displaced source.
 
