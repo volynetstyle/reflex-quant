@@ -1743,3 +1743,27 @@ recovery. Node 25.2.0 passed
 213 development tests, 206 production tests with seven diagnostics skipped,
 all 64 validation oracle cases across both modes, and all five named
 ablations in each mode. The release package check passed.
+
+### Producer version rollover (RQ5)
+
+The baseline `13b7c93` loses the watcher rerun and returns stale
+computed data when the producer and an outstanding observation compare
+equal across rollover. The witness advances only the producer clock
+and uses real writes and computed commits to cross zero. The report
+records the version argument and the O(out-degree) wrap cost.
+
+An earlier candidate (`aa7209b`) repeated the zero test and the expiry
+call at both commit sites, through a separate `expireObservations`, and
+grew the production bundle from 2,749 to 2,822 gzip bytes. Both commits
+now go through one `bump(n)`, which tests the next version for zero and
+expires the producer's numeric observations before publishing it. The
+mechanism is the same: one test per changed commit and one subscriber
+scan per 2^30 changes. The bundle is 2,782 gzip bytes.
+
+The ablation `no-version-expiry` removes the scan from `bump` and fails
+both witnesses, the signal (P5) and the computed (P1) one, in each mode.
+Node 25.2.0 passed 215 development tests and 208 production tests with
+seven diagnostics skipped. Local timings of `aa7209b` showed
+`write.no-subscribers` +3.6% (Node 25) and +10.2% (Node 24); CI run
+44562854881 showed 1.000 for it against an older `main`. The paired CI
+run against current `main` decides.

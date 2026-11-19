@@ -100,6 +100,34 @@ unchanged recovery. The returned value alone concealed the D8 violation.
 existing flag word. The evidence and representation limits are in
 [the transition study](LOG.md#interrupted-validation-and-pending-delivery).
 
+### Producer version rollover (RQ5)
+
+P1 and P5 require a committed value change to remain visible to an
+unvalidated observer and to a running watcher that already read the
+producer. A 30-bit producer version can revisit the observer's recorded
+number. The two public witnesses in `test/version-rollover.test.ts` advance
+the producer clock, then commit through version zero to the original
+version. Without expiry, the computed consumer returns its old value and
+the watcher misses its owed rerun.
+
+The kernel writes `EXPIRED` into existing numeric observations before
+publishing version zero. Any observation that could alias a new version
+must cross that boundary. It stays unequal to every producer version
+until a new execution reads the source. A repeat in a running pass
+preserves its first observation. Expiry leaves `UNREAD` and `SKIPPED`
+intact because those markers encode the unread suffix and are either
+overwritten on read or discarded on successful settlement. A failed
+run already owes execution. The kernel owns both producer commits and
+this observation evidence.
+
+A wider finite counter postpones the collision. An epoch on every
+producer and edge adds retained state and still needs a rollover policy.
+The sentinel uses the current edge word and preserves the existing
+version comparisons. Each changed commit tests for zero. Each wrap
+scans the producer's current subscribers once in O(out-degree) time
+with O(1) extra space. Both commit sites share one `bump`, whose ablation
+fails the signal and the computed witness. See the [transition log](LOG.md#producer-version-rollover-rq5).
+
 ### Native stack recovery (RQ6)
 
 The contract treats native stack exhaustion through synchronous callback

@@ -6,6 +6,7 @@ import {
   Flag,
   KEEP,
   CounterLimit,
+  EXPIRED,
   SCAN,
   SETTLE,
   SKIPPED,
@@ -97,7 +98,7 @@ export function write(s: Node, value: unknown): void {
   if (compare(s.value, value)) return;
 
   s.value = value;
-  s.ver = (s.ver + 1) & CounterLimit.Mask;
+  bump(s);
 
   for (let e = s.firstSub; e !== null; e = e.nextSub) {
     const n = e.to;
@@ -131,6 +132,21 @@ export function write(s: Node, value: unknown): void {
       if (subs !== null) mark(subs);
     }
   }
+}
+
+/**
+ * A committed change: the next producer version. Versions wrap, so at zero
+ * every observation that could alias a later version expires (RQ5): EXPIRED
+ * equals no version. Tracking markers (UNREAD, SKIPPED) are negative and
+ * stay. O(out-degree) once per 2^30 changes.
+ */
+function bump(n: Node): void {
+  const version = (n.ver + 1) & CounterLimit.Mask;
+
+  if (version === 0) {
+    for (let e = n.firstSub; e !== null; e = e.nextSub) if (e.ver >= 0) e.ver = EXPIRED;
+  }
+  n.ver = version;
 }
 
 /** Mark everything below the subscriber list `first` STALE, depth first. */
@@ -429,7 +445,7 @@ export function exec(n: Node): void {
 
   if (compare(value, n.value) === false) {
     n.value = value;
-    n.ver = (n.ver + 1) & CounterLimit.Mask;
+    bump(n);
   }
 }
 
