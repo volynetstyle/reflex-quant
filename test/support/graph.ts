@@ -90,10 +90,10 @@ export function checkGraph(nodes: readonly Node[], label = "graph"): void {
       prev = e;
     }
     check(n.firstSub === null || n.firstSub.prevSub === prev, `${label}: first subscriber of ${id(n)} does not point at its last one`);
-    if (n.fn !== null && (n.flags & (Flag.Stale | Flag.Dirty)) === 0) {
+    if (n.fn !== null && (n.flags & Flag.Pending) === 0) {
       for (let e = n.firstDep; e !== null; e = e.nextDep) {
         const f = e.from.flags;
-        check((f & (Flag.Stale | Flag.Dirty)) === 0, `${label}: clean node ${id(n)} has an invalidated source ${id(e.from)}`);
+        check((f & Flag.Pending) === 0, `${label}: clean node ${id(n)} has an invalidated source ${id(e.from)}`);
         check(e.ver === e.from.ver, `${label}: clean node ${id(n)} holds a stale version of source ${id(e.from)}`);
       }
     }

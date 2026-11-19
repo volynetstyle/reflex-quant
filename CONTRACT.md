@@ -60,8 +60,9 @@ A program that breaks a precondition is erroneous, and no invariant covers it. T
 
 Before the version-tagged tracker resolves a read in an active execution
 of `c`, its accepted prefix records the first observations of this
-attempt. It runs from `c.firstDep` through `cursor` and is empty when
-`cursor` is null.
+attempt. Producer rollover can replace an observation with the nonnegative
+`EXPIRED` marker. The prefix runs from `c.firstDep` through `cursor` and is
+empty when `cursor` is null.
 
 The lemma relies on four premises.
 
@@ -72,8 +73,8 @@ The lemma relies on four premises.
 3. **First acceptance.** Every path that first accepts an edge in this
    execution stores the version observed at that read. Writing the
    nonnegative `s.ver` replaces any `SKIPPED` tag on that edge.
-4. **Repeats.** A reread preserves the version of the first observation,
-   including when `s.ver` has since changed (D6 and P5).
+4. **Repeats.** A reread preserves the version or expiration marker of the
+   first observation, including when `s.ver` has since changed (D6 and P5).
 
 Let `exactPair(e, s, c)` denote the first two premises.
 

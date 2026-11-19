@@ -3,7 +3,7 @@ import { stats } from "./instrumentation";
 // Graph types, constants and intrusive list operations.
 
 // The aliases name different facts but do not brand numbers: counters wrap at
-// MASK and edge versions can carry UNREAD.
+// MASK and edge versions can carry tracking or expiration markers.
 export type Flags = number;
 export type Version = number;
 export type Generation = number;
@@ -38,8 +38,8 @@ export interface Node {
 export interface Edge {
   readonly from: Node;
   readonly to: Node;
-  /** from.ver when `to` read it; UNREAD in the pass's marked unread suffix. */
-  ver: Version | typeof UNREAD | typeof SKIPPED;
+  /** Observed version, EXPIRED at rollover, or a tracking marker. */
+  ver: Version;
   /** to.gen + 1 at birth: tentative while it still equals to.gen + 1. */
   gen: Generation;
   /** Neighbours in the consumer's dependency list. */
@@ -65,6 +65,8 @@ export const enum Flag {
   Dirty = 1 << 1,
   /** Its run is on the stack. */
   Busy = 1 << 2,
+  /** Validation was interrupted; a later push must still pass through. */
+  Unverified = 1 << 3,
   /** A watcher: handed to the host, never read. */
   Watch = 1 << 4,
   /** Woken by signals only; computed sources need no validation. */
@@ -82,7 +84,8 @@ export const enum Flag {
   /** Host policy: already in its queue. */
   Queued = 1 << 7,
   // Combined masks used when testing or clearing flags; all remain within a byte.
-  Pending = Stale | Dirty,
+  Validate = Stale | Unverified,
+  Pending = Validate | Dirty,
   Active = Busy | Checking,
   Pull = Pending | Active,
   // Checking and Woken share a bit on computed nodes and watchers, respectively.
@@ -95,6 +98,9 @@ export const enum Flag {
 export const enum CounterLimit {
   Mask = 0x3fffffff,
 }
+
+/** Never a producer version or an unread-suffix marker. */
+export const EXPIRED: Version = CounterLimit.Mask + 1;
 
 /** edge.ver of an edge the marked or indexed run has not read yet. */
 export const UNREAD = -1;

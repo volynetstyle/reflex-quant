@@ -6,6 +6,7 @@ import {
   Flag,
   KEEP,
   CounterLimit,
+  EXPIRED,
   SCAN,
   SETTLE,
   SKIPPED,
@@ -97,7 +98,7 @@ export function write(s: Node, value: unknown): void {
   if (compare(s.value, value)) return;
 
   s.value = value;
-  s.ver = (s.ver + 1) & CounterLimit.Mask;
+  bumpVersion(s);
 
   for (let e = s.firstSub; e !== null; e = e.nextSub) {
     const n = e.to;
@@ -130,6 +131,16 @@ export function write(s: Node, value: unknown): void {
 
       if (subs !== null) mark(subs);
     }
+  }
+}
+
+/** An old observation can equal a future version anywhere in the next cycle. */
+function bumpVersion(n: Node): void {
+  n.ver = (n.ver + 1) & CounterLimit.Mask;
+  if (n.ver !== 0) return;
+
+  for (let e = n.firstSub; e !== null; e = e.nextSub) {
+    if (e.ver >= 0) e.ver = EXPIRED;
   }
 }
 
@@ -216,7 +227,8 @@ export function peek(n: Node): unknown {
  * Pull a computed up to date. Existential, in read order: sources are
  * checked first to last and the first changed one makes the node run. A
  * STALE source is descended into (the stack keeps the edge to climb back
- * through); a DIRTY one runs. A throw leaves every node on the walk DIRTY.
+ * through); a DIRTY one runs. Interrupted validation resumes without
+ * treating the old push as outstanding.
  * A node whose run is on the stack is a cycle. A development build also
  * diagnoses a node whose validation is on the stack (CHECKING): C1 is a
  * precondition, so its committed value never answers such a demand there.
@@ -232,19 +244,18 @@ function pull(root: Node): void {
 }
 
 /**
- * The walk of `pull` for a STALE node that is not DIRTY, BUSY or CHECKING;
- * kept apart so `pull` stays small. A node disposed during the walk is not
- * run (W3), nor left DIRTY.
+ * The walk of `pull` for a STALE or UNVERIFIED node without DIRTY, BUSY or
+ * CHECKING. A node disposed during the walk is not run or left pending (W3).
  *
  * Development builds diagnose C1: a node on the walk is CHECKING until it is
  * clean or runs, and a source on the stack (BUSY or CHECKING) is a cycle
  * even when no push marked it again, since its version is not yet a fact.
- * CHECKING is set by the store that clears STALE and cleared by `exec` as it
- * sets BUSY; only a node found clean pays a store of its own. Production
+ * CHECKING is set by the store that clears the validation bits. `exec`
+ * clears it as it sets BUSY; only a node found clean pays a store of its own. Production
  * builds compile all of it away.
  */
 function verify(root: Node, f: Flags): void {
-  root.flags = __DEV__ ? (f & ~Flag.Stale) | Flag.Checking : f & ~Flag.Stale;
+  root.flags = __DEV__ ? (f & ~Flag.Validate) | Flag.Checking : f & ~Flag.Validate;
   const base = top;
   let n = root;
   let e = root.firstDep;
@@ -263,8 +274,8 @@ function verify(root: Node, f: Flags): void {
 
             if ((sf & Flag.Dirty) === 0) {
               s.flags = __DEV__
-                ? (sf & ~Flag.Stale) | Flag.Checking
-                : sf & ~Flag.Stale;
+                ? (sf & ~Flag.Validate) | Flag.Checking
+                : sf & ~Flag.Validate;
               stack[top++] = e;
               n = s;
               e = s.firstDep;
@@ -304,18 +315,15 @@ function verify(root: Node, f: Flags): void {
       }
     }
   } catch (error) {
-    if (n.fn !== null)
-      n.flags = __DEV__
-        ? (n.flags | Flag.Dirty) & ~Flag.Checking
-        : n.flags | Flag.Dirty;
-
-    while (top > base) {
-      const p = (stack[--top] as Edge).to;
-
-      if (p.fn !== null)
-        p.flags = __DEV__
-          ? (p.flags | Flag.Dirty) & ~Flag.Checking
-          : p.flags | Flag.Dirty;
+    for (;;) {
+      // These are exactly the frames entered by this walk. An execution
+      // that threw (or a direct write during the walk) still owes a run.
+      if (n.fn !== null) {
+        const flags = n.flags & ~(Flag.Validate | Flag.Checking);
+        n.flags = (flags & Flag.Dirty) === 0 ? flags | Flag.Unverified : flags;
+      }
+      if (top === base) break;
+      n = (stack[--top] as Edge).to;
       stack[top] = null;
     }
     trim();
@@ -406,7 +414,21 @@ export function exec(n: Node): void {
     const last = cursor as Edge | null;
     active = prev;
     cursor = prevCursor;
-    fail(n, base, last);
+    const flags = n.flags & ~Flag.Busy;
+    n.flags = n.fn === null ? flags : flags | Flag.Dirty;
+
+    // Restore the index here. After exhausting the JS stack another call
+    // can throw before it enters its own frame.
+    if (last !== null && last.from.slot === last) {
+      for (let e = n.firstDep; e !== null; e = e.nextDep) e.from.slot = null;
+
+      while (top > base) {
+        const cell = stack[--top] as Edge;
+        stack[top] = null;
+        cell.from.slot = cell;
+      }
+    }
+    fail(n, last);
     throw error;
   }
   const last = cursor as Edge | null;
@@ -430,7 +452,7 @@ export function exec(n: Node): void {
 
   if (compare(value, n.value) === false) {
     n.value = value;
-    n.ver = (n.ver + 1) & CounterLimit.Mask;
+    bumpVersion(n);
   }
 }
 
@@ -438,14 +460,11 @@ export function exec(n: Node): void {
  * A failed run: keep committed edges and this run's reads as the wake set,
  * drop unread edges earlier failed runs left behind, owe a run.
  */
-function fail(n: Node, base: number, last: Edge | null): void {
-  if (last !== null && last.from.slot === last) unindex(n, base);
-
-  n.flags &= ~Flag.Busy;
+function fail(n: Node, last: Edge | null): void {
+  if (top === 0 && stack.length > TRIM) trim();
 
   if (n.fn === null) return detach(n);
 
-  n.flags |= Flag.Dirty;
   const tentative = (n.gen + 1) & CounterLimit.Mask;
   for (let e = last === null ? n.firstDep : last.nextDep; e !== null;) {
     const after: Edge | null = e.nextDep;
