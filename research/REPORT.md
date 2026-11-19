@@ -8,7 +8,7 @@
 > and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien-signals-comparison/).
 
 Experiment: derive a reactive runtime from a frozen contract (invariants
-T1–W5, bounds S1–S8, decisions D1, D2 and D6, precondition C1 in
+T1–W5, bounds S1–S8, decisions D1, D2, D6 and D7, precondition C1 in
 [CONTRACT.md](../CONTRACT.md)) that
 was extracted from Reflex's semantic contract and executable spec, not from
 its implementation; Reflex is provenance, not authority; keep every mechanism
@@ -60,6 +60,30 @@ all 18 scenarios and faster than both on 8; geometric mean 0.97 of the
 better one, 0.95 of Reflex and 0.42 of alien-signals (Q6).
 
 ## 1. Contract inventory (phase 0)
+
+**Watcher validation clarification, 2026-11-19 (D7).** The two-branch
+fault-boundary finding was initially classified as an F4 lost obligation.
+Its first source throws during validation before execution has been justified.
+The independent model keeps `executionPending = false`. A control that
+confirms a change before the throwing source keeps `executionPending = true`.
+An obligation established by a failed body also survives a later validation
+failure and unchanged recovery. A queued validation request alone establishes
+neither semantic change nor execution.
+
+F4 now explicitly names an established execution obligation. D7 specifies
+the automatic delivery boundary left open by the demand-based spec. Failed
+validation aborts its delivery before lifecycle. An unvisited pending sibling
+can keep coalescing changes. The next delivered invalidation validates the
+whole committed frontier with the latest states, preserving any established
+obligation. The proposed stronger retry guarantee is outside this contract.
+The `Rewake` prototype is rejected for its backward repair, temporary set,
+new normal push conditions and changed error attribution on sibling writes.
+
+This result is executable using the `f9be2d0` runtime. Model assertions,
+public API controls and concrete `DIRTY` assertions are in
+`test/watcher-validation.test.ts`. `research/watcher-validation.mjs` checks
+delivery with both release build settings. The separate stack and rollover
+candidates are retained in `research/fault-recovery-candidate`.
 
 **Provenance and ID map.** The contract was extracted from the Reflex
 material listed below. The comparison snapshot is Reflex `dev` `bf71877`;

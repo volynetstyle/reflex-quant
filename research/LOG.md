@@ -1552,3 +1552,36 @@ slot cells have been restored (LOG 43, superseding LOG 39's node-field reset).
 Written for V8: one node shape and one edge shape, each built at a single
 site; numeric fields are SMI counters (masked); conditions are explicit
 comparisons, so no ToBoolean runs on mixed values; the graph walks avoid recursion and allocation per stable read.
+
+## Failed validation and established execution (2026-11-19)
+
+The original two-branch research witness asserted that every change to an
+unvisited pending sibling must retry a watcher whose validation failed.
+That requirement was labelled F4. The executable model instead preserves an
+independent `executionPending` fact, which remains false if the first source
+throws before any change is confirmed. A confirmed change or failed body can
+establish an execution obligation that survives validation failure.
+
+F4's wording now names the established obligation. D7 specifies that the
+failed validation consumes its delivery, pending sibling changes may keep
+coalescing, and a later delivered invalidation checks the full committed
+frontier using the latest states. F1 still governs the next explicit demand
+of a failed computed. A cutoff control verifies that failed validation alone
+creates no execution obligation.
+
+The stronger retry requirement is rejected. Its `Rewake` and `reopenPush`
+prototype repaired notification history with a backward walk, a temporary
+`Set` and changed push tests. It also retried the throwing source during a
+sibling write. Those costs follow the stronger guarantee rather than F4.
+
+`test/watcher-validation.test.ts` exercises the independent model and public
+delivery behavior against `f9be2d0`. Representation assertions cover `DIRTY`
+being false at failure, true before validation, and established during the
+check before a later source throws. `research/watcher-validation.mjs` checks
+the 64 delivery controls in DEV and PROD. The stack and rollover candidates
+remain in `research/fault-recovery-candidate` for independent evaluation.
+
+The D7-only branch uses the `f9be2d0` source tree. Validation on Node 25.2.0
+and V8 14.1.146.11-node.13 passed 201 development tests and 194 production
+tests with seven diagnostic cases skipped. The strict research runner passed
+all 64 cases. The selected clarification requires zero runtime changes.
