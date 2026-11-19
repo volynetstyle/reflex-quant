@@ -15,7 +15,7 @@ Nothing outside this contract defines correctness: not explanatory documents, no
 
 P5, F5 and W5 lie outside the executable spec: its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API. D7 additionally describes automatic watcher delivery, which that spec leaves to its caller. `test/watcher-validation.test.ts` executes D7 through the public API.
 
-`test/failure-boundary.test.ts` exercises D8 in the demand-based model and T3 for a caught exception in an enclosing callback. `test/interrupted-validation.test.ts` exercises D8 through the public API. Native stack exhaustion is covered in [the research report](research/REPORT.md#native-stack-recovery-rq6).
+`test/failure-boundary.test.ts` exercises D8 in the demand-based model and T3 for a caught exception in an enclosing callback. `test/interrupted-validation.test.ts` exercises D8 through the public API.
 
 Graph and tracking
 - **T1 exact tracking.** A computation observes exactly the sources it read; dynamic branches add and drop relations.
@@ -32,6 +32,12 @@ Change and propagation
 Failure
 
 Quant owns the reactive evidence and obligations established by its machine, and the transient state of its own activations. A failure alone establishes no change, execution obligation, demand, delivery, or retry. Recovery proceeds when the contract supplies a cause, such as an explicit demand or a newly delivered invalidation. An established obligation survives until it can be discharged. Hidden JavaScript state, external side effects, and unrelated activity supply no evidence that a failed computation will now succeed.
+
+Actual exhaustion of the native JavaScript stack through synchronous user
+callback nesting (S7) is a resource limit. Continued use of the same Quant
+runtime state after catching that overflow has no defined behavior. An ordinary
+exception thrown by a callback, including a user-thrown `RangeError`, remains
+subject to F1–F5.
 
 - **F1 failed computed.** A failed computed commits nothing and executes on its next demand.
 - **F2 failed read.** A read that threw is not an observation.

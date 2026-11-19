@@ -413,6 +413,10 @@ and the computed keeps its last good value as `prev`. Once its inputs are fixed,
 it recovers on the next read. If an effect throws during creation, it leaves
 nothing running.
 
+The stack-safety guarantee covers Quant's graph walks. If synchronous nesting
+of callbacks exhausts the native JavaScript stack, continued use of the same
+Quant runtime state after catching the overflow has no defined behavior.
+
 **Use the development build to catch cycles.** Bundlers that resolve the
 `development` export condition (Vite, webpack, and Node with
 `--conditions=development`) load a build that throws `Cycle detected` when a

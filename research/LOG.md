@@ -1708,3 +1708,31 @@ The local runner and raw samples are in `.cache/validation-timing/`
 (`final-vs-main.json`, `validation-pinned.json`, `attachment-vs-main.json`
 and `pending-read-vs-main.json`). These timings apply to this machine
 and engine.
+
+### Interrupted-validation merge candidate
+
+[Benchmark run 44552818253](https://github.com/volynetstyle/reflex-quant/actions/runs/44552818253)
+passed at `985ff54`. It paired the production candidate with remote
+`main` at `66ed54e` for nine rounds on Node 22.23.4. Median
+candidate/main ratios and pair ranges were:
+
+| Scenario | Median | Pair range |
+|---|---:|---:|
+| `read.computed-clean` | 1.000 | 0.970–1.003 |
+| `track.fresh-after-reorder-64` | 1.010 | 0.940–1.124 |
+| `effect.through-computed` | 1.007 | 0.942–1.020 |
+| `effect.frontier-256-cutoff` | 0.983 | 0.830–1.214 |
+| `effect.frontier-256-dirty` | 0.957 | 0.813–1.172 |
+
+The CI median on fresh relations was +1.0%. The earlier Windows repeats
+showed +4.5% and +5.6% on an earlier attachment shape. The CI pair spread
+allows a regression on individual rounds.
+
+The candidate declares native stack exhaustion from synchronous user
+callback nesting a resource limit. The RQ6 recovery study remains available
+at `472a42b`. This decision changes the written boundary only. The runtime
+matches `985ff54`, and the D8 cutoff witness now uses a user-thrown
+`RangeError` to exercise ordinary exception recovery. Node 25.2.0 passed
+213 development tests, 206 production tests with seven diagnostics skipped,
+all 64 validation oracle cases across both modes, and all five named
+ablations in each mode. The release package check passed.

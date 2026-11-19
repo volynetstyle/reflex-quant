@@ -7,7 +7,7 @@ import { idle } from "../src/kernel";
 function interruptedChain() {
   const source = signal(0);
   const direct = signal(0);
-  const failure = new Error("leaf");
+  const failure = new RangeError("leaf");
   let broken = true;
   let leafRuns = 0;
   let rootRuns = 0;

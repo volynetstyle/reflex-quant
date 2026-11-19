@@ -102,22 +102,28 @@ existing flag word. The evidence and representation limits are in
 
 ### Native stack recovery (RQ6)
 
-The proposed F6 obligation concerns transient Quant state after a catchable
-native stack overflow. An abandoned activation must release its transient
-state and restore any enclosing activation so that later valid work can run.
-Its adoption belongs with the RQ6 implementation and witnesses.
+The contract treats native stack exhaustion through synchronous callback
+nesting as a resource limit. S7 still bounds Quant's graph walks. F1–F5
+still apply to ordinary callback exceptions, including explicitly thrown
+`RangeError` instances. The D8 cutoff witness exercises that exception.
 
-S7 covers Quant's own graph walks. User callbacks can synchronously demand
-each other until the native stack is exhausted. On Node 25.2.0 with
-`--stack-size=256`, a cold chain of 10,000
-computeds threw a `RangeError` and subsequently recovered when read from leaf
-to root. A warm chain of the same length with a shared signal and reordered
-indexed reads also overflowed. Its subsequent leaf-to-root reads reported
-`Cycle detected` on the acyclic graph in both release configurations of
-`66ed54e`. The first exception is permitted by S7. The later cycle error
-violates the proposed obligation. The indexed-chain witness and candidate
-cleanup are available in `437e2f6`, in `test/fault-boundaries.test.ts` and
-`src/kernel.ts`.
+On Node 25.2.0 with `--stack-size=256`, a cold chain of 10,000 computeds
+overflowed and subsequently recovered when read from leaf to root. A warm
+chain with a shared signal and reordered indexed reads also overflowed.
+Subsequent leaf-to-root reads reported `Cycle detected` on the acyclic graph
+in both release configurations of `66ed54e`. This witness shows what can
+happen when the program crosses the resource limit.
+
+The [RQ6 experiment at `472a42b`](https://github.com/volynetstyle/reflex-quant/commit/472a42bdde79b1eabe0b077bf28b76a695fd3a08)
+preserves the proposed F6, its tests and its implementation. A native
+overflow can prevent a callee from entering after the caller mutates runtime
+state. Recovery in that candidate spans activation and slot cleanup,
+incomplete push paths, committed-write propagation, and host hold and queue
+ownership. Tracking unfinished push ancestry adds work-stack traffic to
+ordinary propagation. Continued use after this resource limit is outside
+the selected contract, so the F6 recovery mechanisms have no admission
+obligation. Reopening F6 would require an explicit contract decision and a
+design that accounts for all these interruption points.
 
 ### Provenance
 
