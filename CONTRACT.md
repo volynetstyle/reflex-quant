@@ -15,6 +15,8 @@ Nothing outside this contract defines correctness: not explanatory documents, no
 
 P5, F5 and W5 lie outside the executable spec: its program language has no write inside a computation, no batch, and creating a watcher there runs nothing. `test/semantics.test.ts` executes them through the public API. D7 additionally describes automatic watcher delivery, which that spec leaves to its caller. `test/watcher-validation.test.ts` executes D7 through the public API.
 
+`test/failure-boundary.test.ts` exercises D8 in the demand-based model and F6 for a caught exception in an enclosing callback. Known runtime gaps for interrupted validation and native stack exhaustion are recorded in [the research report](research/REPORT.md#failure-boundary-d8-f6-and-s7).
+
 Graph and tracking
 - **T1 exact tracking.** A computation observes exactly the sources it read; dynamic branches add and drop relations.
 - **T2 relation uniqueness.** One relation per (source, consumer) pair, under repeats, reorders, nesting, and failures.
@@ -28,11 +30,15 @@ Change and propagation
 - **P5 in-pass invalidation.** Once a computation has observed a source in an execution, a later committed change to that source leaves it owing another execution; rereading the source in the same execution does not discharge the obligation.
 
 Failure
+
+Quant owns the reactive evidence and obligations established by its machine, and the transient state of its own activations. A failure alone establishes no change, execution obligation, demand, delivery, or retry. Recovery proceeds when the contract supplies a cause, such as an explicit demand or a newly delivered invalidation. An established obligation survives until it can be discharged. Hidden JavaScript state, external side effects, and unrelated activity supply no evidence that a failed computation will now succeed.
+
 - **F1 failed computed.** A failed computed commits nothing and executes on its next demand.
 - **F2 failed read.** A read that threw is not an observation.
 - **F3 failed watcher.** An established watcher (W5) whose run fails is cold and wakes on committed sources ∪ last-attempt reads.
-- **F4 established obligation survives.** Once execution is owed, a failure does not discharge that obligation. Validation failure before execution becomes owed does not itself create an execution obligation. Retaining an obligation does not independently schedule another delivery (D7).
+- **F4 established obligation survives.** Once execution is owed, a failure does not discharge that obligation. Validation interrupted before a change is established creates no execution obligation for the validator or any ancestor solely because of the interruption. Retaining an obligation does not independently schedule delivery (D7).
 - **F5 first error.** An operation that fails rethrows the first error raised in it. Obligations it still discharges afterwards run, and their errors do not replace that first error. Those obligations are the later watchers of the same drain, the watchers a failing batch body deferred, and the rollback of a failed `effect()` call (W5).
+- **F6 abandoned activation is no longer live.** When an exception unwinds an evaluation or validation in a contract-valid program, Quant releases that activation's transient state and restores any enclosing activation. Later valid work can proceed without a spurious cycle or stale tracking state from the abandoned activation. This guarantee entails neither retry of the failed operation nor rollback of user side effects.
 
 Watchers and lifecycle
 - **W1 cleanup first.** The previous cleanup is consumed before a rerun.
@@ -56,6 +62,7 @@ A program that breaks a precondition is erroneous, and no invariant covers it. T
 - **D2 failed computed re-entry.** A failed computed executes on its next demand without validating its old frontier first, even if that frontier now throws (F1). The provenance spec validates the old frontier first (research/REPORT.md).
 - **D6 in-pass invalidation.** A relation keeps the version of its source's first successful observation in an execution, and an execution is validated as of its start (P5). The provenance spec refreshes the version on every reread and stamps its validation after the execution, so a change an execution makes to a source it already observed is never seen (research/REPORT.md).
 - **D7 failed watcher validation is a barrier.** Failed validation aborts that delivery before any watcher lifecycle step (P4). Invalidations already coalesced into it remain pending and create no independent retry obligation. A later delivered invalidation retries the full committed source set, using the latest states of pending branches and preserving any established execution obligation (F4). The barrier alone schedules no further attempt. F1 continues to require execution of a failed computed on its next demand.
+- **D8 interrupted computed validation.** When validation is interrupted before a change is established, the computed validates its committed dependencies on its next demand in D1 order. If their versions are unchanged, cutoff is preserved (P2). An execution owed on independent evidence still runs (F1, F4). A later invalidation that would reach the consumer through the interrupted validation path must still be able to reach it. D7 governs branches already coalesced outside that path.
 
 ### Structural bounds
 
@@ -65,6 +72,6 @@ A program that breaks a precondition is erroneous, and no invariant covers it. T
 - **S4** graph size proportional to live relations;
 - **S5** repeated failures do not accumulate relations;
 - **S6** nesting does not rebuild global state;
-- **S7** traversal is bounded and stack-safe.
+- **S7 kernel traversal is bounded and stack-safe.** Quant's graph walks use bounded work and do not consume JavaScript call stack proportional to graph depth. Synchronous nesting of user callbacks that demand other computations is outside this stack bound. If such nesting unwinds with a catchable exception, F6 applies.
 - **S8** host queue storage is O(W) plus constant slack, where W is the most scheduled watchers queued at once. Completed deliveries do not accumulate queue storage.
 

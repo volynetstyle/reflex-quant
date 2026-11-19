@@ -44,9 +44,9 @@ let peak = 0;
 let wake: (w: Node) => void = () => {};
 
 /**
- * The host is told about every watcher a write or mark reaches. It owns the
- * deduplication (a queued watcher is not queued again), so a watcher left
- * STALE by a failed check is delivered again by the next push.
+ * The host deduplicates notifications for watchers a write or mark reaches.
+ * A push can stop at an already stale computed before reaching a watcher
+ * whose previous check failed (D7).
  */
 export function onWake(fn: (w: Node) => void): void {
   wake = fn;

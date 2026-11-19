@@ -17,7 +17,7 @@
 
 Reflex Quant is a framework-agnostic fine-grained reactivity library for JavaScript
 and TypeScript, with signals, computeds and effects in under 3 KB gzip. It combines
-exact dynamic dependency tracking, glitch-free propagation, stack-safe execution
+exact dynamic dependency tracking, glitch-free propagation, stack-safe graph traversal
 and defined failure semantics. Its implementation was derived from a written
 reactive contract and validated through differential testing.
 

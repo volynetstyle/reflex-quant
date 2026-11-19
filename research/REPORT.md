@@ -8,7 +8,7 @@
 > and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien-signals-comparison/).
 
 Experiment: derive a reactive runtime from a frozen contract (invariants
-T1–W5, bounds S1–S8, decisions D1, D2, D6 and D7, precondition C1 in
+T1–W5, bounds S1–S8, decisions D1, D2, D6, D7 and D8, precondition C1 in
 [CONTRACT.md](../CONTRACT.md)) that
 was extracted from Reflex's semantic contract and executable spec, not from
 its implementation; Reflex is provenance, not authority; keep every mechanism
@@ -84,6 +84,33 @@ public API controls and concrete `DIRTY` assertions are in
 `test/watcher-validation.test.ts`. `research/watcher-validation.mjs` checks
 delivery with both release build settings. The separate stack and rollover
 candidates are retained in `research/fault-recovery-candidate`.
+
+### Failure boundary (D8, F6 and S7)
+
+F4 applies to computed validators and their ancestors. Only a confirmed
+change or a previously established obligation justifies executing a body.
+Under D8, a failed leaf body retries on demand (F1), and its ancestors
+compare the versions in their committed frontiers (D1). The model test in
+`test/failure-boundary.test.ts` counts the middle and root callbacks. Both
+stay at one invocation after unchanged recovery and reach two after changed
+recovery. On `66ed54e`, both release configurations reached two even for
+unchanged recovery. The returned value alone concealed the D8 violation.
+`verify` marks the interrupted spine dirty. Recording the interruption as
+`Unverified` is one candidate. The witness establishes the need to preserve
+cutoff and allow a later causal push, while leaving the encoding open.
+
+S7 covers Quant's own graph walks. User callbacks can synchronously demand
+each other until the native stack is exhausted. F6 applies once the stack
+unwinds. On Node 25.2.0 with `--stack-size=256`, a cold chain of 10,000
+computeds threw a `RangeError` and subsequently recovered when read from leaf
+to root. A warm chain of the same length with a shared signal and reordered
+indexed reads also overflowed. Its subsequent leaf-to-root reads reported
+`Cycle detected` on the acyclic graph in both release configurations of
+`66ed54e`. The first exception is permitted by S7. The later cycle error
+violates F6. The indexed-chain witness and candidate cleanup are available
+in `437e2f6`, in `test/fault-boundaries.test.ts` and `src/kernel.ts`.
+
+### Provenance
 
 **Provenance and ID map.** The contract was extracted from the Reflex
 material listed below. The comparison snapshot is Reflex `dev` `bf71877`;

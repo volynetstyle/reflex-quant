@@ -65,10 +65,9 @@ export function watcher(fn: NodeFn, auto: boolean): Node {
 
 /**
  * Check every committed source unless only signals woke it, then, if a run
- * is owed, consume the previous cleanup and run. A watcher neither STALE,
- * WOKEN is clean, or cold after a failure until a source changes. A failed
- * check leaves it STALE, so the next run checks again (V1) and the next push
- * finds it queued or delivers it again.
+ * is owed, consume the previous cleanup and run. A failed check leaves the
+ * watcher STALE. A later delivered invalidation checks the committed sources
+ * again. Already coalesced invalidations need not reschedule it (D7).
  * Precondition: its own run is not on the stack (flush is not reentrant).
  */
 export function run(w: Node): void {
