@@ -475,8 +475,27 @@ export function dispose(n: Node): void {
   if ((n.flags & Flag.Busy) === 0) detach(n);
 }
 
+/**
+ * Disposal's teardown. A watcher's also clears each removed edge's
+ * `nextDep`, so a `check` walking the list ends after the pull that disposed
+ * it and starts no further pulls for its delivery (W3). A computed keeps the
+ * chain: the walk belongs to the demand in progress, which goes on (W3).
+ */
 function detach(n: Node): void {
-  cutDeps(n, null);
+  if ((n.flags & Flag.Watch) === 0) cutDeps(n, null);
+  else {
+    let e = n.firstDep;
+
+    n.firstDep = n.lastDep = null;
+
+    while (e !== null) {
+      const next: Edge | null = e.nextDep;
+
+      unlinkSub(e);
+      e.prevDep = e.nextDep = null;
+      e = next;
+    }
+  }
   n.flags &= ~Flag.PendingMarked;
 }
 

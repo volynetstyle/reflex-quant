@@ -125,6 +125,27 @@ the selected contract, so the F6 recovery mechanisms have no admission
 obligation. Reopening F6 would require an explicit contract decision and a
 design that accounts for all these interruption points.
 
+### Disposal during watcher validation (Q1)
+
+P4 orders rerun cleanup and execution after validation while the
+watcher is live. W3 makes disposal terminal. A source pulled during
+validation can dispose the watcher and synchronously run its disposal
+cleanup, or throw during that cleanup or the rest of the pull. Once
+that pull returns, validation may neither establish an execution
+obligation nor follow the detached dependency list to a later source.
+When it throws, the host delivers the original error and preserves
+terminal disposal.
+
+The baseline's end-of-frontier check prevents a body rerun but still
+pulls the next detached source: the walk follows the removed edges'
+`nextDep` chain. A watcher's teardown now clears that chain, so the walk
+ends after the pull that disposed it and the existing tombstone test
+returns. `check` gains no test; a computed's teardown is unchanged, since
+its validation serves the demand in progress (W3). Pending bits a
+failure leaves on a disposed watcher are unobservable and stay. No new
+state is needed. The witnesses and ablations are
+recorded in the [transition log](LOG.md#disposal-during-watcher-validation-q1).
+
 ### Provenance
 
 **Provenance and ID map.** The contract was extracted from the Reflex
@@ -162,7 +183,7 @@ the first architecture pass.
 | change is a version fact (`Object.is` at commit; ABA counts) | spec `version` | probe P6 |
 | cutoff: an unchanged computed does not propagate | RUNTIME, spec rule 3 | P7, semantics "cutoff" |
 | no glitch, one execution per node per wave | (implied) | semantics "diamond", "layered diamond 8x8" |
-| validate ≠ execute: watchers validate their whole committed set before any lifecycle step (V3) | SEMANTIC_CONTRACT V1–V6 | P10 |
+| validate ≠ execute: a live watcher validates its whole committed set before rerun cleanup or execution (V3) | SEMANTIC_CONTRACT V1–V6 | P10 |
 | C1–C3: a failed computed commits nothing and executes on its next demand | SEMANTIC_CONTRACT | recovery language, P2 |
 | C4/R3: a read that threw is no observation | SEMANTIC_CONTRACT, F18 boundary | contract-boundary catalog |
 | W1–W3: cleanup consumed first; a failed watcher is cold and wakes on committed ∪ last-attempt reads | SEMANTIC_CONTRACT, spec `retrySnapshot` | P3, P4, P5, P8 |
