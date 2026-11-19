@@ -568,15 +568,16 @@ function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 
   const first = s.firstSub;
   const tail = first !== null ? first.prevSub : null;
+  // Field order is the object layout: what each walk reads sits together.
   const e: Edge = {
     from: s,
-    to: c,
     ver: s.ver,
+    nextDep: next,
+    to: c,
+    nextSub: null,
     gen: (c.gen + 1) & CounterLimit.Mask,
     prevDep: last,
-    nextDep: next,
     prevSub: tail,
-    nextSub: null,
   };
 
   if (last !== null) last.nextDep = e;
