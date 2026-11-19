@@ -1554,6 +1554,16 @@ No new runtime mechanism, field, guard or type/range restriction is admitted.
   witnesses in `semantics`, `structure` and `disposal-differential`, so the
   tag test carries the soundness. 229 dev / 222 production tests; 2,866 B
   gzip (main 2,857).
+- **CI against main 7c11e9d** (run 44602133669, 9 rounds). 101 paired
+  rows, geomean 1.001; validation ablations pass on Node 22 and 25 in
+  both builds. Highest: `mount-dispose@64` 1.047 [1.005, 1.256], a path
+  that never reaches `lookup`; `fan-out.computeds-1000` 1.031. The target
+  is not in the CI corpus. Locally (Node 25, 7 rounds) `swaps-nested@8`
+  is 0.912; other `swaps`, `move-earlier` and `move-later` sizes stay
+  within 0.964–1.066 with wide ranges.
+- **Boundary.** From `swaps-nested@32` on, one mark per pass remains
+  (761 edges): the forward scan runs out of budget and finds an untagged
+  pair, which no field places (research/marked-escalation, LOG).
 
 ## Representation and edge removal note
 
