@@ -1730,13 +1730,16 @@ allows a regression on individual rounds.
 
 The historical ablation runner now targets the current flag masks and
 validation unwind. All 58 mutant anchors and the Reflex idle emulation
-resolve against the candidate.
+resolve against the candidate. The existing W3 witness now checks pending
+state immediately after a failed demand disposes the validator, before a
+later read could consume that state.
 
 The candidate declares native stack exhaustion from synchronous user
 callback nesting a resource limit. The RQ6 recovery study remains available
 at `472a42b`. This decision changes the written boundary only. The runtime
 matches `985ff54`, and the D8 cutoff witness now uses a user-thrown
-`RangeError` to exercise ordinary exception recovery. Node 25.2.0 passed
+`RangeError` with a stack-overflow message to exercise ordinary exception
+recovery. Node 25.2.0 passed
 213 development tests, 206 production tests with seven diagnostics skipped,
 all 64 validation oracle cases across both modes, and all five named
 ablations in each mode. The release package check passed.

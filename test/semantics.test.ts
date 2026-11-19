@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { batch, computed, dispose, effect as watch, get, peek, set, signal, untracked, type Computed, type Effect } from "../src/index";
 import { idle } from "../src/kernel";
-import type { Node } from "../src/graph";
+import { Flag, type Node } from "../src/graph";
 import { checkGraph } from "./support/graph";
 import { dev } from "./support/mode";
 import { foundRepeat, prefixRepeat } from "./support/p5";
@@ -709,7 +709,7 @@ describe("W3 disposal during validation", () => {
     }
   });
 
-  it("a later source failing in the same walk does not leave the disposed computed owing a run", () => {
+  it("a later source failing in the same walk does not reopen a disposed computed (W3)", () => {
     // a disposes b and comes out unchanged, so the walk goes on to t, which
     // throws into the demand in progress; b is terminal from then on.
     const { s, fault, b } = program(false, false);
@@ -718,6 +718,7 @@ describe("W3 disposal during validation", () => {
       set(s, 1);
     });
     expect(() => get(b)).toThrow("t");
+    expect(n(b).flags & Flag.Pending).toBe(0);
     expect(get(b)).toBe(1);
     set(fault, false);
     expect(get(b)).toBe(1);
