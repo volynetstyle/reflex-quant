@@ -6,6 +6,7 @@ import {
   Flag,
   KEEP,
   CounterLimit,
+  EXPIRED,
   SCAN,
   SETTLE,
   SKIPPED,
@@ -96,8 +97,11 @@ function trim(): void {
 export function write(s: Node, value: unknown): void {
   if (compare(s.value, value)) return;
 
+  const version = (s.ver + 1) & CounterLimit.Mask;
+  if (version === 0) expireObservations(s);
+
   s.value = value;
-  s.ver = (s.ver + 1) & CounterLimit.Mask;
+  s.ver = version;
 
   for (let e = s.firstSub; e !== null; e = e.nextSub) {
     const n = e.to;
@@ -130,6 +134,13 @@ export function write(s: Node, value: unknown): void {
 
       if (subs !== null) mark(subs);
     }
+  }
+}
+
+/** Prevent old observations from matching a reused producer version. */
+function expireObservations(n: Node): void {
+  for (let e = n.firstSub; e !== null; e = e.nextSub) {
+    if (e.ver >= 0) e.ver = EXPIRED;
   }
 }
 
@@ -428,8 +439,11 @@ export function exec(n: Node): void {
   if ((n.gen & SETTLE) === 0) settleDeps(n);
 
   if (compare(value, n.value) === false) {
+    const version = (n.ver + 1) & CounterLimit.Mask;
+    if (version === 0) expireObservations(n);
+
     n.value = value;
-    n.ver = (n.ver + 1) & CounterLimit.Mask;
+    n.ver = version;
   }
 }
 

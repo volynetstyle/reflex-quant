@@ -70,6 +70,10 @@ export const mutants = [
     [K, "    if ((flags & Flag.Stale) === 0) return flags;\n    w.flags = flags & ~Flag.Stale;", "    return flags;"]],
   ["no-attachment-handoff", "P5: a new observer receives the invalidation that preceded its edge",
     [K, "  if ((s.flags & Flag.Stale) !== 0) mark(e);\n", ""]],
+  ["no-signal-version-expiry", "P5: an in-pass observation survives a wrapped signal version",
+    [K, "  if (version === 0) expireObservations(s);\n", ""]],
+  ["no-computed-version-expiry", "P1: a pending observation survives a wrapped computed version",
+    [K, "    if (version === 0) expireObservations(n);\n", ""]],
   ["wake-guard", "the kernel wakes a watcher only when it is neither STALE nor WOKEN (re-delivery after a failed validation)",
     [K, "      n.flags = f | Flag.Dirty | Flag.Woken;\n      wake(n);", "      n.flags = f | Flag.Dirty | Flag.Woken;\n      if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"],
     [K, "        n.flags = f | Flag.Stale;\n        wake(n);", "        n.flags = f | Flag.Stale;\n        if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"]],
@@ -221,6 +225,7 @@ if (process.argv.includes("--validation")) {
   mkdirSync(cache, { recursive: true });
   const interrupted = "test/interrupted-validation.test.ts";
   const delivery = "test/validation-delivery.test.ts";
+  const rollover = "test/version-rollover.test.ts";
   const retry = "retries an interrupted validation on demand and preserves cutoff (D8)";
   const witnesses = [
     ["validation-stale", interrupted, "delivers again through the interrupted path after a causal write (D8)"],
@@ -228,8 +233,10 @@ if (process.argv.includes("--validation")) {
     ["validation-clean", interrupted, retry],
     ["no-check-restart", delivery, "rechecks a committed source made stale by a later source before cleanup (RQ3, P4)"],
     ["no-attachment-handoff", delivery, "checks a pending source on demand after the first computed subscription (RQ1b)"],
+    ["no-signal-version-expiry", rollover, "retains an in-pass obligation across a signal version wrap (RQ5, P5)"],
+    ["no-computed-version-expiry", rollover, "expires an unvalidated computed observation when its source wraps (RQ5, P1)"],
   ];
-  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery] });
+  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery, rollover] });
   if (baseline.status !== 0 || baseline.total === 0 || baseline.failed.length || baseline.error) {
     throw new Error(`validation baseline failed in ${mode}: ${JSON.stringify(baseline)}`);
   }

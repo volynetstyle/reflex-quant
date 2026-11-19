@@ -1743,3 +1743,17 @@ recovery. Node 25.2.0 passed
 213 development tests, 206 production tests with seven diagnostics skipped,
 all 64 validation oracle cases across both modes, and all five named
 ablations in each mode. The release package check passed.
+
+### Producer version rollover (RQ5)
+
+The baseline `5e7e80d` loses the watcher rerun and returns stale
+computed data when the producer and an outstanding observation compare
+equal across rollover. The witness advances only the producer clock
+and uses real writes and computed commits to cross zero. Each named
+ablation removes expiry at one of the two commit sites and reproduces
+the corresponding failure. The report records the version argument
+and the O(out-degree) wrap cost.
+
+Node 25.2.0 passed 215 development tests and 208 production tests with
+seven diagnostics skipped. Both RQ5 ablations failed their named
+witnesses in each mode. The release package check passed.
