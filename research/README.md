@@ -21,6 +21,8 @@ and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien
 ```sh
 node research/watcher-validation.mjs --strict
 node research/watcher-validation.mjs --mode production --strict
+node research/mutants.mjs --validation
+node research/mutants.mjs --validation --mode production
 ```
 
 The runner builds the current sources with release DEV and PROD settings and
@@ -46,6 +48,29 @@ recovery and cutoff through the public API, an obligation surviving repeated
 failure, and F1 on explicit computed demand. Test-only representation
 assertions check `DIRTY` before and after a thrown validation, including a
 change confirmed partway through the check. D7 is valid in both build modes.
+
+The validation ablations first run the witnesses on the unmodified runtime.
+Each mutant must then fail its named public test. The three D8 mutants
+substitute `STALE`, `DIRTY` or clean state for interrupted validation. The
+other two drop the P4 restart and the P5 attachment handoff. A crash or a
+surviving mutant fails the run. Benchmark CI runs these checks in DEV and
+PROD and uploads the reports.
+
+### Benchmark comparison with main
+
+Dispatch the existing Benchmark workflow on the research branch.
+
+```sh
+gh workflow run benchmark.yml --ref research/interrupted-validation -f rounds=9
+```
+
+The build job records the two commit SHAs and uses the same Quant adapter and
+production options for both. The mechanisms, scenarios and scaling jobs
+time candidate and main in adjacent processes on the same runner and
+alternate their order. Reports show the median and range of paired ratios
+and retain the raw samples. A candidate/main ratio above one means the
+candidate took longer. Cost probes, structural counters and edge churn
+are included in the same run.
 
 ### Rejected notification repair
 

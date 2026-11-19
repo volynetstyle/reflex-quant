@@ -354,6 +354,26 @@ export const scenarios = [
       return (i) => (s.set(i), out);
     },
   },
+  ...["cutoff", "dirty"].map((mode) => ({
+    id: `effect.frontier-256-${mode}`,
+    group: "effect",
+    note: `one watcher over 256 computeds, changing the first source: ${mode}`,
+    setup(api) {
+      const input = api.signal(0);
+      const first = api.computed(() => {
+        const value = input.get();
+        return mode === "cutoff" ? Number(value < 0) : value;
+      });
+      const rest = range(255).map((i) => api.computed(() => i));
+      let result = 0;
+      api.effect(() => {
+        let sum = first.get();
+        for (const source of rest) sum += source.get();
+        result = sum;
+      });
+      return (i) => (input.set(i), result);
+    },
+  })),
   // -------------------------------------------------------------- batch
   {
     id: "batch.coalesce-64",

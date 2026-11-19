@@ -5,7 +5,9 @@ import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const run = (file, args = []) => execFileSync(process.execPath, [path.join(root, file), ...args], { cwd: root, stdio: "inherit" });
-run("bench/build.mjs");
+const args = process.argv.slice(2);
+const main = args.indexOf("--main");
+run("bench/build.mjs", main < 0 ? [] : args.slice(main, main + 2));
 run("bench/cost/build.mjs");
 const probes = process.argv.includes("--smoke")
   ? ["leaf", "decompose"]

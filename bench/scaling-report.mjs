@@ -17,18 +17,22 @@ const out = outAt < 0 ? undefined : args[outAt + 1];
 const files = args.filter((_, i) => outAt < 0 || (i !== outAt && i !== outAt + 1));
 if (files.length === 0) throw new Error("usage: scaling-report.mjs <timing.json> [...] [--out <file.md>]");
 
-const runtimes = ["quant", "reflex", "alien"];
 const byFamily = new Map();
 let env;
 for (const file of files) {
   const data = JSON.parse(readFileSync(file, "utf8"));
   env ??= data.env;
+  const main = data.env?.manifest?.["quant-main"]?.commit;
+  if (main !== env?.manifest?.["quant-main"]?.commit) throw new Error(`inconsistent main baseline in ${file}`);
   for (const row of data.rows) {
     const [family, size] = row.id.split("@");
     const n = Number(size);
     if (!Number.isFinite(n)) continue;
     const entry = byFamily.get(family) ?? { family, note: templates[family]?.note ?? row.note, points: [] };
-    entry.points.push({ n, ...Object.fromEntries(runtimes.map((r) => [r, row[r].median])) });
+    entry.points.push({
+      n, quant: row.quant.median, reflex: row.reflex.median, alien: row.alien.median,
+      "quant-main": row["quant-main"]?.median, mainRatio: row.mainComparison?.median,
+    });
     byFamily.set(family, entry);
   }
 }
@@ -50,23 +54,34 @@ function slope(points, runtime) {
 const fmt = (ns) => (ns >= 1e6 ? `${(ns / 1e6).toFixed(2)} ms` : ns >= 1e3 ? `${(ns / 1e3).toFixed(2)} µs` : `${ns.toFixed(1)} ns`);
 const families = [...byFamily.values()].map((f) => ({ ...f, points: f.points.sort((a, b) => a.n - b.n) }));
 const sizes = [...new Set(families.flatMap((f) => f.points.map((p) => p.n)))].sort((a, b) => a - b);
+const main = env?.manifest?.["quant-main"]?.commit;
+const runtimes = main ? ["quant", "quant-main", "reflex", "alien"] : ["quant", "reflex", "alien"];
+const columns = [
+  ...runtimes.map((r) => `${r} slope`),
+  ...runtimes.map((r) => `${r} ns/N`),
+  "quant / best at max N",
+];
+if (main) columns.push("quant / main at max N (paired)");
 
 const lines = [];
 if (env) lines.push(`Node ${env.node} (V8 ${env.v8}), ${env.cpu} x${env.cores}, ${env.os}; ${env.rounds} rounds`, "");
+if (main) lines.push(`Quant ${env.manifest.quant.commit} vs main ${main}.`, "");
 lines.push(
   "Growth exponent: slope of log(ns/step) on log(N) (0 constant, 1 linear, 2 quadratic); ns per N at the largest N.",
   "",
-  "| family | quant slope | reflex slope | alien slope | quant ns/N | reflex ns/N | alien ns/N | quant / best at max N |",
-  "| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+  `| family | ${columns.join(" | ")} |`,
+  `| --- | ${columns.map(() => "---:").join(" | ")} |`,
 );
 for (const f of families) {
   const big = f.points.at(-1);
   const s = runtimes.map((r) => slope(f.points, r).toFixed(2));
   const perN = runtimes.map((r) => (big[r] / big.n).toFixed(2));
   const vsBest = (big.quant / Math.min(big.reflex, big.alien)).toFixed(2);
-  lines.push(`| ${f.family} | ${s.join(" | ")} | ${perN.join(" | ")} | ${vsBest} |`);
+  const cells = [f.family, ...s, ...perN, vsBest];
+  if (main) cells.push(big.mainRatio.toFixed(3));
+  lines.push(`| ${cells.join(" | ")} |`);
 }
-lines.push("", "ns/step per N (quant / reflex / alien):", "", `| family | ${sizes.map((n) => `N=${n}`).join(" | ")} |`, `| --- | ${sizes.map(() => "---:").join(" | ")} |`);
+lines.push("", `ns/step per N (${runtimes.join(" / ")})`, "", `| family | ${sizes.map((n) => `N=${n}`).join(" | ")} |`, `| --- | ${sizes.map(() => "---:").join(" | ")} |`);
 for (const f of families) {
   const cells = sizes.map((n) => {
     const p = f.points.find((x) => x.n === n);

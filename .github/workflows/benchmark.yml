@@ -1,9 +1,9 @@
 name: Benchmark
 
 # Quant vs the vendored Reflex baseline vs alien-signals, split into parallel
-# jobs. Bundles are built and checksum-verified once, then shared. Every
-# timing job runs all three runtimes on its own runner, so ratios within one
-# job are valid; never compare times across jobs or runs.
+# jobs. Bundles are built and checksum-verified once, then shared. Manual
+# runs on a research branch also pair that Quant build with main on the
+# same runner. Ratios use measurements from one job.
 #
 #   mechanisms  one job per mechanism (bench/mechanisms.mjs): read, write,
 #               track, push, pull, effect, batch, lifecycle
@@ -15,6 +15,7 @@ name: Benchmark
 #               regime, layout, decompose, leaf, lower-bound, surface, reorder
 #   structure   counters for all suites (counting, not timing)
 #   edge-churn  isolated Edge allocation probe
+#   ablations   D8, P4 and P5 witnesses for the failure-recovery mechanisms
 
 on:
   push:
@@ -57,12 +58,28 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Checkout the Quant main baseline
+        id: main
+        if: github.event_name == 'workflow_dispatch' && github.ref_name != 'main'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: refs/heads/main
+          path: .cache/quant-main
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: "22.23.4"
           cache: npm
       - run: npm ci
-      - run: npm run check:bench
+      - name: Build and verify the cost probes
+        env:
+          MAIN_CHECKOUT: ${{ steps.main.outcome }}
+        run: |
+          if [[ "$MAIN_CHECKOUT" == "success" ]]; then
+            npm run check:bench -- --main "$PWD/.cache/quant-main"
+          else
+            npm run check:bench
+          fi
       - name: Same answers on every runtime
         run: |
           node bench/run.mjs --suite mechanisms --verify-only
@@ -81,6 +98,41 @@ jobs:
           path: .cache/cost/
           include-hidden-files: true
           retention-days: 1
+
+  ablations:
+    name: validation ablations / ${{ matrix.mode }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [development, production]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.23.4"
+          cache: npm
+      - run: npm ci
+      - name: Require a named semantic witness for each ablation
+        env:
+          MODE: ${{ matrix.mode }}
+        run: |
+          mkdir -p .cache/mutants
+          node research/watcher-validation.mjs --strict --mode "$MODE" | tee ".cache/mutants/d7-$MODE.jsonl" | tail -n 1
+          node research/mutants.mjs --validation --mode "$MODE"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: validation-ablations-${{ matrix.mode }}
+          path: |
+            .cache/mutants/validation-${{ matrix.mode }}.json
+            .cache/mutants/d7-${{ matrix.mode }}.jsonl
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 30
 
   mechanisms:
     name: mechanism ${{ matrix.mechanism }}

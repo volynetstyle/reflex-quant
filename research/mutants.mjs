@@ -3,6 +3,8 @@
 // deletion; the failing test is its smallest known counterexample.
 //
 //   node research/mutants.mjs [id ...]      results -> research/mutants.json
+//   node research/mutants.mjs --validation [--mode production]
+//        requires each validation mutant to fail its named public witness
 //   node research/mutants.mjs --emulate-reflex
 //        builds quant with Reflex's failure choices (D3, D4, D5) and prints
 //        the directory, for QUANT_SRC=<dir> (test/tools/attribution.test.ts)
@@ -58,9 +60,16 @@ export const mutants = [
   ["clear-after", "STALE cleared before the run, so pushes during it survive",
     [K, "        ? Flag.Stale | Flag.Dirty | Flag.Checking\n        : Flag.Stale | Flag.Dirty)) |", "        ? Flag.Dirty | Flag.Checking\n        : Flag.Dirty)) |"],
     [K, "  n.flags = f & ~Flag.Busy;", "  n.flags = f & ~(Flag.Busy | Flag.Stale);"]],
-  ["validation-stale", "a failed validation leaves DIRTY (push passes) rather than STALE",
-    [K, "        ? (n.flags | Flag.Dirty) & ~Flag.Checking\n        : n.flags | Flag.Dirty;", "        ? (n.flags | Flag.Stale) & ~Flag.Checking\n        : n.flags | Flag.Stale;"],
-    [K, "          ? (p.flags | Flag.Dirty) & ~Flag.Checking\n          : p.flags | Flag.Dirty;", "          ? (p.flags | Flag.Stale) & ~Flag.Checking\n          : p.flags | Flag.Stale;"]],
+  ["validation-stale", "D8: retaining STALE after interruption blocks the next causal push",
+    [K, "flags | Flag.Unverified : flags;", "flags | Flag.Stale : flags;"]],
+  ["validation-dirty", "D8: fabricating DIRTY after interruption loses cutoff",
+    [K, "flags | Flag.Unverified : flags;", "flags | Flag.Dirty : flags;"]],
+  ["validation-clean", "D8: clearing interrupted validation skips the next demand",
+    [K, "(flags & Flag.Dirty) === 0 ? flags | Flag.Unverified : flags;", "flags;"]],
+  ["no-check-restart", "P4: a fresh STALE mark requires validation before lifecycle",
+    [K, "    if ((flags & Flag.Stale) === 0) return flags;\n    w.flags = flags & ~Flag.Stale;", "    return flags;"]],
+  ["no-attachment-handoff", "P5: a new observer receives the invalidation that preceded its edge",
+    [K, "  if ((s.flags & Flag.Stale) !== 0) mark(e);\n", ""]],
   ["wake-guard", "the kernel wakes a watcher only when it is neither STALE nor WOKEN (re-delivery after a failed validation)",
     [K, "      n.flags = f | Flag.Dirty | Flag.Woken;\n      wake(n);", "      n.flags = f | Flag.Dirty | Flag.Woken;\n      if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"],
     [K, "        n.flags = f | Flag.Stale;\n        wake(n);", "        n.flags = f | Flag.Stale;\n        if ((f & (Flag.Stale | Flag.Woken)) === 0) wake(n);"]],
@@ -171,12 +180,17 @@ function build(id, edits) {
   return dir;
 }
 
-function runSuite(dir, id) {
+function runSuite(dir, id, { mode, files = [] } = {}) {
   const out = path.join(cache, `${id}.json`);
+  rmSync(out, { force: true });
+  const env = { ...process.env, QUANT_RUNS: "3000" };
+  if (dir === null) delete env.QUANT_SRC;
+  else env.QUANT_SRC = dir;
   const result = spawnSync(
     process.execPath,
-    [path.join(root, "node_modules/vitest/vitest.mjs"), "run", "--config", "vitest.config.ts", "--reporter=json", `--outputFile=${out}`],
-    { cwd: root, env: { ...process.env, QUANT_SRC: dir, QUANT_RUNS: "3000" }, encoding: "utf8", timeout: 600_000 },
+    [path.join(root, "node_modules/vitest/vitest.mjs"), "run", "--config", "vitest.config.ts",
+      "--reporter=json", `--outputFile=${out}`, ...(mode ? ["--mode", mode] : []), ...files],
+    { cwd: root, env, encoding: "utf8", timeout: 600_000 },
   );
   try {
     const report = JSON.parse(readFileSync(out, "utf8"));
@@ -186,10 +200,53 @@ function runSuite(dir, id) {
     const suiteErrors = report.testResults
       .filter((f) => f.status === "failed" && f.assertionResults.length === 0)
       .map((f) => `${path.basename(f.name)}: ${f.message.split("\n")[0]}`);
-    return { failed: [...failed, ...suiteErrors], total: report.numTotalTests };
+    const error = result.error?.message ?? result.signal ?? (
+      result.status === 0 || (result.status === 1 && failed.length > 0)
+        ? suiteErrors.join("\n") : `unexpected exit ${result.status}`
+    );
+    return { failed, total: report.numTotalTests, status: result.status, error };
   } catch {
-    return { failed: [`suite crashed: ${(result.stderr || result.stdout).split("\n").slice(0, 3).join(" ")}`], total: 0 };
+    return {
+      failed: [],
+      total: 0,
+      status: result.status,
+      error: result.error?.message ?? `no Vitest report: ${(result.stderr || result.stdout || "").trim()}`,
+    };
   }
+}
+
+if (process.argv.includes("--validation")) {
+  const modeAt = process.argv.indexOf("--mode");
+  const mode = modeAt < 0 ? "development" : process.argv[modeAt + 1];
+  if (mode !== "development" && mode !== "production") throw new Error("expected development or production mode");
+  mkdirSync(cache, { recursive: true });
+  const interrupted = "test/interrupted-validation.test.ts";
+  const delivery = "test/validation-delivery.test.ts";
+  const retry = "retries an interrupted validation on demand and preserves cutoff (D8)";
+  const witnesses = [
+    ["validation-stale", interrupted, "delivers again through the interrupted path after a causal write (D8)"],
+    ["validation-dirty", interrupted, retry],
+    ["validation-clean", interrupted, retry],
+    ["no-check-restart", delivery, "rechecks a committed source made stale by a later source before cleanup (RQ3, P4)"],
+    ["no-attachment-handoff", delivery, "checks a pending source on demand after the first computed subscription (RQ1b)"],
+  ];
+  const baseline = runSuite(null, `validation-baseline-${mode}`, { mode, files: [interrupted, delivery] });
+  if (baseline.status !== 0 || baseline.total === 0 || baseline.failed.length || baseline.error) {
+    throw new Error(`validation baseline failed in ${mode}: ${JSON.stringify(baseline)}`);
+  }
+  const results = [];
+  for (const [id, file, test] of witnesses) {
+    const [, mechanism, ...edits] = mutants.find((candidate) => candidate[0] === id);
+    const cacheId = `${id}-${mode}`;
+    const suite = runSuite(build(cacheId, edits), cacheId, { mode, files: [file] });
+    const witness = `${path.basename(file)} > ${test}`;
+    const killed = suite.status === 1 && !suite.error && suite.failed.includes(witness);
+    results.push({ id, mechanism, witness, killed, ...suite });
+    console.log(`${killed ? "KILLED" : "FAILED"} ${id} (${mode}) ${suite.error || witness}`);
+  }
+  writeFileSync(path.join(cache, `validation-${mode}.json`), JSON.stringify({ mode, baseline, results }, null, 2) + "\n");
+  if (results.some(({ killed }) => !killed)) process.exitCode = 1;
+  process.exit();
 }
 
 if (process.argv.includes("--validate-anchors")) {
@@ -211,8 +268,9 @@ const results = [];
 for (const [id, mechanism, ...edits] of mutants) {
   if (only.size && !only.has(id)) continue;
   const dir = build(id, edits);
-  const { failed, total } = runSuite(dir, id);
+  const { failed, total, error } = runSuite(dir, id);
   results.push({ id, mechanism, killed: failed.length > 0, failed });
-  console.log(`${failed.length ? "KILLED  " : "SURVIVED"} ${id.padEnd(20)} ${failed.length}/${total}  ${failed.slice(0, 3).join(" | ")}`);
+  console.log(`${error ? "ERROR   " : failed.length ? "KILLED  " : "SURVIVED"} ${id.padEnd(20)} ${failed.length}/${total}  ${error || failed.slice(0, 3).join(" | ")}`);
+  if (error) process.exitCode = 1;
 }
 if (!only.size) writeFileSync(path.join(root, "research/mutants.json"), JSON.stringify(results, null, 2) + "\n");

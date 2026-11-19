@@ -1,5 +1,5 @@
-// Timing comparison of quant, Reflex and alien-signals (CI only: timing runs
-// never count when taken on a developer machine).
+// Timing comparison of quant, Reflex and alien-signals, with an optional
+// main bundle. Only CI runs count as benchmark results.
 //
 //   node bench/build.mjs && node bench/run.mjs [--suite scenarios|mechanisms|scaling] [--rounds 7] [--only <regex>] [--out <file>] [--verify-only]
 //
@@ -20,12 +20,17 @@ const args = process.argv.slice(2);
 const { name: suite, scenarios } = suiteOf(args);
 const option = (name, fallback) => (args.includes(name) ? args[args.indexOf(name) + 1] : fallback);
 const rounds = Number(option("--rounds", 7));
+if (!Number.isSafeInteger(rounds) || rounds < 1) throw new Error("--rounds must be a positive integer");
 const only = new RegExp(option("--only", "."));
 const outFile = option("--out", path.join(root, ".cache/bench/results.json"));
-const runtimes = ["quant", "reflex", "alien"];
+const manifest = JSON.parse(readFileSync(path.join(root, ".cache/bench/manifest.json"), "utf8"));
+const compareMain = manifest["quant-main"] !== undefined;
+const references = ["quant", "reflex", "alien"];
+const runtimes = compareMain ? ["quant", "quant-main", "reflex", "alien"] : references;
 const bundle = (name) => path.join(root, ".cache/bench", name);
 const worker = path.join(root, "bench/worker.mjs");
 const selected = scenarios.filter((s) => only.test(s.id));
+if (selected.length === 0) throw new Error(`no workloads selected in ${suite}`);
 
 let seed = 0x2545f491;
 const random = () => ((seed = (Math.imul(seed ^ (seed >>> 15), 0x2c1b3c6d) + 0x9e3779b9) >>> 0) / 2 ** 32);
@@ -62,10 +67,16 @@ if (args.includes("--verify-only")) {
 // 2. Timing.
 const results = {};
 for (let round = 0; round < rounds; round++) {
-  const pairs = shuffle(selected.flatMap((s) => runtimes.map((r) => [r, s.id])));
+  const pairs = shuffle(selected.flatMap((s) => references.map((r) => [r, s.id])));
   for (const [runtime, id] of pairs) {
-    const m = runWorker(runtime, id);
-    ((results[id] ??= {})[runtime] ??= []).push(m.nsPerStep);
+    // The candidate and main run consecutively. Alternate their order
+    // between rounds so drift within a pair affects both variants.
+    const order = compareMain && runtime === "quant" ? ["quant", "quant-main"] : [runtime];
+    if (round % 2 !== 0) order.reverse();
+    for (const name of order) {
+      const m = runWorker(name, id);
+      ((results[id] ??= {})[name] ??= []).push(m.nsPerStep);
+    }
   }
   process.stderr.write(`round ${round + 1}/${rounds}\n`);
 }
@@ -84,6 +95,11 @@ const rows = selected.map((s) => {
   row.quantVsBest = row.quant.median / best;
   row.quantVsReflex = row.quant.median / row.reflex.median;
   row.quantVsAlien = row.quant.median / row.alien.median;
+  if (compareMain) {
+    const { quant, "quant-main": main } = results[s.id];
+    const ratios = quant.map((ns, i) => ns / main[i]);
+    row.mainComparison = { quant, main, median: median(ratios), min: Math.min(...ratios), max: Math.max(...ratios) };
+  }
   return row;
 });
 
@@ -95,21 +111,29 @@ const env = {
   os: `${platform()} ${release()} ${arch()}`,
   suite,
   rounds,
-  manifest: JSON.parse(readFileSync(path.join(root, ".cache/bench/manifest.json"), "utf8")),
+  manifest,
   invalid,
 };
 writeFileSync(outFile, JSON.stringify({ env, rows }, null, 2) + "\n");
 
 const fmt = (ns) => (ns >= 1e6 ? `${(ns / 1e6).toFixed(2)} ms` : ns >= 1e3 ? `${(ns / 1e3).toFixed(2)} µs` : `${ns.toFixed(0)} ns`);
+const columns = ["scenario", ...runtimes, "quant / best", "quant / reflex", "quant / alien"];
+if (compareMain) columns.push("quant / main (paired)");
 const lines = [
   `Node ${env.node} (V8 ${env.v8}), ${env.cpu} x${env.cores}, ${env.os}; ${rounds} rounds; reflex ${env.manifest.reflex.commit.slice(0, 7)}, alien ${env.manifest.alien.version}`,
   "",
-  "| scenario | quant | reflex | alien | quant / best | quant / reflex | quant / alien |",
-  "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
-  ...rows.map(
-    (r) =>
-      `| ${r.id} | ${fmt(r.quant.median)} | ${fmt(r.reflex.median)} | ${fmt(r.alien.median)} | ${r.quantVsBest.toFixed(2)} | ${r.quantVsReflex.toFixed(2)} | ${r.quantVsAlien.toFixed(2)} |`,
-  ),
+  ...(compareMain ? [`Quant ${manifest.quant.commit} vs main ${manifest["quant-main"].commit}. Main ratios are the median of paired ratios, with the pair range in brackets.`, ""] : []),
+  `| ${columns.join(" | ")} |`,
+  `| --- | ${columns.slice(1).map(() => "---:").join(" | ")} |`,
+  ...rows.map((r) => {
+    const cells = [r.id, ...runtimes.map((name) => fmt(r[name].median)),
+      r.quantVsBest.toFixed(2), r.quantVsReflex.toFixed(2), r.quantVsAlien.toFixed(2)];
+    if (compareMain) {
+      const { median, min, max } = r.mainComparison;
+      cells.push(`${median.toFixed(3)} [${min.toFixed(3)}, ${max.toFixed(3)}]`);
+    }
+    return `| ${cells.join(" | ")} |`;
+  }),
   "",
   "Round ranges (min..max of the round medians):",
   "",

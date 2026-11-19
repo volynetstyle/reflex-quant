@@ -1,29 +1,34 @@
 // Builds one bench bundle per runtime into .cache/bench/<name>/index.mjs.
 //
-//   node bench/build.mjs
+//   node bench/build.mjs [--main <checkout-directory>]
 //
 // quant         src/index.ts, counters compiled out, esbuild-minified
 // quant-stats   the same with research counters (structure runs only)
 // quant-readable  the quant bundle with original identifiers (shape traces)
+// quant-main    optional main checkout, built with the same Quant adapter
 // reflex        the runtime's own production oracle bundle of <commit>
 //               (scripts/build-baseline-oracle.mjs --production: inline
 //               constants, minified like dist) behind bench/adapters/reflex.mjs
 // alien         alien-signals 3.2.1, esbuild-minified
 // alien-stats   alien with link counters (the lab's instrumentation)
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
 
 const root = path.resolve(import.meta.dirname, "..");
 const out = path.join(root, ".cache/bench");
-if (process.argv.length > 2) throw new Error("The Reflex baseline is fixed at bf718774a5bf9c15cda769712d226d9fc4d4da23");
+const args = process.argv.slice(2);
+if (args.length !== 0 && (args.length !== 2 || args[0] !== "--main")) {
+  throw new Error("usage: node bench/build.mjs [--main <checkout-directory>]");
+}
 const require = createRequire(path.join(root, "package.json"));
 const esbuild = require("esbuild");
 const alienEntry = require.resolve("alien-signals");
 const alienEsm = path.join(alienEntry.slice(0, alienEntry.lastIndexOf(path.sep + "alien-signals" + path.sep)), "alien-signals/esm");
 const alienVersion = JSON.parse(readFileSync(path.join(alienEsm, "../package.json"), "utf8")).version;
 
-async function bundle(name, entry, { stats = false, alias = {}, readable = false } = {}) {
+async function bundle(name, entry, { stats = false, alias = {}, readable = false, plugins = [] } = {}) {
   const dir = path.join(out, name);
   mkdirSync(dir, { recursive: true });
   await esbuild.build({
@@ -37,6 +42,7 @@ async function bundle(name, entry, { stats = false, alias = {}, readable = false
     target: "es2022",
     define: { __STATS__: String(stats), __DEV__: "false" },
     alias,
+    plugins,
     outfile: path.join(dir, "index.mjs"),
     logLevel: "warning",
   });
@@ -44,12 +50,29 @@ async function bundle(name, entry, { stats = false, alias = {}, readable = false
 }
 
 const manifest = {};
+const quantAdapter = path.join(root, "bench/adapters/quant.mjs");
 
-await bundle("quant", path.join(root, "bench/adapters/quant.mjs"));
+await bundle("quant", quantAdapter);
 // Same code, original identifiers: for V8 shape traces (bench/shape.mjs).
-await bundle("quant-readable", path.join(root, "bench/adapters/quant.mjs"), { readable: true });
+await bundle("quant-readable", quantAdapter, { readable: true });
 await bundle("quant-stats", path.join(root, "bench/adapters/quant-stats.mjs"), { stats: true });
 manifest.quant = { source: "src", minifier: "esbuild" };
+
+if (args.length !== 0) {
+  const main = path.resolve(args[1]);
+  const revision = (cwd) => execFileSync("git", ["rev-parse", "HEAD"], { cwd, encoding: "utf8" }).trim();
+  const sources = {
+    name: "quant-main-sources",
+    setup(builder) {
+      builder.onResolve({ filter: /^\.\.\/\.\.\/src\/index\.ts$/ }, ({ importer }) => {
+        if (importer === quantAdapter) return { path: path.join(main, "src/index.ts") };
+      });
+    },
+  };
+  await bundle("quant-main", quantAdapter, { plugins: [sources] });
+  manifest.quant.commit = revision(root);
+  manifest["quant-main"] = { commit: revision(main), minifier: "esbuild" };
+}
 
 // Frozen production oracle built from the Reflex baseline commit.
 const reflexDir = path.join(out, "reflex");
