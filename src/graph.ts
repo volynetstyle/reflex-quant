@@ -3,7 +3,7 @@ import { stats } from "./instrumentation";
 // Graph types, constants and intrusive list operations.
 
 // The aliases name different facts but do not brand numbers: counters wrap at
-// MASK and edge versions can carry UNREAD.
+// MASK and edge versions can carry tracking and expiration markers.
 export type Flags = number;
 export type Version = number;
 export type Generation = number;
@@ -38,7 +38,7 @@ export interface Node {
 export interface Edge {
   readonly from: Node;
   readonly to: Node;
-  /** from.ver when `to` read it; UNREAD in the pass's marked unread suffix. */
+  /** Observed version, EXPIRED after wrap, or an unread tracking marker. */
   ver: Version | typeof UNREAD | typeof SKIPPED;
   /** to.gen + 1 at birth: tentative while it still equals to.gen + 1. */
   gen: Generation;
@@ -65,7 +65,7 @@ export const enum Flag {
   Dirty = 1 << 1,
   /** Its run is on the stack. */
   Busy = 1 << 2,
-  /** Interrupted computed validation. A demand rechecks it and a push passes through. */
+  /** Pending computed validation without a completed push. */
   Unverified = 1 << 3,
   /** A watcher: handed to the host, never read. */
   Watch = 1 << 4,
@@ -108,6 +108,8 @@ export const UNREAD = -1;
  * a failed one leaves its node DIRTY.
  */
 export const SKIPPED = -2;
+/** A committed observation older than the producer's current version cycle. */
+export const EXPIRED = -3;
 /**
  * A committed edge keeps its birth generation, and generations wrap: an edge
  * 2^30 - 1 commits old would read as born in the next run (tentative). So a

@@ -34,11 +34,10 @@ export function wake(w: Node): void {
 
   if ((flags & Flag.AutoQueued) !== Flag.Auto) return;
 
-  w.flags = flags | Flag.Queued;
-
   if (size > mask) grow();
 
   queue[(head + size++) & mask] = w;
+  w.flags = flags | Flag.Queued;
 }
 
 onWake(wake);
@@ -75,8 +74,7 @@ export function run(w: Node): void {
 }
 
 /**
- * `run` with the watcher's flags already loaded: the drain clears QUEUED in
- * the same store that clears WAKE. WOKEN without STALE means only signals
+ * `run` with the watcher's flags already loaded. WOKEN without STALE means only signals
  * woke it, and they made it DIRTY: no check, no reload.
  */
 function deliver(w: Node, flags: Flags): void {
@@ -84,16 +82,14 @@ function deliver(w: Node, flags: Flags): void {
     w.flags = flags;
     return;
   }
-  w.flags = flags & ~Flag.Wake;
-
   if ((flags & Flag.Stale) !== 0) {
     try {
       if ((check(w, flags) & Flag.Dirty) === 0) return;
     } catch (error) {
-      w.flags |= Flag.Stale;
+      if (w.fn !== null) w.flags |= Flag.Stale;
       throw error;
     }
-  }
+  } else w.flags = flags & ~Flag.Wake;
   const cleanup = w.value;
 
   if (typeof cleanup === "function") {
@@ -130,7 +126,11 @@ export function flush(): void {
  */
 export function drainNow(): void {
   hold = 1;
-  drain(false, undefined);
+  try {
+    drain(false, undefined);
+  } finally {
+    hold = 0;
+  }
 }
 
 /**
@@ -147,11 +147,20 @@ export function start(w: Node): void {
   hold = 1;
 
   try {
-    exec(w);
-  } catch (error) {
-    return drain(true, error);
+    try {
+      exec(w);
+    } catch (error) {
+      try {
+        drain(true, error);
+      } catch {
+        // F5 also applies if the drain itself could not enter.
+      }
+      throw error;
+    }
+    drain(false, undefined);
+  } finally {
+    hold = 0;
   }
-  drain(false, undefined);
 }
 
 /**
@@ -174,10 +183,20 @@ function drain(failed: boolean, first: unknown): void {
     queue[head] = null;
     head = (head + 1) & mask;
     size--;
+    const waiting = size;
 
     try {
       deliver(queuedWatcher, queuedWatcher.flags & ~Flag.Queued);
     } catch (error) {
+      // At native stack exhaustion the delivery may never have entered
+      // its first phase. Hold prevents dequeue during a delivery, so a
+      // fresh QUEUED bit would require an append.
+      if (size === waiting && (queuedWatcher.flags & Flag.Queued) !== 0) {
+        head = (head - 1) & mask;
+        queue[head] = queuedWatcher;
+        size++;
+        throw failed ? first : error;
+      }
       if (!failed) first = error;
 
       failed = true;
@@ -192,8 +211,6 @@ function drain(failed: boolean, first: unknown): void {
       if ((spare += taken) > mask) shrink(calm);
     } else spare = calm = 0;
   }
-  hold = 0;
-
   if (failed) throw first;
 }
 

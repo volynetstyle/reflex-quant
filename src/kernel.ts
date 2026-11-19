@@ -6,6 +6,7 @@ import {
   Flag,
   KEEP,
   CounterLimit,
+  EXPIRED,
   SCAN,
   SETTLE,
   SKIPPED,
@@ -31,7 +32,7 @@ let active: Node | null = null;
 /** Last accepted edge of the running pass; saved with `active` on nesting. */
 let cursor: Edge | null = null;
 /**
- * One LIFO work stack shared by all walks: sibling edges to resume (mark),
+ * One LIFO work stack shared by all walks: unfinished push paths (mark),
  * edges to climb back through (pull), and slot cells an indexed run displaced.
  * Every walk pops back to its own base before returning. Once the stack is
  * empty, an oversized buffer is cut back (`trim`).
@@ -96,40 +97,96 @@ function trim(): void {
 export function write(s: Node, value: unknown): void {
   if (compare(s.value, value)) return;
 
+  const version = (s.ver + 1) & CounterLimit.Mask;
+  if (version === 0) expireObservations(s);
+
   s.value = value;
-  s.ver = (s.ver + 1) & CounterLimit.Mask;
+  s.ver = version;
 
-  for (let e = s.firstSub; e !== null; e = e.nextSub) {
-    const n = e.to;
-    const f = n.flags;
+  let e = s.firstSub;
+  try {
+    for (; e !== null; e = e.nextSub) {
+      const n = e.to;
+      const f = n.flags;
 
-    if (__STATS__) stats.marks++;
+      if (__STATS__) stats.marks++;
 
-    if ((f & Flag.Busy) !== 0) {
-      // Running: it may not have read s yet, so versions decide.
-      if ((f & Flag.Stale) === 0) {
+      if ((f & Flag.Busy) !== 0) {
+        // Running: it may not have read s yet, so versions decide.
+        if ((f & Flag.Stale) !== 0) continue;
         n.flags = f | Flag.Stale;
 
-        if ((f & Flag.Watch) !== 0) wake(n);
-        else {
-          const subs = n.firstSub;
-
-          if (subs !== null) mark(subs);
+        if ((f & Flag.Watch) !== 0) {
+          wake(n);
+          continue;
         }
-      }
-    } else if ((f & Flag.Watch) !== 0) {
-      n.flags = f | Flag.Dirty | Flag.Woken;
+      } else if ((f & Flag.Watch) !== 0) {
+        n.flags = f | Flag.Dirty | Flag.Woken;
 
-      wake(n);
-    } else if ((f & Flag.Stale) !== 0) {
-      n.flags = f | Flag.Dirty;
-    } else {
-      n.flags = f | Flag.Dirty | Flag.Stale;
+        wake(n);
+        continue;
+      } else if ((f & Flag.Stale) !== 0) {
+        n.flags = f | Flag.Dirty;
+        continue;
+      } else n.flags = f | Flag.Dirty | Flag.Stale;
 
       const subs = n.firstSub;
 
       if (subs !== null) mark(subs);
     }
+  } catch (error) {
+    // The value is already committed. Complete graph invalidation from
+    // this frame, even if entering another scheduling call would overflow.
+    if (e !== null && (e.to.flags & Flag.Watch) === 0)
+      e.to.flags &= ~Flag.Stale;
+
+    const base = top;
+    for (let edge = s.firstSub; edge !== null; edge = edge.nextSub) {
+      const n = edge.to;
+      const flags = n.flags;
+      const running = (flags & Flag.Busy) !== 0;
+
+      if ((flags & Flag.Watch) !== 0) {
+        n.flags = flags | (running ? Flag.Stale : Flag.Dirty | Flag.Woken);
+      } else {
+        n.flags = flags | Flag.Stale | (running ? 0 : Flag.Dirty);
+        if ((flags & Flag.Stale) === 0) stack[top++] = edge;
+      }
+    }
+
+    // Temporary STALE marks visit each new node once. This suffix of
+    // the work stack also records which certificates to retract.
+    for (let i = base; i < top; i++) {
+      for (
+        let edge = stack[i]!.to.firstSub;
+        edge !== null;
+        edge = edge.nextSub
+      ) {
+        const n = edge.to;
+        const flags = n.flags;
+
+        if ((flags & Flag.Stale) !== 0) continue;
+        n.flags = flags | Flag.Stale;
+        if ((flags & Flag.Watch) === 0) stack[top++] = edge;
+      }
+    }
+    while (top > base) {
+      const n = (stack[--top] as Edge).to;
+      stack[top] = null;
+      n.flags = (n.flags & ~Flag.Stale) | Flag.Unverified;
+    }
+    if (top === 0 && stack.length > TRIM) {
+      if (__STATS__ && stack.length > peak) peak = stack.length;
+      stack.length = KEEP;
+    }
+    throw error;
+  }
+}
+
+/** An observation survives at most one producer version cycle (P1, P5). */
+function expireObservations(n: Node): void {
+  for (let e = n.firstSub; e !== null; e = e.nextSub) {
+    if (e.ver >= 0) e.ver = EXPIRED;
   }
 }
 
@@ -138,41 +195,45 @@ function mark(first: Edge): void {
   const base = top;
   let e: Edge | null = first;
 
-  for (;;) {
-    while (e !== null) {
-      const n: Node = e.to;
-      const f = n.flags;
+  try {
+    for (;;) {
+      while (e !== null) {
+        const n: Node = e.to;
+        const f = n.flags;
 
-      if (__STATS__) stats.marks++;
-      // A watcher has no subscribers; the host deduplicates, so it is always told.
-      if ((f & Flag.Watch) !== 0) {
-        n.flags = f | Flag.Stale;
-        wake(n);
-      } else if ((f & Flag.Stale) === 0) {
-        n.flags = f | Flag.Stale;
+        if (__STATS__) stats.marks++;
+        // Watchers have no subscribers and the host deduplicates their wakes.
+        if ((f & Flag.Watch) !== 0) {
+          n.flags = f | Flag.Stale;
+          wake(n);
+        } else if ((f & Flag.Stale) === 0) {
+          n.flags = f | Flag.Stale;
 
-        const subs = n.firstSub;
+          const subs = n.firstSub;
 
-        if (subs !== null) {
-          const next = e.nextSub;
-
-          if (next !== null) stack[top++] = next;
-
-          e = subs;
-          continue;
+          if (subs !== null) {
+            stack[top++] = e;
+            e = subs;
+            continue;
+          }
         }
+        e = e.nextSub;
       }
-      e = e.nextSub;
-    }
 
-    if (top === base) {
-      trim();
-      return;
+      if (top === base) break;
+      e = (stack[--top] as Edge).nextSub;
+      stack[top] = null;
     }
-
-    e = stack[--top] as Edge;
-    stack[top] = null;
+  } catch (error) {
+    // The suspended ancestry has not finished forwarding its push.
+    while (top > base) {
+      const pending = (stack[--top] as Edge).to;
+      stack[top] = null;
+      pending.flags = (pending.flags & ~Flag.Stale) | Flag.Unverified;
+    }
+    throw error;
   }
+  trim();
 }
 
 // -------------------------------------------------------------------- read
@@ -326,45 +387,62 @@ function verify(root: Node, f: Flags): void {
  * the watcher was disposed. Tentative edges from failed runs only wake.
  */
 export function check(w: Node, flags: Flags): Flags {
+  w.flags = flags & ~Flag.Wake;
   const tentative = (w.gen + 1) & CounterLimit.Mask;
 
-  for (;;) {
-    let e = w.firstDep;
+  let e: Edge | null = null;
+  try {
+    for (;;) {
+      e = w.firstDep;
 
-    // A watcher without an execution obligation has only committed edges.
-    if ((flags & Flag.Dirty) === 0) {
-      for (; e !== null; e = e.nextDep) {
-        const s = e.from;
+      // A watcher without an execution obligation has only committed edges.
+      if ((flags & Flag.Dirty) === 0) {
+        for (; e !== null; e = e.nextDep) {
+          const s = e.from;
 
-        if (__STATS__) stats.checks++;
+          if (__STATS__) stats.checks++;
 
-        if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) pull(s);
+          if ((s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0) {
+            pull(s);
+            if (w.fn === null) return 0;
+          }
 
-        if (s.ver !== e.ver) {
-          w.flags |= Flag.Dirty;
-          e = e.nextDep;
-          break;
+          if (s.ver !== e.ver) {
+            w.flags |= Flag.Dirty;
+            e = e.nextDep;
+            break;
+          }
         }
       }
+
+      for (; e !== null; e = e.nextDep) {
+        if (__STATS__) stats.checks++;
+
+        const s = e.from;
+
+        if (
+          (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
+          e.gen !== tentative
+        ) {
+          pull(s);
+          if (w.fn === null) return 0;
+        }
+      }
+
+      flags = w.flags;
+
+      if ((flags & Flag.Stale) === 0) return flags;
+      w.flags = flags & ~Flag.Stale;
     }
-
-    for (; e !== null; e = e.nextDep) {
-      if (__STATS__) stats.checks++;
-
+  } catch (error) {
+    // The current pull may have failed before entering pull(). Later
+    // causal pushes need to cross that source even in this case.
+    if (e !== null) {
       const s = e.from;
-
-      if (
-        (s.flags & (__DEV__ ? Flag.Pull : Flag.Pending)) !== 0 &&
-        e.gen !== tentative
-      )
-        pull(s);
+      if (s.fn !== null && (s.flags & Flag.Stale) !== 0)
+        s.flags = (s.flags & ~Flag.Stale) | Flag.Unverified;
     }
-
-    if (w.fn === null) return 0;
-    flags = w.flags;
-
-    if ((flags & Flag.Stale) === 0) return flags;
-    w.flags = flags & ~Flag.Stale;
+    throw error;
   }
 }
 
@@ -401,19 +479,37 @@ export function exec(n: Node): void {
 
   try {
     value = n.fn!(n.value);
+    const last = cursor as Edge | null;
+    if (last !== null && last.from.slot === last) unindex(n, base);
   } catch (error) {
     const last = cursor as Edge | null;
     active = prev;
     cursor = prevCursor;
-    fail(n, base, last);
+
+    // An exhausted stack may reject another call. Release the activation
+    // and give displaced cells back from this frame first.
+    n.flags &= ~Flag.Busy;
+    if (n.fn !== null) n.flags |= Flag.Dirty;
+    for (let e = n.firstDep; e !== null; e = e.nextDep) {
+      if (e.from.slot === e) e.from.slot = null;
+    }
+    while (top > base) {
+      const cell = stack[--top] as Edge;
+      stack[top] = null;
+      cell.from.slot = cell;
+    }
+
+    try {
+      fail(n, last);
+    } catch {
+      // Preserve the callback's first error.
+    }
     throw error;
   }
   const last = cursor as Edge | null;
   active = prev;
   cursor = prevCursor;
   const f = n.flags;
-
-  if (last !== null && last.from.slot === last) unindex(n, base);
 
   n.flags = f & ~Flag.Busy;
 
@@ -428,8 +524,11 @@ export function exec(n: Node): void {
   if ((n.gen & SETTLE) === 0) settleDeps(n);
 
   if (compare(value, n.value) === false) {
+    const version = (n.ver + 1) & CounterLimit.Mask;
+    if (version === 0) expireObservations(n);
+
     n.value = value;
-    n.ver = (n.ver + 1) & CounterLimit.Mask;
+    n.ver = version;
   }
 }
 
@@ -437,14 +536,11 @@ export function exec(n: Node): void {
  * A failed run: keep committed edges and this run's reads as the wake set,
  * drop unread edges earlier failed runs left behind, owe a run.
  */
-function fail(n: Node, base: number, last: Edge | null): void {
-  if (last !== null && last.from.slot === last) unindex(n, base);
-
-  n.flags &= ~Flag.Busy;
+function fail(n: Node, last: Edge | null): void {
+  if (top === 0 && stack.length > TRIM) trim();
 
   if (n.fn === null) return detach(n);
 
-  n.flags |= Flag.Dirty;
   const tentative = (n.gen + 1) & CounterLimit.Mask;
   for (let e = last === null ? n.firstDep : last.nextDep; e !== null;) {
     const after: Edge | null = e.nextDep;
@@ -452,13 +548,13 @@ function fail(n: Node, base: number, last: Edge | null): void {
     if (e.gen === tentative) {
       const before = e.prevDep;
 
+      unlinkSub(e);
       if (before !== null) before.nextDep = after;
       else n.firstDep = after;
 
       if (after !== null) after.prevDep = before;
       else n.lastDep = before;
 
-      unlinkSub(e);
       e.prevDep = null;
       e.nextDep = null;
     }
@@ -556,7 +652,14 @@ function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 
   // If the source is still STALE after peek, its push preceded this edge.
   // Pass that pending validation to the new subscriber (P5).
-  if ((s.flags & Flag.Stale) !== 0) mark(e);
+  if ((s.flags & Flag.Stale) !== 0) {
+    try {
+      mark(e);
+    } catch (error) {
+      s.flags = (s.flags & ~Flag.Stale) | Flag.Unverified;
+      throw error;
+    }
+  }
 }
 
 // Exact dependency tracking: resolve a read outside the stable cursor path.

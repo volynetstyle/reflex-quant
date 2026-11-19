@@ -102,10 +102,9 @@ existing flag word. The evidence and representation limits are in
 
 ### Native stack recovery (RQ6)
 
-The proposed F6 obligation concerns transient Quant state after a catchable
-native stack overflow. An abandoned activation must release its transient
-state and restore any enclosing activation so that later valid work can run.
-Its adoption belongs with the RQ6 implementation and witnesses.
+F6 concerns transient Quant state after a catchable native stack overflow.
+An abandoned activation releases its transient state and restores any
+enclosing activation so that later valid work can run.
 
 S7 covers Quant's own graph walks. User callbacks can synchronously demand
 each other until the native stack is exhausted. On Node 25.2.0 with
@@ -118,6 +117,103 @@ indexed reads also overflowed. Its subsequent leaf-to-root reads reported
 violates the proposed obligation. The indexed-chain witness and candidate
 cleanup are available in `437e2f6`, in `test/fault-boundaries.test.ts` and
 `src/kernel.ts`.
+
+### Fork audit triage at `985ff54`
+
+The [fork audit](https://github.com/PeshoVurtoleta/reflex-quant/blob/research/audit-2026-11-19/research/audit-2026-11-19/README.md)
+uses its own RQ and Q identifiers.
+
+| Finding | Disposition |
+|---|---|
+| RQ1a | D7 specifies the failed validation barrier. A pending sibling supplies its latest state when a later causal delivery reaches the watcher. |
+| RQ1b/c | The research branch hands an in-pass invalidation to a newly attached subscriber. |
+| RQ2 | `5c847db` consumed the pre-body watcher wake in both builds on `main`. |
+| RQ3 | The research branch repeats a watcher validation invalidated during its pass, before rerun cleanup or execution. |
+| RQ4 | D8 repairs interrupted validation on the research branch. S7 covers Quant graph walks. Synchronous recursion through callbacks with genuinely owed executions falls outside that bound. Recovery after that recursion exhausts the stack belongs to RQ6. |
+| RQ5 | Version ABA remains open. `437e2f6` contains the `EXPIRED` candidate. |
+| RQ6 | Recovery after native stack exhaustion remains open. The `BUSY` and index cleanup candidate in `437e2f6` covers part of the kernel. The audit also shows host hold, queue and propagation failures. |
+
+**Q1 (P4/W3).** Terminal disposal detaches the
+watcher and consumes cleanup while a source is being pulled. The walk can
+then reach a later source through its saved dependency edge. The computed
+disposal witness allows such a later failure on explicit demand. A watcher
+adds an ordering question because its cleanup has already run.
+
+P4 gates the lifecycle of a live delivery.
+W3 cancels that delivery as part of detachment, then consumes terminal
+cleanup synchronously. The pull already in flight can finish or throw. Its
+return ends the cancelled walk before it starts any more source pulls.
+Ordinary first-error attribution applies to the in-flight pull and cleanup.
+This boundary preserves the existing timing of disposal cleanup and gives
+the walker a concrete terminal boundary.
+
+An in-memory control on `985ff54` stopped both validation phases after a
+pull returned to a disposed watcher and skipped rearming disposed watchers
+in the error handler. In DEV and PROD it ran only cleanup when the disposing
+source returned a changed value, returned an unchanged value, or entered
+with execution already owed. When cleanup or the in-flight source threw,
+the same error surfaced and the disposed watcher had no pending flags.
+The baseline instead reached the later throwing source in the first three
+cases and restored pending flags in all five. P4 and W3 now specify this
+ordering. The public tests in `test/validation-delivery.test.ts` exercise
+both validation phases and first-error attribution.
+
+**Q2 (W5).** W5 guarantees rollback when `effect()` throws to its caller.
+The self-write and sibling-write witnesses run again within that call's
+drain, before rollback. Forbidding a second attempt before publication
+would be an additional policy.
+
+**Q3 (P3/D6).** The pair `[P, x] = [0, 1]` is compatible with D6's
+start-of-execution boundary when a later source writes `x` during
+validation. The write creates subsequent work under P5. RQ1c's research
+fix delivers that work to later subscribers. The mixed first observation
+still appears in the original witness and is allowed by this reading of D6.
+
+The local `track.fresh-after-reorder-64` measurement after folding `link`
+into `attach` prompted a CI timing check on `985ff54`. The attachment handoff
+has an independent semantic ablation. Performance is measured with paired
+candidate and main processes on the same runner in
+[Benchmark CI](https://github.com/volynetstyle/reflex-quant/actions/runs/44552818253).
+
+### Audit recovery candidate
+
+The `research/audit-remaining` branch takes the following transitions.
+
+- **RQ5 (P1/P5).** Before publishing a wrapped version, the producer
+  expires its subscribers' ordinary version observations. `EXPIRED` is
+  outside the producer version range and the unread tracking markers keep
+  their meaning. The scan is local to the producer and runs once per
+  version cycle. Both producer paths are tested using fast-forwarded
+  versions. The fork's PROD in-pass witness also passed at `2^30 - 1` and
+  `2^30` actual writes.
+- **RQ6 (F6).** Execution restores tracking registers, slot ownership, and
+  `BUSY` in the callback's caller before attempting a cleanup call. The
+  host releases `hold` from the frame that owns it. A popped queue entry
+  keeps its queued witness until delivery starts. A still-queued watcher
+  with no append during that attempt identifies an unentered delivery,
+  so the drain restores that entry and unwinds. An interrupted mark
+  clears the propagation certificates on its unfinished ancestry. This
+  uses the existing work stack, with one entry per descended edge, and
+  introduces no per-node field. If a committed write loses a scheduling
+  call, the write frame finishes the graph invalidation without making
+  further scheduling calls. The shared stack records the newly marked
+  nodes so they can leave with validation pending and their push paths open.
+  An interrupted watcher check reopens the
+  source it was pulling. Sibling sources outside that attempt retain D7
+  behavior. Four fork scripts covering write, hold, delivery and execution
+  completed with working controls and no wedge in either build on Node
+  25.2.0 with `--stack-size=768`. The tests also exercise indexed recovery
+  and propagate through multiple interrupted ancestors.
+- **Q1 (P4/W3).** Watcher disposal cancels the remaining validation. The
+  guards in both check phases run after the current pull returns. The
+  failure handler preserves its error and leaves the disposed watcher
+  detached from scheduling.
+
+These results exercise recovery on the audited paths. A branching control
+checks a previously clean dependent after a committed write loses a wake.
+An explicit demand sees the committed value on the branch the initial walk
+had yet to reach. The added mark ancestry changes hot-path work-stack traffic, so
+performance on this branch needs its own CI measurements.
 
 ### Provenance
 
