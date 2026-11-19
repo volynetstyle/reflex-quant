@@ -147,6 +147,7 @@ Do not add a mechanism unless all of the following are recorded:
 
 2. **Witness**  
    Provide a minimized program, graph, or workload that violates the obligation without the mechanism.
+   A failure window that depends on the engine (stack-limit behaviour, tiering) needs a witness on at least one supported engine configuration that exposes it. Its ablation may survive on an engine where the window is absent; record which engines expose it.
 
 3. **Failure mode**  
    Show exactly what breaks: observable semantics, graph integrity, uniqueness, asymptotic work, retained memory, allocation bound, or stack-depth bound.

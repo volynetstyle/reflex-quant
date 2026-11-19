@@ -1743,3 +1743,106 @@ recovery. Node 25.2.0 passed
 213 development tests, 206 production tests with seven diagnostics skipped,
 all 64 validation oracle cases across both modes, and all five named
 ablations in each mode. The release package check passed.
+
+## RQ6 commit points (2026-11-19)
+
+The contract no longer calls the state after a caught native stack overflow
+fail-stop. Quant keeps running and the program may observe what the overflow
+left. F6 narrows that undefined state to one guarantee: Quant is not wedged.
+This F6 replaces the recovery clause of the `472a42b` experiment, which is
+still rejected.
+
+**Witnesses.** `research/stack-commit-points.mjs` bundles the source with the
+release options and runs each witness in its own process. A sweep exhausts
+the stack and runs attempts in the eight frames above the limit, shifting each
+sweep by one stack slot through the number of actual arguments. A whole
+recursion frame is coarser than the windows. Vitest is not used for the
+sweeps: its module wrappers turned an overflow inside a cross-module call
+into `TypeError: … is not a function`, also inside the runtime. The suite
+runs the script per witness and honours `QUANT_SRC`.
+
+On `13b7c93` (Node 25.2.0, V8 14.1.146.11-node.13), in both builds:
+
+| Witness | Window | `13b7c93` |
+|---|---|---|
+| `activation` | `exec` stores BUSY; `catch` calls `fail` | 67–68 of 512 computeds stay BUSY: `Cycle detected` |
+| `drain` | `drain` takes a watcher off the ring; calls `deliver` | 63–64 of 512 watchers stay QUEUED and never run again |
+| `enqueue` | `wake` stores QUEUED; calls `grow`. `batch` end calls `drainNow` → `drain` | `hold` stays 1: none of 512 targets runs again |
+| `create` | `start` stores `hold`; calls `exec`, then `drain` | held |
+
+**Change.** Every store that a refused call would strand now follows the
+call, or the frame that made it undoes it without a call:
+
+- `exec`'s `catch` ends the activation (BUSY off, DIRTY unless disposed)
+  before calling `fail`. `fail` keeps the cleanup: slot restore, disposal,
+  tentative edges. A refused `fail` loses that cleanup only.
+- `wake` grows the ring first, then takes the slot and stores QUEUED.
+- `drain` clears QUEUED as it takes the watcher off the ring, before
+  `deliver`. A refused delivery keeps its wake flags, and the next push
+  queues the watcher again. One extra flag store per delivery.
+- `drainNow` closes the drain in `finally`. `drain` still closes it itself.
+  This is the only one of the four repairs that is lexical rather than a
+  store order, and the only one with a measured cost (below).
+
+`start` is unchanged. Its `drain` call runs where `exec`'s frame was refused
+or has returned, and `exec`'s interpreter frame is 104 bytes against
+`drain`'s 40. The `create` witness held under default flags, `--jitless`,
+`--no-opt --no-maglev`, `--always-sparkplug` and `--max-lazy` with the
+pre-change `start`. This rests on V8's frame sizes, not on a guarantee.
+
+**Ablations.** `busy-in-fail`, `queued-before-grow`, `queued-in-deliver` and
+`hold-in-drain-now` restore one store order each. Each fails its named
+witness in both builds (`mutants.mjs --validation`). `cut-on-failure`,
+`idle-after-failure` and `no-cursor-restore` were re-anchored on the moved
+stores; all 62 anchors resolve. Node 25.2.0 passed 217 development tests and
+210 production tests with seven diagnostics skipped, and the 64-case D7
+oracle. The release check passed; the production bundle stays 2,749 gzip bytes.
+
+**Engines.** [Benchmark run 44572981025](https://github.com/volynetstyle/reflex-quant/actions/runs/44572981025)
+ran the ablations on Node 22.23.4 (V8 12.4.254.21-node.57). There
+`hold-in-drain-now` survived every witness, and so did `13b7c93`: the hold
+window never opened on that engine. The other three windows wedge
+`13b7c93` and are repaired on both engines. On Node 25.2.0 the `enqueue`
+witness wedged `13b7c93` in 12 of 12 runs and this candidate in 0 of 12.
+
+| Mechanism | Node 22.23.4 | Node 25.2.0 |
+|---|---|---|
+| `busy-in-fail` | killed | killed |
+| `queued-in-deliver` | killed | killed |
+| `queued-before-grow` | killed | killed |
+| `hold-in-drain-now` | window absent | killed |
+
+The ablation job now runs on both engines. A mechanism must be killed on
+at least one supported engine that exposes its window; its ablation may
+survive where the window is absent (ARCHITECTURE.md, admission rule). The
+runner reports such a survivor as UNEXPOSED and fails only where the
+mechanism declares its window exposed.
+
+**Cheaper placements falsified (Node 25.2.0, `enqueue`).** `drain` storing
+`hold = 1` itself, with `drainNow` storing nothing, still wedged.
+`hold = 0` moved before `shrink` still wedged. `try`/`finally` around the
+loop inside `drain` wedged 5 of 12 runs. With counters in that variant,
+`drain` had stored `hold = 1` and its own `finally` never ran, while the
+`RangeError` pointed at the loop header inside the `try`. The observation
+disappeared with `--no-use-osr`, with `--no-maglev` and with `--no-opt`.
+A standalone loop with the same shape outside Quant ran its `finally` in all
+21,140 attempts on both engines. This is recorded as an engine observation
+for V8 14.1, not as V8 semantics: an overflow while `drain` runs optimized
+code entered by OSR can leave that frame without its `finally` observably
+running. A `finally` in the caller's frame, which existed before the loop
+was entered, recovered in every tested run. The repair stays there.
+
+**Cost.** The same run paired the candidate with `13b7c93` over nine rounds:
+geometric mean 1.003 over 101 timed rows. The only rows whose whole pair
+range lies above 1 are `batch.writes-32` 1.036 [1.024, 1.042] and
+`batch.coalesce-64` 1.027 [1.009, 1.050], the path that ends in
+`drainNow`. `push.effects-1000` was 1.005 and `effect.rerun-1` 0.992.
+If that cost shows up in real batched workloads, F6 is to be reconsidered
+as a whole, not repaired with a narrower trick.
+
+**Not covered.** The engine may also throw at loop stack checks, so code
+without calls narrows the windows but does not make them atomic. `write` and
+`mark` still publish STALE before marking below it. An overflow there leaves
+a STALE node whose subscribers were never marked, and every later push stops
+at it. F6 leaves that cone undefined. Certificate-last propagation (STALE
+stored after the walk below the node) is the next study.
