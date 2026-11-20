@@ -46,7 +46,7 @@ list dependencies by hand.
 
 ## Why quant?
 
-- 🤏 **Tiny.** About 2.7 KB min+gzip for the whole library, and no dependencies.
+- 🤏 **Tiny.** About 2.9 KB min+gzip for the whole library, and no dependencies.
 - 🎯 **Exact.** Dependencies are whatever the last run actually read. Take a
   branch and the old dependencies drop away. Write a value that nothing
   currently reads and nothing reruns.

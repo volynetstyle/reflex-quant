@@ -1,6 +1,6 @@
 {
   "name": "reflex-quant",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A tiny, high-performance signals library for JavaScript and TypeScript with exact dynamic dependency tracking, glitch-free propagation, stack-safe graph traversal, and defined failure semantics.",
   "keywords": [
     "signals",
