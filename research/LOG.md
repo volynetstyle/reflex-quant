@@ -2000,3 +2000,136 @@ survive as conventions. The global recovery guarantee does not.
   O(depth) continuation storage?
 - **Unchanged.** F3, D7, D8 (UNVERIFIED), RQ1b/c, RQ3, Q1, RQ5, SETTLE,
   slot/UNREAD/SKIPPED.
+
+## Kernel code shape and edge layout (2026-11-20)
+
+Four semantic-neutral optimizations, one commit each on
+`research/kernel-layout`, classified as **optimization**: no field, flag,
+phase or rule is added, and every contract test, the validation oracle and
+every mutant keep their verdicts. Their mechanisms differ, so they are
+recorded apart: merging any two back together would bring back the cost
+of the other.
+
+### Method and its boundary
+
+Machine code read with `--print-opt-code` on Node 22.23.4 (V8 12.4) and
+Node 25.2.0 (V8 14.1); hot code located with `--prof` / `--cpu-prof`.
+Local timings are paired, fresh processes, pinned to one P-core
+(i5-1235U); they choose among variants, CI decides. CI runs of each stage
+against `main` 4c3851f: L 44628722802, L+E 44628728815, L+E+R3
+44628733813, L+E+R3+W2 44732369336.
+
+`effect.frontier-256-cutoff` is not a decision metric on CI: within one
+run every runtime is bimodal there (Reflex 688 ns..1.31 µs, alien 568 ns..
+1.26 µs, run 44628722802), and paired medians of the same build moved
+0.86..1.34 between runs.
+
+### Heap perturbation: why CI saw what the clean probe did not
+
+On Node 22 the 256-source frontier cost `main` 675 ns in a standalone
+harness and 1100 ns in `bench/worker.mjs`. The hot code (`deliver` with
+`check` inlined) was byte-identical in both, apart from embedded
+addresses. Importing `bench/suites.mjs` before building the graph moved
+the standalone harness to 1100 ns as well (3 processes each, pinned);
+Reflex moved 680 → 710 and alien did not move. A store-free scan loop
+(the rejected `scan` variant) was as slow, so the loop's own stack traffic
+was not the cause. The cause is data layout: without pointer compression
+an Edge is 88 B and a Node 96 B, one check over 256 sources touches about
+48 KB, the size of this core's L1D, and heap history decided how many of
+those lines missed. Recorded so that a later "local probe disagrees with
+CI" starts from layout, not from the code.
+
+### L: hot traversal fields colocated in Edge (34511c7)
+
+- **Mechanism.** The `attach` literal's order is the object layout. The
+  dependency walks read `from`, `ver`, `nextDep` (formerly +0x18, +0x28,
+  +0x40, 48 bytes apart, often two lines); they now lead the object,
+  followed by the subscriber walk's `to`, `nextSub`.
+- **Evidence.** Under the heap perturbation above: 1100 → 735 ns on
+  Node 22 (Reflex 700) and 1175 → 545 ns on Node 25. CI L/main geomean
+  0.999 over 46 rows; the effect does not show on the CI server CPUs.
+  Kept for its causal witness at no measured cost.
+
+### E: settled sources get their own back edge (fc309dc)
+
+- **Mechanism.** In `verify` and both `check` phases the fast path
+  ("source settled, version unchanged") shared the comparison block that
+  follows a `pull` / `exec`. Live across that call, the walk's edge was
+  kept in a stack slot and reloaded on every source:
+  `[rbp-0x48] = e … rcx = [rbp-0x48]; rcx = [rcx+0x3f]` (V8 14) and
+  `[rbp-0x30] = rbx … rax = [rbp-0x30]; rbx = [rax+0x3f]` (V8 12.4, in
+  `deliver`). Store-forwarding then sat on the e → e.nextDep chain. With
+  its own `continue`, the fast path keeps the edge in a register on both
+  engines. Order of pulls and the read of `nextDep` after a pull (W3) are
+  unchanged.
+- **Principle.** A traversal's fast path must not share a continuation
+  with a path that contains a call, if a loop-carried pointer is needed
+  after that call. `write` / `mark` were audited for the same shape on
+  V8 14: their edges stay in registers; after `grow()` inside an inlined
+  `wake` only the woken watcher and its flags are reloaded (not
+  loop-carried).
+- **Evidence.** Local Node 25 E/main: validate-wide-256 0.71, frontier
+  cutoff 0.84, chains 1.00..1.01. CI (L+E)/L: frontier-dirty 0.969,
+  stable.wide-256 0.968, fresh-after-reorder-64 0.971; push.chain-cutoff
+  1.044, fan-out.computeds 1.030; geomean about 0.997.
+
+### R3: each read outcome returns its own value (08114f7)
+
+- **Mechanism.** `read` held the value from the pull to the end of
+  tracking, so it stayed live (in a stack slot) across `miss` / `attach`,
+  and the hit path joined the post-pull block. Each outcome now returns,
+  loading `n.value` at the return; tracking runs no user code, so the
+  value cannot change in between. A repeat keeps its first observation
+  (P5).
+- **Principle.** Shorten live ranges: load a value where it is returned,
+  not where it is first known.
+- **Evidence.** CI (L+E+R3)/(L+E): value-sort.256x32 0.745, read.signal
+  0.835, frontier-dirty 0.867, signal-create 0.883, static.read-clean
+  0.894, read.computed-clean 0.904; geomean about 0.973. Highest:
+  track.swap-1 1.057.
+
+### W2: Object.is spelled out at the write site (6452235)
+
+- **Mechanism.** `Object.is` on untyped values compiles to a SameValue
+  builtin call (in `write`, in `exec`'s commit and wherever `exec` is
+  inlined). `write` now spells the same relation with `===`, handling
+  +0/-0 and NaN explicitly; the site keeps its own feedback and stays
+  inline. The commit keeps `Object.is`.
+- **Evidence.** Local pinned, W2/previous, Node 22 / 25: write.same-value
+  0.81 / 0.90, batch.coalesce-64 0.91 / 0.89, batch.writes-32 0.93 / 0.90,
+  track.stable-1 0.93 / 0.94. CI, full stack against main (run
+  44732369336): batch.coalesce-64 0.845, batch.writes-32 0.859,
+  write.no-subscribers 0.877, write.same-value 0.891, all with narrow
+  ranges. The P1 test gains -0 → -0 and -0 → +0; it kills a variant that
+  ignores the sign of zero.
+- **Open regression.** fan-out.effects-1000 1.113 [1.084, 1.135] on an
+  EPYC 7763 (Zen 3) runner; 1.002 for L+E on the same CPU model, none on
+  the other CPUs or locally (Node 22 1.005, Node 25 0.989). On Node 22
+  W2 changes an inlining decision: `grow` (the host ring's growth, an
+  array allocation) is inlined into `set` / `write`, so the rare growth
+  path sits inside the 1,000-subscriber loop. Not repaired yet.
+
+### Rejected
+
+- **`scan` pre-pass** (a call-free helper before the slow path): chains
+  +7..13% (a pending source is tested twice; the unrolled scan's exits
+  make V8 reload `e.from` and `flags`).
+- **R1 / R1b** (`read`'s fast path split into its own function):
+  diamond.8x8 +8%, long-reorder +13%: a stale computed's read pays an
+  extra call.
+- **W1** (one shared `===` helper for write and commit): write.same-value
+  2.34x; the helper's feedback mixed Smis with `undefined`.
+- **W3** (W2 plus a spelled-out commit): stable.wide-8 +7 / +16%,
+  pull.diamond-1000 +8% on Node 25.
+- **D2** (repeat tested before the next edge): duplicates 0.79..0.85, but
+  every ordinary hit +4..9%.
+
+### Full stack against main
+
+CI run 44732369336 (Node 22, 9 rounds, 46 rows): geomean 0.952. Lowest:
+read.signal 0.822, batch.coalesce-64 0.845, pull.validate-wide-256 0.853,
+batch.writes-32 0.859, value-sort.256x32 0.872, write.no-subscribers
+0.877, signal-create 0.885. Highest: fan-out.effects-1000 1.113 (above),
+fan-out.computeds-1000 1.030 [0.80, 1.24], pull.diamond-1000 1.028.
+225 dev / 218 production tests, 64 oracle cases, 65 mutant anchors;
+2,871 B gzip (main 2,856).
