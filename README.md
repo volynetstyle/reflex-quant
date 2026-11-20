@@ -413,6 +413,18 @@ and the computed keeps its last good value as `prev`. Once its inputs are fixed,
 it recovers on the next read. If an effect throws during creation, it leaves
 nothing running.
 
+Two edges of error recovery are worth knowing. When a computed throws while an
+effect is checking whether it must rerun, that check stops there. The effect
+does not rerun until another change reaches it, even if a source the check
+never got to changes in the meantime; `get` still returns current values.
+And an effect whose first run throws can run once more before `effect()`
+throws, if that run triggered an update; side effects such as a request are
+not undone by the rollback.
+
+**Writes from inside a computation take effect afterwards.** If a callback
+writes a signal while a read is already checking its dependencies, that read
+may still answer from before the write. The next read sees it.
+
 The stack-safety guarantee covers Quant's graph walks: a chain of 100,000
 computeds is fine. It does not cover callbacks that call each other until
 the native JavaScript stack runs out. That is a resource failure of the
