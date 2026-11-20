@@ -24,6 +24,19 @@ differential tests. `no-mark`, `no-unread` and `no-displaced` still fail
 to their original snapshot; they do not imply that the removed flags or
 node field are necessary.
 
+**Q4 update (2026-11-20).** Two ablations extend cluster H, self-disposal
+inside the node's own pass ([LOG](LOG.md#q4-a-self-disposing-computed-commits-its-runs-value-2026-11-20)).
+`self-dispose-drops-value` restores the old early return, so a computed that
+disposes itself in a successful run drops that run's value. It is
+**semantic** against W3 as worded on 2026-11-20 and fails exactly three
+tests: the first run, the demand that triggered the run, and an effect
+reading the computed. The behaviour it witnesses was a contract choice, not
+a derived necessity: before that date W3 left it open, and the old outcome
+followed only from where the early return sat. `self-dispose-keeps-cleanup`
+lets a self-disposed watcher store its returned cleanup. It is **resource
+correctness** (a closure that never runs stays reachable from a dead handle)
+and fails one test. The table below predates both and is not renumbered.
+
 ## Per-ablation classification
 
 | Ablation | Class | What the failing test proves | Obligation (cluster) |

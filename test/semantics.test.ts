@@ -782,6 +782,25 @@ describe("W3 self-disposal in a computed's own execution", () => {
     expect(idle()).toBe(true);
   });
 
+  it("commits the same way when a callback the execution calls disposes it", () => {
+    // d is read inside c's execution and disposes c there, not c itself.
+    const s = signal(0);
+    const h: { c?: Computed<number> } = {};
+    const d = computed(() => {
+      if (get(s) === 1) dispose(h.c!);
+      return 0;
+    });
+    const c = (h.c = computed(() => get(d) + get(s) * 10));
+    const outer = computed(() => get(c) + 1);
+    expect(get(outer)).toBe(1);
+    set(s, 1);
+    expect(get(outer)).toBe(11);
+    set(s, 2);
+    expect(get(outer)).toBe(11);
+    expect(get(c)).toBe(10);
+    expect(n(c).firstDep).toBe(null);
+  });
+
   it("a watcher reading the computed sees the disposing execution's value", () => {
     const { s, c } = program(1);
     const seen: number[] = [];

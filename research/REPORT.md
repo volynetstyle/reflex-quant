@@ -43,6 +43,15 @@ records source access budgets, compiler feedback, rejected hot-path reshapes
 and validation (172 development tests, 165 production tests with seven
 diagnosis tests skipped).
 
+**Self-disposal commit (Q4, 2026-11-20).** W3 now decides a case it left
+open: a computed disposed during its own execution that then returns commits that run's
+value, then detaches (provenance below, mechanism table row, LOG entry).
+`exec`'s disposal exit calls `disposed(n, value)`; its live path is the same
+as before. This adds no field, flag or phase. Figures at this point: 232
+development tests, 225 production (seven diagnosis tests skipped), 67
+ablations in `mutants.mjs`, ESM release 2,930 B gzip (`dist/index.js` with
+its banner).
+
 **Result.** The invariants admit a substantially different architecture of
 about the same per-object size: versions instead of change bits, bounded
 exact searches backed by an on-demand mark or source-side index instead of
@@ -205,6 +214,16 @@ rollback's cleanup error. `drain` already kept the first error among
 siblings. F5 extends that same rule to the two remaining places where
 two errors meet, so W4 (batching defers execution only) and W5 (the error
 reaches the caller) name one well-defined error.
+
+W3's self-disposal clause (2026-11-20, [LOG](LOG.md#q4-a-self-disposing-computed-commits-its-runs-value-2026-11-20))
+also has no Reflex source ID. The source row below says only "safe inside
+the node's own pass". An external audit (Q4) showed that this left one case
+open: a computed disposed during its own execution, which then returns. Quant had
+dropped that run's value, only because of where an early return sat. The
+contract now decides it: the run commits its value, then the node detaches;
+a run that throws is F1. Its witnesses are in `test/semantics.test.ts`, not
+the contract spec, whose program language has no `dispose` inside a
+computation.
 
 Sources: `test/differential/docs/SEMANTIC_CONTRACT.md`, the spec runtime
 (`internal/machine/spec-runtime.ts`), `docs/RUNTIME.md`, `docs/DISPOSE.md`,
@@ -423,7 +442,7 @@ recorded the work they save, not because they save none (LOG 30).
 | empty work stack releases oversized capacity at every producer exit | successful/failed validation, cold indexed runs, direct watchers and push without later demand (`no-trim`, placement ablations; LOG 40) |
 | disposed handles do not retain former dependencies (S4/resource correctness) | graph-field reachability is independent of former dependency width (LOG 39); LOG 43 removes the node cursor, retiring `retain-disposed-cursor`, and checks nested execution with `no-cursor-restore` |
 | no run of a node disposed during its validation (W3) | "a computed disposed while it is validated…" (`disposed-run`, `disposed-run-climb`); "a later source failing in the same walk…" (`disposed-left-dirty`) |
-| a computed disposed in its own successful run commits that run's value; a watcher's returned cleanup is dropped (W3, Q4) | "the demand that ran the disposing execution observes its value" (`self-dispose-drops-value`); "a watcher disposing itself keeps no cleanup from that run" (`self-dispose-keeps-cleanup`) |
+| a computed disposed during its own execution that returns commits that run's value; a watcher's returned cleanup is dropped (W3, Q4) | "the demand that ran the disposing execution observes its value" (`self-dispose-drops-value`); "a watcher disposing itself keeps no cleanup from that run" (`self-dispose-keeps-cleanup`) |
 
 ## Q4. Optimization versus semantics
 

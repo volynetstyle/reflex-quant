@@ -2161,18 +2161,44 @@ passing.
 **Contract decision.** The contract did not decide Q4: W3 said only
 "terminal and safe inside the node's own pass", and F1 covers only a run
 that throws. The old outcome came from where the early return sat, not
-from any rule. W3 now says: a computed that disposes itself during a
-successful execution commits the value returned by that execution before
-detaching; its observations from that execution do not remain subscribed;
-if that execution throws, F1 applies and the node is detached. Success of
-the run and lifetime of the node are separate axes:
+from any rule. Success of the run and lifetime of the node are separate
+axes:
 
-| self-dispose | callback | result |
+| disposed during the run | callback | result |
 |---|---|---|
 | no | returns | normal commit |
-| no | throws | F1 |
-| yes | returns | value/version commit, then detach |
-| yes | throws | no commit (F1), detach |
+| no | throws | F1: nothing committed, executes on next demand |
+| yes | returns | value commit under P1/P2, no relations, terminal |
+| yes | throws | nothing committed, terminal |
+
+W3 was then worded clause by clause:
+
+- "terminal: a disposed node never executes again, and a disposed
+  computed's last committed value stays readable": "terminal" was
+  undefined, and "stays readable" was promised only by the README, which
+  has no authority. Pinned by the disposal tests already on `main`.
+- "own execution" replaces "own pass": P5 and F1 say "execution".
+- "by its own callback or by any callback that execution calls":
+  `exec` tests `fn === null` after the callback, whoever disposed the node.
+  A first draft said "disposes itself", which is narrower than the
+  mechanism. New witness: a computed read inside `c`'s run disposes `c`.
+- "If it returns": the first draft said "successful execution", a term the
+  contract does not define.
+- "committed as any returned value is (P1, P2)": `Object.is` decides the
+  change, and an unchanged value cuts off (witness: outer computed not
+  re-run).
+- "the demand that started the execution reads that value": the
+  observable consequence. The first draft said "before detaching", which
+  is an internal order no program can observe.
+- "no relation from that execution remains": the same term as "ghost
+  relations" one sentence earlier, not "observations ... subscribed".
+- "If it throws, it commits nothing (F1), and the computed still never
+  executes again": the first draft said "F1 applies". F1 also says the
+  computed "executes on its next demand", which contradicts terminal.
+  Only the commit half of F1 applies.
+- "A watcher disposed during its own execution never runs the cleanup that
+  execution returns": already pinned ("dispose inside the callback: no
+  relations, returned cleanup dropped") but not in the contract.
 
 **Classification.** Semantic mechanism (W3) for the computed commit;
 resource correctness for the watcher guard below.
@@ -2207,15 +2233,16 @@ through an outer computed's validation, whose demand must observe the new
 value (`outer` = 11, not 1); a watcher reading the computed; cutoff (P2)
 when the disposing run returns an unchanged value; the throw case, first
 run and re-run (old value kept, detached, terminal); a self-disposing
-watcher keeps no cleanup. On the unchanged runtime the first three fail
-and the cutoff and throw tests pass.
+watcher keeps no cleanup; a computed disposed by a computed it reads during
+its run (same result). On the unchanged runtime the success-path tests
+fail and the cutoff and throw tests pass.
 
 **Ablations.** `self-dispose-drops-value` (the old early return): killed
 by exactly the three success-path tests. `self-dispose-keeps-cleanup` (no
 watcher return): killed by the watcher test. `eager-dispose` stays
 killed.
 
-**Numbers.** 231 dev / 224 production tests (+6), 67 mutant anchors.
+**Numbers.** 232 dev / 225 production tests (+7), 67 mutant anchors.
 Kernel bundle (esbuild, minified ESM, production defines) 8,039 → 8,118 B,
 gzip 2,852 → 2,873 B (the inline shape: 8,058 B, 2,863 B). The audit's
 script prints `not reproduced` and exits 0 on PROD and DEV. CI Benchmark

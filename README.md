@@ -375,7 +375,7 @@ set(mouse, { x: 150, y: 20 }); // { col: 1, row: 0 }
 | `update(s, fn)`          | `set(s, fn(current))`. `fn` runs untracked. If it throws, nothing is written.                 |
 | `batch(fn)`              | Run `fn`, then deliver all its writes as a single update. Returns `fn`'s result.                       |
 | `untracked(fn)`          | Run `fn` without subscribing to anything it reads.                                            |
-| `dispose(x)`             | Stop an effect (running its cleanup) or detach a computed (its last value stays readable).    |
+| `dispose(x)`             | Stop an effect (running its cleanup) or detach a computed (its last committed value stays readable). |
 | `typeOf(x)`              | `"signal"`, `"computed"` or `"effect"`, without evaluating anything.                          |
 
 > **Why `get(count)` and not `count()` or `count.value`?** Here the handle *is*
@@ -418,6 +418,15 @@ computeds is fine. It does not cover callbacks that call each other until
 the native JavaScript stack runs out. That is a resource failure of the
 host, and Quant promises nothing after a program catches it and goes on.
 An error a callback throws itself is an ordinary failure, handled as above.
+
+**Disposing from inside a run is safe.** A computed or effect may be
+disposed while it runs, by its own callback or by anything that callback
+calls. The run finishes, then the node detaches and never runs again. A
+computed's run that returns still commits its value, so the read that
+triggered it sees the new value and that value stays readable. If the run
+throws instead, the previous value stays. An effect disposed during its run
+drops the cleanup that run returns: disposal has already run the previous
+one, and nothing will run the new one.
 
 **Use the development build to catch cycles.** Bundlers that resolve the
 `development` export condition (Vite, webpack, and Node with
@@ -501,9 +510,10 @@ lower bound for every possible design.
   spec, with three documented choices applied, on all 27 061 bounded and
   18 660 recovery programs and on 100 000 generated ones. Graph integrity is
   checked after every operation.
-- **Nothing is optional.** Removing any of the 34 mechanisms makes a test fail:
-  25 fail a semantic test, 8 fail only a structural-bound or representation test,
-  and 1 fails only a sibling-order test (a convention). All 7 ablations of the
+- **Nothing is optional.** Of the 67 ablations in `research/mutants.mjs`, 64
+  make a test fail. The other 3 remove store orders kept as conventions
+  (truthful transient state); the contract does not require them, and the
+  [log](research/LOG.md) records why no test kills them. All 7 ablations of the
   development diagnostic fail a test of the development build.
 - Current Reflex is the same contract plus three failure-path choices. One of
   them drops an execution obligation that the contract (R2) says survives a
