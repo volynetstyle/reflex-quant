@@ -33,6 +33,8 @@ export interface Node {
   slot: Edge | null;
   /** Successful runs; edges born since the last one are tentative. */
   gen: Generation;
+  /** Calibration probe: 8 B nobody reads or writes (pure node density). */
+  readonly pad: null;
 }
 
 export interface Edge {
@@ -147,6 +149,7 @@ export function createNode(fn: Node["fn"], value: unknown, flags: Flags): Node {
     firstSub: null,
     slot: null,
     gen: 0,
+    pad: null,
   };
 }
 
