@@ -2144,3 +2144,121 @@ Reruns of the same commit: geomean 0.948 (44736090317) and 0.951
 (44736095501), no row above 1.04 in either.
 225 dev / 218 production tests, 64 oracle cases, 65 mutant anchors;
 2,908 B gzip (main 2,856; 2,871 before W2).
+
+## Q4: a self-disposing computed commits its run's value (2026-11-20)
+
+**Source.** The external audit's 2026-11-20 addendum (PeshoVurtoleta,
+`research/audit-2026-11-19` at `5d29274`, item Q4, script
+`ext-self-dispose-commit.mjs`). A computed that calls `dispose` on itself
+in a run that returns: `exec` took `if (n.fn === null) return detach(n);`
+before the value/version commit, so the run's value was dropped. The
+demand that ran it answered the pre-run value (the initial value on a first
+run), and that value stayed readable. Disposing the same computed from
+outside after its run keeps that run's value. Re-run on `main` `e05a4ce`
+(Node 25.2.0): the script exits 1 on both PROD and DEV with all controls
+passing.
+
+**Contract decision.** The contract did not decide Q4: W3 said only
+"terminal and safe inside the node's own pass", and F1 covers only a run
+that throws. The old outcome came from where the early return sat, not
+from any rule. Success of the run and lifetime of the node are separate
+axes:
+
+| disposed during the run | callback | result |
+|---|---|---|
+| no | returns | normal commit |
+| no | throws | F1: nothing committed, executes on next demand |
+| yes | returns | value commit under P1/P2, no relations, terminal |
+| yes | throws | nothing committed, terminal |
+
+W3 was then worded clause by clause:
+
+- "terminal: a disposed node never executes again, and a disposed
+  computed's last committed value stays readable": "terminal" was
+  undefined, and "stays readable" was promised only by the README, which
+  has no authority. Pinned by the disposal tests already on `main`.
+- "own execution" replaces "own pass": P5 and F1 say "execution".
+- "by its own callback or by any callback that execution calls":
+  `exec` tests `fn === null` after the callback, whoever disposed the node.
+  A first draft said "disposes itself", which is narrower than the
+  mechanism. New witness: a computed read inside `c`'s run disposes `c`.
+- "If it returns": the first draft said "successful execution", a term the
+  contract does not define.
+- "committed as any returned value is (P1, P2)": `Object.is` decides the
+  change, and an unchanged value cuts off (witness: outer computed not
+  re-run).
+- "the demand that started the execution reads that value": the
+  observable consequence. The first draft said "before detaching", which
+  is an internal order no program can observe.
+- "no relation from that execution remains": the same term as "ghost
+  relations" one sentence earlier, not "observations ... subscribed".
+- "If it throws, it commits nothing (F1), and the computed still never
+  executes again": the first draft said "F1 applies". F1 also says the
+  computed "executes on its next demand", which contradicts terminal.
+  Only the commit half of F1 applies.
+- "A watcher disposed during its own execution never runs the cleanup that
+  execution returns": already pinned ("dispose inside the callback: no
+  relations, returned cleanup dropped") but not in the contract.
+
+**Classification.** Semantic mechanism (W3) for the computed commit;
+resource correctness for the watcher guard below.
+
+**Repair.** `exec`'s disposal exit calls `disposed(n, value)` instead of
+`detach(n)`: it detaches, then commits the value and version. The
+relation commit (`cutDeps`, `gen`, `settleDeps`) stays on the live path
+only: a terminal node's relations are detached, not committed. Apart from
+that call target, `exec` is the same as on `main`.
+
+A first shape (`373b698`, `research/q4-self-dispose`) did the same inside
+`exec`: the disposal branch detached and fell through to the shared value
+commit, with the relation commit in an `else`. CI Benchmark #62 (run
+44753588453, Node 22.23.4, Xeon 6973P, 9 rounds): geomean 0.998 over 46
+rows, but track.stable-64 1.061 [1.051, 1.064], 352 ns against 332 ns,
+with every pair above 1.05. Locally (Node 22.23.4, same bundles) the row
+was 1.004 [0.955, 1.048], so the cost depends on the CPU, like the write
+loop in the previous entry. The out-of-line exit keeps the live path's
+code identical to `main`.
+
+Moving the whole commit above the early return was rejected: watchers go
+through `exec` too, and their run's value is the returned cleanup. A
+watcher disposed in its own run would keep that cleanup in `value`. It
+would never run and would keep alive whatever it closes over (the pinned
+"returned cleanup dropped" test only checks that the cleanup is never
+called). The disposal path therefore returns for a watcher before the
+commit.
+
+**Witnesses** (`test/semantics.test.ts`, "W3 self-disposal in a computed's
+own execution"): a first run that disposes itself; a re-run reached
+through an outer computed's validation, whose demand must observe the new
+value (`outer` = 11, not 1); a watcher reading the computed; cutoff (P2)
+when the disposing run returns an unchanged value; the throw case, first
+run and re-run (old value kept, detached, terminal); a self-disposing
+watcher keeps no cleanup; a computed disposed by a computed it reads during
+its run (same result). On the unchanged runtime the success-path tests
+fail and the cutoff and throw tests pass.
+
+**Ablations.** `self-dispose-drops-value` (the old early return): killed
+by exactly the three success-path tests. `self-dispose-keeps-cleanup` (no
+watcher return): killed by the watcher test. `eager-dispose` stays
+killed.
+
+**Numbers.** 232 dev / 225 production tests (+7), 67 mutant anchors.
+Kernel bundle (esbuild, minified ESM, production defines) 8,039 → 8,118 B,
+gzip 2,852 → 2,873 B (the inline shape: 8,058 B, 2,863 B). The audit's
+script prints `not reproduced` and exits 0 on PROD and DEV.
+
+CI Benchmark #63 (run 44757352869, out-of-line shape, Node 22.23.4, 9
+rounds): geomean 1.000 over 46 rows; track.stable-64 1.000 [0.992, 1.005]
+(inline shape: 1.061). Highest row effect.through-computed 1.049 [0.904,
+1.099], within its pair range. Validation ablations killed in DEV and PROD
+on Node 22 and 25. The out-of-line shape is merged.
+
+**Rest of the addendum.** The relayed lost-update report (in-pass write on
+a computed's first run, chain into an effect) is RQ1 shape b, already
+closed on `main` by the `attach` handoff: `neon-inpass-write` and
+`ledger-b-link-to-pending` exit 0 on PROD and DEV. The latter imports a
+bare absolute path and fails on Windows (`ERR_UNSUPPORTED_ESM_URL_SCHEME`);
+it was run through a `pathToFileURL` copy. `dispose(h)` inside an effect's
+first run (`h` is still `undefined`, W5) and a cleanup that disposes its
+own effect (W1 + W3) are not defects; not re-checked here beyond their
+reasoning.

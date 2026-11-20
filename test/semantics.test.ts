@@ -729,6 +729,146 @@ describe("W3 disposal during validation", () => {
   const nodes = (...xs: object[]) => xs as unknown as Node[];
 });
 
+describe("W3 self-disposal in a computed's own execution", () => {
+  // Success and lifetime are separate: a run that returns commits its value
+  // (F1 decides a run that throws), and the self-disposal ends the node.
+  const n = (x: object) => x as unknown as Node;
+
+  /** `c` = s * 10 disposes itself when s = `at`; `outer` = c + 1 demands it. */
+  const program = (at: number, fault = false) => {
+    const s = signal(0);
+    let runs = 0;
+    const c: Computed<number> = computed(() => {
+      runs++;
+      const v = get(s);
+      if (v === at) {
+        dispose(c);
+        if (fault) throw new Error("c");
+      }
+      return v * 10;
+    }, -1);
+    const outer = computed(() => get(c) + 1);
+    return { s, c, outer, runs: () => runs };
+  };
+
+  it("commits the value of a first run that disposes itself", () => {
+    const { s, c, outer, runs } = program(0);
+    expect(get(outer)).toBe(1);
+    expect(get(c)).toBe(0);
+    set(s, 1);
+    expect(get(c)).toBe(0);
+    expect(get(outer)).toBe(1);
+    expect(runs()).toBe(1);
+    expect(n(c).firstDep).toBe(null);
+    expect(idle()).toBe(true);
+  });
+
+  it("the demand that ran the disposing execution observes its value", () => {
+    // outer validates c, c runs, disposes itself and returns 10: the new
+    // version reaches outer in the same demand.
+    const { s, c, outer, runs } = program(1);
+    expect(get(outer)).toBe(1);
+    set(s, 1);
+    expect(get(outer)).toBe(11);
+    expect(get(c)).toBe(10);
+    expect(runs()).toBe(2);
+    // Terminal: no relation from c's last run stays subscribed.
+    set(s, 2);
+    expect(get(outer)).toBe(11);
+    expect(get(c)).toBe(10);
+    expect(runs()).toBe(2);
+    expect(n(s).firstSub).toBe(null);
+    checkGraph([n(s), n(c), n(outer)]);
+    expect(idle()).toBe(true);
+  });
+
+  it("commits the same way when a callback the execution calls disposes it", () => {
+    // d is read inside c's execution and disposes c there, not c itself.
+    const s = signal(0);
+    const h: { c?: Computed<number> } = {};
+    const d = computed(() => {
+      if (get(s) === 1) dispose(h.c!);
+      return 0;
+    });
+    const c = (h.c = computed(() => get(d) + get(s) * 10));
+    const outer = computed(() => get(c) + 1);
+    expect(get(outer)).toBe(1);
+    set(s, 1);
+    expect(get(outer)).toBe(11);
+    set(s, 2);
+    expect(get(outer)).toBe(11);
+    expect(get(c)).toBe(10);
+    expect(n(c).firstDep).toBe(null);
+  });
+
+  it("a watcher reading the computed sees the disposing execution's value", () => {
+    const { s, c } = program(1);
+    const seen: number[] = [];
+    const stop = effect(() => {
+      seen.push(get(c));
+    });
+    set(s, 1);
+    set(s, 2);
+    expect(seen).toEqual([0, 10]);
+    stop();
+    expect(idle()).toBe(true);
+  });
+
+  it("an unchanged value from the disposing execution keeps the cutoff (P2)", () => {
+    const s = signal(0);
+    let outerRuns = 0;
+    const c: Computed<number> = computed(() => {
+      if (get(s) === 1) dispose(c);
+      return 7;
+    });
+    const outer = computed(() => {
+      outerRuns++;
+      return get(c);
+    });
+    expect(get(outer)).toBe(7);
+    set(s, 1);
+    expect(get(outer)).toBe(7);
+    expect(outerRuns).toBe(1);
+    expect(n(c).firstDep).toBe(null);
+  });
+
+  it("a disposing execution that throws commits nothing and still detaches (F1)", () => {
+    for (const first of [true, false]) {
+      const { s, c, outer, runs } = program(first ? 0 : 1, true);
+      if (first) {
+        expect(() => get(outer)).toThrow("c");
+        expect(get(c)).toBe(-1);
+      } else {
+        expect(get(outer)).toBe(1);
+        set(s, 1);
+        expect(() => get(outer)).toThrow("c");
+        expect(get(c)).toBe(0);
+      }
+      const at = runs();
+      set(s, 3);
+      expect(get(c)).toBe(first ? -1 : 0);
+      expect(runs()).toBe(at);
+      expect(n(c).firstDep).toBe(null);
+      expect(n(s).firstSub).toBe(null);
+      expect(idle()).toBe(true);
+    }
+  });
+
+  it("a watcher disposing itself keeps no cleanup from that run", () => {
+    // Contrast: only a computed commits. A watcher's returned cleanup would
+    // never run, and keeping it would retain whatever it closes over.
+    const s = signal(0);
+    const w: Effect = watch(() => {
+      if (get(s) === 1) dispose(w);
+      return () => {};
+    });
+    set(s, 1);
+    expect(n(w).value).toBe(undefined);
+    expect(n(w).firstDep).toBe(null);
+    expect(idle()).toBe(true);
+  });
+});
+
 describe("F5 first error", () => {
   // An operation that fails rethrows the first error it caught. Obligations
   // it still finishes afterwards (deferred watchers, rollback) run, but their

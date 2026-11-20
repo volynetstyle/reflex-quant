@@ -53,7 +53,9 @@ change confirmed partway through the check. D7 is valid in both build modes.
 The validation ablations first run the witnesses on the unmodified runtime.
 Each mutant must then fail its named public test. The three D8 mutants
 substitute `STALE`, `DIRTY` or clean state for interrupted validation. The
-other two drop the P4 restart and the P5 attachment handoff. A crash or a
+others drop the P4 restart, the P5 attachment handoff, version expiry on a
+producer's version wrap (RQ5, two witnesses), and the end of a disposed
+watcher's dependency chain (Q1, W3): six mutants, eight witnesses. A crash or a
 surviving mutant fails the run. Benchmark CI runs these checks in DEV and
 PROD and uploads the reports.
 
@@ -82,8 +84,11 @@ ordinary push tests. It implemented a stronger retry guarantee than the
 contract requires. In the two-branch witness it also made a sibling write
 surface the throwing source's error again. That mechanism was rejected.
 
-`research/fault-recovery-candidate` preserves separate experiments for
+`research/fault-recovery-candidate` preserves the first experiments for
 interrupted deep validation (`Unverified`), version rollover (`EXPIRED`), and
-restoring `BUSY` and index slots after stack overflow. Their necessity and
-representation require their own contract and structural evidence. The D7
-tests and oracle run against `f9be2d0` without those candidate mechanisms.
+restoring `BUSY` and index slots after stack overflow. The D7 tests and
+oracle were first run against `f9be2d0`, without those mechanisms. Two of
+them later entered `main` in smaller forms, each with its own contract
+clause and witnesses: `Unverified` (D8) and version expiry (RQ5). Recovery
+after stack overflow did not: F6 was removed and the contract now ends at
+native stack exhaustion (LOG, "RQ6 closed").

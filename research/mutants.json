@@ -13,6 +13,8 @@
     "mechanism": "O2: direct subscribers marked DIRTY on write (optimization)",
     "killed": true,
     "failed": [
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct true)",
+      "interrupted-validation.test.ts > keeps DIRTY from a write during the interrupted validation",
       "structure.test.ts > O2: a direct write executes the computed without a validation walk"
     ]
   },
@@ -42,12 +44,67 @@
     ]
   },
   {
+    "id": "no-source-absence",
+    "mechanism": "LOG 49: a source whose at most two subscribers are other readers is absent before any scan (optimization)",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > O1: sources with a few other subscribers are proven absent without indexing"
+    ]
+  },
+  {
     "id": "no-suffix-scan",
     "mechanism": "O1: bounded scan of the unread suffix before indexing (optimization)",
     "killed": true,
     "failed": [
-      "structure.test.ts > O1: rotation and adjacent swaps are resolved without indexing",
-      "structure.test.ts > O1: sources with a few other subscribers are proven absent without indexing"
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 1024",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 4096",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 8192",
+      "structure.test.ts > a SKIPPED edge survives a failed attempt and a repeat preserves P5",
+      "structure.test.ts > a version wrap expires the accepted prefix and keeps SKIPPED in the suffix (RQ5)",
+      "tracking.test.ts > four adjacent sources dropped: misses bounded by the edit, not by the list",
+      "tracking.test.ts > one source moved 6 places earlier: misses bounded by the edit, not by the list"
+    ]
+  },
+  {
+    "id": "no-defer",
+    "mechanism": "LOG 47: an edge a read skips twice goes to the end of the list (optimization)",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 1024",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 4096",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 8192",
+      "tracking.test.ts > rotation by one: misses bounded by the edit, not by the list",
+      "tracking.test.ts > one source dropped mid-list: misses bounded by the edit, not by the list",
+      "tracking.test.ts > four adjacent sources dropped: misses bounded by the edit, not by the list",
+      "tracking.test.ts > one source moved 200 places later: misses bounded by the edit, not by the list"
+    ]
+  },
+  {
+    "id": "no-skip-marker",
+    "mechanism": "LOG 50: an edge a read skips once stays; only a second skip defers it (optimization)",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 1024",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 4096",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 8192",
+      "structure.test.ts > a SKIPPED edge survives a failed attempt and a repeat preserves P5",
+      "structure.test.ts > a version wrap expires the accepted prefix and keeps SKIPPED in the suffix (RQ5)",
+      "tracking.test.ts > rotation by one: misses bounded by the edit, not by the list",
+      "tracking.test.ts > one source dropped mid-list: misses bounded by the edit, not by the list",
+      "tracking.test.ts > four adjacent sources dropped: misses bounded by the edit, not by the list",
+      "tracking.test.ts > one source moved 200 places later: misses bounded by the edit, not by the list",
+      "tracking.test.ts > adjacent swap: misses bounded by the edit, not by the list",
+      "tracking.test.ts > one source moved 6 places earlier: misses bounded by the edit, not by the list"
+    ]
+  },
+  {
+    "id": "no-tail-scan",
+    "mechanism": "LOG 47: bounded scan of the unread suffix from its end (optimization)",
+    "killed": true,
+    "failed": [
+      "tracking.test.ts > reorder A B C D E -> E A B C D reuses every relation, allocates none",
+      "tracking.test.ts > one source moved 200 places later: misses bounded by the edit, not by the list",
+      "tracking.test.ts > reversal: misses bounded by the edit, not by the list"
     ]
   },
   {
@@ -56,6 +113,39 @@
     "killed": true,
     "failed": [
       "structure.test.ts > O1: a completely scanned reader list proves absence where the subscribers cannot"
+    ]
+  },
+  {
+    "id": "no-skipped-accept",
+    "mechanism": "SKIPPED lemma: an exact pair tagged SKIPPED is taken without marking the suffix (optimization)",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 1024",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 4096",
+      "structure.test.ts > nested swaps reuse edges without a suffix walk at width 8192",
+      "structure.test.ts > a SKIPPED edge survives a failed attempt and a repeat preserves P5",
+      "structure.test.ts > a version wrap expires the accepted prefix and keeps SKIPPED in the suffix (RQ5)"
+    ]
+  },
+  {
+    "id": "accept-any-found",
+    "mechanism": "SKIPPED lemma: only the SKIPPED tag proves a found pair unread (a repeat must not move)",
+    "killed": true,
+    "failed": [
+      "disposal-differential.test.ts > releases successful, failed, never-run and throwing-cleanup watchers with unchanged observations",
+      "semantics.test.ts > one rule on every path that recognises a repeated read",
+      "structure.test.ts > a SKIPPED edge survives a failed attempt and a repeat preserves P5",
+      "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
+      "structure.test.ts > a fresh source needs no lookup after the pass has marked its unread suffix",
+      "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
+      "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
+      "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: false)",
+      "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: true)",
+      "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot",
+      "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
+      "tracking.test.ts > duplicate after a long prefix: P0..P127 then P0..P127 P32",
+      "tracking.test.ts > old twin: a source re-read after nested passes subscribed to it stays unique",
+      "validation-delivery.test.ts > hands off pending validation for an edge added during indexed tracking (RQ1b)"
     ]
   },
   {
@@ -78,8 +168,8 @@
       "structure.test.ts > LOG 28: a single reader's random reorder marks its pass, with no slot index",
       "structure.test.ts > a fresh source needs no lookup after the pass has marked its unread suffix",
       "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
-      "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
       "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: false)",
+      "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index"
     ]
@@ -91,7 +181,6 @@
     "failed": [
       "differential.test.ts > generated wide nested indexes: reorders, repeated reads, failed frontiers and recovery",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
-      "tracking.test.ts > a nested indexed pass restores the outer pass's cells (re-read after nesting)",
       "trim.test.ts > wide nested runs agree with an independent sum model across change, failure and recovery",
       "trim.test.ts > keeps the hysteresis boundary: TRIM stays, TRIM + 1 shrinks",
       "trim.test.ts > reclaims a cold dirty execution after return",
@@ -125,7 +214,6 @@
       "semantics.test.ts > one rule on every path that recognises a repeated read",
       "structure.test.ts > LOG 29: over shared sources, the first reader marks its pass and deeper readers index",
       "structure.test.ts > P5 witnesses reach the prefix-scan, subscriber and slot repeat paths",
-      "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: true)",
       "structure.test.ts > random reorder of wide sources: one linear index walk per pass, no allocation",
       "tracking.test.ts > random permutations of 64 shared sources: exact, no allocation, linear work",
       "tracking.test.ts > nested passes that index the same sources do not corrupt the outer index",
@@ -160,6 +248,7 @@
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
       "generations.test.ts > a failed watcher keeps a committed edge its failed run did not read (F3)",
       "generations.test.ts > a failed computed keeps its committed frontier (F1)",
+      "structure.test.ts > a SKIPPED edge survives a failed attempt and a repeat preserves P5",
       "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: false)",
       "structure.test.ts > reverse retries keep mixed committed and tentative relations linear (shared: true)",
       "torture-lifecycle.test.ts > failures across a full reorder keep the committed frontier and only the last attempt's reads",
@@ -172,23 +261,105 @@
     "mechanism": "STALE cleared before the run, so pushes during it survive",
     "killed": true,
     "failed": [
+      "interrupted-validation.test.ts > delivers again through the interrupted path after a causal write (D8)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct false)",
       "semantics.test.ts > an effect writing a source it read converges",
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
       "semantics.test.ts > a computed that writes a source it already read converges on the next read (F1)",
       "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
       "semantics.test.ts > A→B→A after the first observation is a change (P1): the next demand executes again",
       "semantics.test.ts > one rule on every path that recognises a repeated read",
+      "structure.test.ts > a SKIPPED edge survives a failed attempt and a repeat preserves P5",
+      "structure.test.ts > a version wrap expires the accepted prefix and keeps SKIPPED in the suffix (RQ5)",
       "structure.test.ts > a long drain holds O(queued watchers) slots, not O(deliveries)",
-      "structure.test.ts > many watchers invalidating themselves stay within max(TRIM + W, 2W)",
-      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
+      "structure.test.ts > many watchers invalidating themselves stay within max(KEEP, 2W)",
+      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty",
+      "validation-delivery.test.ts > rechecks a committed source made stale by a later source before cleanup (RQ3, P4)",
+      "validation-delivery.test.ts > checks a pending source on demand after the first computed subscription (RQ1b)",
+      "validation-delivery.test.ts > preserves cutoff when a newly linked pending source validates unchanged (RQ1b, P2)",
+      "validation-delivery.test.ts > hands off pending validation for an edge added during indexed tracking (RQ1b)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (execution, RQ1b/c)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (validation, RQ1b/c)",
+      "version-rollover.test.ts > retains an in-pass obligation across a signal version wrap (RQ5, P5)",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":true,\"confirmedDuringCheck\":false,\"after\":true})",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":false,\"confirmedDuringCheck\":true,\"after\":true})",
+      "watcher-validation.test.ts > coalesces an unvisited branch until a later delivery retries validation (D7, cutoff false)",
+      "watcher-validation.test.ts > coalesces an unvisited branch until a later delivery retries validation (D7, cutoff true)",
+      "watcher-validation.test.ts > retains an established obligation through a validation barrier and unchanged recovery (F4)"
     ]
   },
   {
     "id": "validation-stale",
-    "mechanism": "a failed validation leaves DIRTY (push passes) rather than STALE",
+    "mechanism": "D8: retaining STALE after interruption blocks the next causal push",
     "killed": true,
     "failed": [
+      "interrupted-validation.test.ts > delivers again through the interrupted path after a causal write (D8)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct false)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct true)",
+      "interrupted-validation.test.ts > clears interrupted validation on disposal",
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes"
+    ]
+  },
+  {
+    "id": "validation-dirty",
+    "mechanism": "D8: fabricating DIRTY after interruption loses cutoff",
+    "killed": true,
+    "failed": [
+      "interrupted-validation.test.ts > retries an interrupted validation on demand and preserves cutoff (D8)",
+      "interrupted-validation.test.ts > validates a 100,000-deep warm chain after a failed leaf body (D8, S7)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct false)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct true)",
+      "interrupted-validation.test.ts > clears interrupted validation on disposal"
+    ]
+  },
+  {
+    "id": "validation-clean",
+    "mechanism": "D8: clearing interrupted validation skips the next demand",
+    "killed": true,
+    "failed": [
+      "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "interrupted-validation.test.ts > retries an interrupted validation on demand and preserves cutoff (D8)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct false)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct true)",
+      "interrupted-validation.test.ts > clears interrupted validation on disposal",
+      "semantics.test.ts > a read of a node under validation is a cycle, not its previous value",
+      "semantics.test.ts > the answer does not depend on how the cycle's nodes were invalidated",
+      "semantics.test.ts > validation reaching an executing node is a cycle and leaves no clean node behind",
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above",
+      "semantics.test.ts > a reentrant demand without a data cycle fails as a direct read does",
+      "trim.test.ts > reclaims a deep validation (throw: true)",
+      "work-stack.test.ts > restores the enclosing cells on throw above suspended validation frames",
+      "work-stack.test.ts > restores the enclosing cells on dispose-self-throw above suspended validation frames"
+    ]
+  },
+  {
+    "id": "no-check-restart",
+    "mechanism": "P4: a fresh STALE mark requires validation before lifecycle",
+    "killed": true,
+    "failed": [
+      "validation-delivery.test.ts > rechecks a committed source made stale by a later source before cleanup (RQ3, P4)"
+    ]
+  },
+  {
+    "id": "no-attachment-handoff",
+    "mechanism": "P5: a new observer receives the invalidation that preceded its edge",
+    "killed": true,
+    "failed": [
+      "validation-delivery.test.ts > checks a pending source on demand after the first computed subscription (RQ1b)",
+      "validation-delivery.test.ts > preserves cutoff when a newly linked pending source validates unchanged (RQ1b, P2)",
+      "validation-delivery.test.ts > hands off pending validation for an edge added during indexed tracking (RQ1b)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (execution, RQ1b/c)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (validation, RQ1b/c)"
+    ]
+  },
+  {
+    "id": "no-version-expiry",
+    "mechanism": "P1/P5: an observation survives its producer's version wrap",
+    "killed": true,
+    "failed": [
+      "structure.test.ts > a version wrap expires the accepted prefix and keeps SKIPPED in the suffix (RQ5)",
+      "version-rollover.test.ts > retains an in-pass obligation across a signal version wrap (RQ5, P5)",
+      "version-rollover.test.ts > expires an unvalidated computed observation when its source wraps (RQ5, P1)"
     ]
   },
   {
@@ -196,9 +367,17 @@
     "mechanism": "the kernel wakes a watcher only when it is neither STALE nor WOKEN (re-delivery after a failed validation)",
     "killed": true,
     "failed": [
+      "interrupted-validation.test.ts > delivers again through the interrupted path after a causal write (D8)",
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
       "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
-      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
+      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty",
+      "validation-delivery.test.ts > rechecks a committed source made stale by a later source before cleanup (RQ3, P4)",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":true,\"confirmedDuringCheck\":false,\"after\":true})",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":false,\"confirmedDuringCheck\":true,\"after\":true})",
+      "watcher-validation.test.ts > coalesces an unvisited branch until a later delivery retries validation (D7, cutoff false)",
+      "watcher-validation.test.ts > coalesces an unvisited branch until a later delivery retries validation (D7, cutoff true)",
+      "watcher-validation.test.ts > retains an established obligation through a validation barrier and unchanged recovery (F4)",
+      "watcher-validation.test.ts > executes a failed computed on explicit demand after a sibling write coalesces (F1, D7)"
     ]
   },
   {
@@ -221,7 +400,8 @@
       "differential.test.ts > phase 0 probes pin their classification",
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
       "disposal-differential.test.ts > releases successful, failed, never-run and throwing-cleanup watchers with unchanged observations",
-      "semantics.test.ts > an effect failing after its first run keeps the obligation (R2)"
+      "semantics.test.ts > an effect failing after its first run keeps the obligation (R2)",
+      "watcher-validation.test.ts > retains an established obligation through a validation barrier and unchanged recovery (F4)"
     ]
   },
   {
@@ -233,7 +413,22 @@
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
       "generations.test.ts > an owed watcher validates every committed source before its cleanup (P4)",
       "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
-      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty"
+      "torture-semantics.test.ts > validation failure happens before cleanup even if another source already proved dirty",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, changed)",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, owed)",
+      "validation-delivery.test.ts > rechecks a committed source made stale by a later source before cleanup (RQ3, P4)",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":true,\"confirmedDuringCheck\":false,\"after\":true})",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":false,\"confirmedDuringCheck\":true,\"after\":true})"
+    ]
+  },
+  {
+    "id": "watcher-detach-keeps-chain",
+    "mechanism": "W3: a disposed watcher's teardown ends the dependency chain, so its validation pulls no further source",
+    "killed": true,
+    "failed": [
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, changed)",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, unchanged)",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, owed)"
     ]
   },
   {
@@ -271,7 +466,14 @@
       "disposal-retention.test.ts > releases dependencies during indirect validation (later throw: false)",
       "disposal-retention.test.ts > releases dependencies during indirect validation (later throw: true)",
       "disposal-retention.test.ts > preserves frozen values and downstream subscriptions",
+      "failure-boundary.test.ts > resumes tracking in the enclosing callback after a caught failure (T3)",
       "generations.test.ts > a watcher whose generation wrapped still validates its committed computed (no failure)",
+      "interrupted-validation.test.ts > retries an interrupted validation on demand and preserves cutoff (D8)",
+      "interrupted-validation.test.ts > delivers again through the interrupted path after a causal write (D8)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct false)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct true)",
+      "interrupted-validation.test.ts > clears interrupted validation on disposal",
+      "interrupted-validation.test.ts > keeps DIRTY from a write during the interrupted validation",
       "semantics.test.ts > diamond: one execution per node, no glitch",
       "semantics.test.ts > layered diamond 8x8: each node executes once per write",
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
@@ -282,7 +484,12 @@
       "semantics.test.ts > a reentrant demand without a data cycle fails as a direct read does",
       "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
       "semantics.test.ts > a computed disposed while it is validated is not run again; its value freezes",
-      "semantics.test.ts > a later source failing in the same walk does not leave the disposed computed owing a run",
+      "semantics.test.ts > a later source failing in the same walk does not reopen a disposed computed (W3)",
+      "semantics.test.ts > the demand that ran the disposing execution observes its value",
+      "semantics.test.ts > commits the same way when a callback the execution calls disposes it",
+      "semantics.test.ts > a watcher reading the computed sees the disposing execution's value",
+      "semantics.test.ts > an unchanged value from the disposing execution keeps the cutoff (P2)",
+      "semantics.test.ts > a disposing execution that throws commits nothing and still detaches (F1)",
       "surface.test.ts > returning prev is a cutoff (P2): equality without a comparator",
       "torture-lifecycle.test.ts > a throwing peek restores the outer tracking context and records nothing",
       "torture-lifecycle.test.ts > validation surfaces it to the writer, before the effect's own try/catch runs (P4)",
@@ -308,6 +515,25 @@
       "trim.test.ts > preserves suspended validation entries across untracked (throw: false)",
       "trim.test.ts > preserves suspended validation entries across untracked (throw: true)",
       "trim.test.ts > an empty stack may be reclaimed inside untracked while a user callback is suspended",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, changed)",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, unchanged)",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, owed)",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, cleanup throws)",
+      "validation-delivery.test.ts > ends a disposed watcher's validation after the current pull (Q1, pull throws)",
+      "validation-delivery.test.ts > rechecks a committed source made stale by a later source before cleanup (RQ3, P4)",
+      "validation-delivery.test.ts > checks a pending source on demand after the first computed subscription (RQ1b)",
+      "validation-delivery.test.ts > preserves cutoff when a newly linked pending source validates unchanged (RQ1b, P2)",
+      "validation-delivery.test.ts > hands off pending validation for an edge added during indexed tracking (RQ1b)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (execution, RQ1b/c)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (validation, RQ1b/c)",
+      "version-rollover.test.ts > expires an unvalidated computed observation when its source wraps (RQ5, P1)",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":false,\"confirmedDuringCheck\":false,\"after\":false})",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":true,\"confirmedDuringCheck\":false,\"after\":true})",
+      "watcher-validation.test.ts > preserves established DIRTY through a thrown check ({\"before\":false,\"confirmedDuringCheck\":true,\"after\":true})",
+      "watcher-validation.test.ts > coalesces an unvisited branch until a later delivery retries validation (D7, cutoff false)",
+      "watcher-validation.test.ts > coalesces an unvisited branch until a later delivery retries validation (D7, cutoff true)",
+      "watcher-validation.test.ts > retains an established obligation through a validation barrier and unchanged recovery (F4)",
+      "watcher-validation.test.ts > executes a failed computed on explicit demand after a sibling write coalesces (F1, D7)",
       "work-stack.test.ts > uses one stack slot per displaced edge at three increasing widths",
       "work-stack.test.ts > restores the enclosing cells on success",
       "work-stack.test.ts > restores the enclosing cells on throw",
@@ -325,6 +551,24 @@
       "work-stack.test.ts > restores the enclosing cells on dispose-outer-throw above suspended validation frames",
       "work-stack.test.ts > keeps pending mark siblings below a nested indexed run"
     ]
+  },
+  {
+    "id": "busy-in-fail",
+    "mechanism": "convention (truthful state): a failed activation ends (BUSY off, a run owed) before the call to its cleanup",
+    "killed": false,
+    "failed": []
+  },
+  {
+    "id": "queued-before-grow",
+    "mechanism": "convention (truthful state): a woken watcher is QUEUED only once it holds its slot, after the ring grew",
+    "killed": false,
+    "failed": []
+  },
+  {
+    "id": "queued-in-deliver",
+    "mechanism": "convention (truthful state): a watcher taken off the ring loses QUEUED before the call that delivers it",
+    "killed": false,
+    "failed": []
   },
   {
     "id": "no-cycle-check",
@@ -364,6 +608,10 @@
     "killed": true,
     "failed": [
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct false)",
+      "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
+      "semantics.test.ts > every cycle up to length 4 fails whichever node is demanded, directly or from above",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (validation, RQ1b/c)",
       "work-stack.test.ts > restores the enclosing cells on success above suspended validation frames"
     ]
   },
@@ -373,18 +621,29 @@
     "killed": true,
     "failed": [
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "interrupted-validation.test.ts > delivers again through the interrupted path after a causal write (D8)",
+      "interrupted-validation.test.ts > validates a 100,000-deep warm chain after a failed leaf body (D8, S7)",
       "semantics.test.ts > diamond: one execution per node, no glitch",
       "semantics.test.ts > layered diamond 8x8: each node executes once per write",
+      "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
       "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
       "semantics.test.ts > one rule on every path that recognises a repeated read",
+      "semantics.test.ts > a watcher's validation reaching a computed under validation fails before its cleanup (P4)",
+      "semantics.test.ts > the demand that ran the disposing execution observes its value",
+      "semantics.test.ts > commits the same way when a callback the execution calls disposes it",
       "structure.test.ts > the end of a deep outermost validation cuts the stack back to KEEP",
       "structure.test.ts > a stack a deep mark grew is cut before the write returns",
       "structure.test.ts > a validation no deeper than TRIM leaves the stack as it is",
       "tracking.test.ts > push and pull are not bounded by the call stack (20,000-deep chain)",
       "trim.test.ts > reclaims a deep validation (throw: false)",
+      "trim.test.ts > reclaims a deep validation (throw: true)",
       "trim.test.ts > reclaims a deep mark without waiting for any later demand",
       "trim.test.ts > preserves suspended validation entries across untracked (throw: false)",
       "trim.test.ts > preserves suspended validation entries across untracked (throw: true)",
+      "validation-delivery.test.ts > checks a pending source on demand after the first computed subscription (RQ1b)",
+      "validation-delivery.test.ts > hands off pending validation for an edge added during indexed tracking (RQ1b)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (execution, RQ1b/c)",
+      "watcher-validation.test.ts > coalesces an unvisited branch until a later delivery retries validation (D7, cutoff false)",
       "work-stack.test.ts > restores the enclosing cells on caught above suspended validation frames",
       "work-stack.test.ts > keeps pending mark siblings below a nested indexed run"
     ]
@@ -395,6 +654,13 @@
     "killed": true,
     "failed": [
       "differential.test.ts > generated programs: dynamic branches, failures, cleanups, disposal",
+      "interrupted-validation.test.ts > retries an interrupted validation on demand and preserves cutoff (D8)",
+      "interrupted-validation.test.ts > delivers again through the interrupted path after a causal write (D8)",
+      "interrupted-validation.test.ts > validates a 100,000-deep warm chain after a failed leaf body (D8, S7)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct false)",
+      "interrupted-validation.test.ts > consumes overlapping pending flags after a causal push (direct true)",
+      "interrupted-validation.test.ts > clears interrupted validation on disposal",
+      "interrupted-validation.test.ts > keeps DIRTY from a write during the interrupted validation",
       "semantics.test.ts > after a failed validation the effect is re-delivered when its cause changes",
       "semantics.test.ts > a read of a node under validation is a cycle, not its previous value",
       "semantics.test.ts > validation reaching an executing node is a cycle and leaves no clean node behind",
@@ -441,12 +707,29 @@
   },
   {
     "id": "disposed-left-dirty",
-    "mechanism": "W3: a failed walk does not leave a node disposed during it owing a run",
+    "mechanism": "W3: a failed walk leaves a node disposed during it with no pending validation",
     "killed": true,
     "failed": [
-      "disposal-retention.test.ts > releases dependencies during direct validation (later throw: true)",
-      "disposal-retention.test.ts > releases dependencies during indirect validation (later throw: true)",
-      "semantics.test.ts > a later source failing in the same walk does not leave the disposed computed owing a run"
+      "semantics.test.ts > a later source failing in the same walk does not reopen a disposed computed (W3)"
+    ]
+  },
+  {
+    "id": "self-dispose-drops-value",
+    "mechanism": "W3 (Q4): a computed disposed in its own successful run commits that run's value",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > commits the value of a first run that disposes itself",
+      "semantics.test.ts > the demand that ran the disposing execution observes its value",
+      "semantics.test.ts > commits the same way when a callback the execution calls disposes it",
+      "semantics.test.ts > a watcher reading the computed sees the disposing execution's value"
+    ]
+  },
+  {
+    "id": "self-dispose-keeps-cleanup",
+    "mechanism": "W3 (Q4): a watcher disposed in its own run keeps no returned cleanup (retained memory)",
+    "killed": true,
+    "failed": [
+      "semantics.test.ts > a watcher disposing itself keeps no cleanup from that run"
     ]
   },
   {
@@ -491,6 +774,7 @@
       "structure.test.ts > the end of a deep outermost validation cuts the stack back to KEEP",
       "structure.test.ts > a stack a deep mark grew is cut before the write returns",
       "trim.test.ts > reclaims a deep validation (throw: false)",
+      "trim.test.ts > reclaims a deep validation (throw: true)",
       "trim.test.ts > preserves suspended validation entries across untracked (throw: false)",
       "trim.test.ts > preserves suspended validation entries across untracked (throw: true)"
     ]
@@ -524,7 +808,6 @@
     "mechanism": "SETTLE: a commit restamps its edges twice a cycle, so a wrapped generation never reads a committed edge as tentative",
     "killed": true,
     "failed": [
-      "generations.test.ts > a watcher whose generation wrapped still validates its committed computed (no failure)",
       "generations.test.ts > a failed watcher keeps a committed edge its failed run did not read (F3)",
       "generations.test.ts > a failed computed keeps its committed frontier (F1)",
       "generations.test.ts > an owed watcher validates every committed source before its cleanup (P4)",
@@ -568,22 +851,19 @@
     ]
   },
   {
-    "id": "no-queue-compact",
-    "mechanism": "S8: the drain moves the live tail to the front once spent slots dominate",
+    "id": "no-queue-shrink",
+    "mechanism": "S8: small drains give back a ring four times larger than they need (LOG 48, LOG 50)",
     "killed": true,
     "failed": [
-      "structure.test.ts > a long drain holds O(queued watchers) slots, not O(deliveries)",
-      "structure.test.ts > many watchers invalidating themselves stay within max(TRIM + W, 2W)"
+      "structure.test.ts > bursts between small drains keep the ring; small drains give it back after a ring's worth"
     ]
   },
   {
-    "id": "no-queue-trim",
-    "mechanism": "S8: the queue at rest is cut back to KEEP",
+    "id": "queue-shrink-eager",
+    "mechanism": "LOG 50: the ring is given back once small drains have delivered a ring's worth, not at the first",
     "killed": true,
     "failed": [
-      "structure.test.ts > a long drain holds O(queued watchers) slots, not O(deliveries)",
-      "structure.test.ts > many watchers invalidating themselves stay within max(TRIM + W, 2W)",
-      "structure.test.ts > a burst of queued watchers does not keep its high water after the drain"
+      "structure.test.ts > bursts between small drains keep the ring; small drains give it back after a ring's worth"
     ]
   },
   {
@@ -593,7 +873,9 @@
     "failed": [
       "semantics.test.ts > read, changing write, reread: the next demand executes again (3, 4, 4)",
       "semantics.test.ts > A→B→A after the first observation is a change (P1): the next demand executes again",
-      "semantics.test.ts > one rule on every path that recognises a repeated read"
+      "semantics.test.ts > one rule on every path that recognises a repeated read",
+      "structure.test.ts > a SKIPPED edge survives a failed attempt and a repeat preserves P5",
+      "tracking.test.ts > A A (immediate repeat) is recognised without indexing"
     ]
   },
   {
@@ -617,7 +899,11 @@
       "semantics.test.ts > effects created inside a batch or another effect run after it",
       "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back",
       "semantics.test.ts > a first run deferred by a batch is established: its failure is F3",
-      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's"
+      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's",
+      "validation-delivery.test.ts > preserves cutoff when a newly linked pending source validates unchanged (RQ1b, P2)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (execution, RQ1b/c)",
+      "validation-delivery.test.ts > delivers to a watcher linked while its source became pending (validation, RQ1b/c)",
+      "version-rollover.test.ts > retains an in-pass obligation across a signal version wrap (RQ5, P5)"
     ]
   },
   {
@@ -627,12 +913,13 @@
     "failed": [
       "semantics.test.ts > effects created inside a batch or another effect run after it",
       "semantics.test.ts > a sibling's failure in the drain the call opened rolls the new watcher back",
-      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's"
+      "semantics.test.ts > a failed effect() call reports its run's error, not its rollback's",
+      "version-rollover.test.ts > retains an in-pass obligation across a signal version wrap (RQ5, P5)"
     ]
   },
   {
     "id": "prepend-subs",
-    "mechanism": "subscribers kept in birth order (lastSub append)",
+    "mechanism": "subscribers kept in birth order (append after the head's prevSub, the last subscriber)",
     "killed": true,
     "failed": [
       "semantics.test.ts > failing effect does not stop the others; the error reaches the writer",
@@ -642,7 +929,9 @@
       "torture-lifecycle.test.ts > a failed watcher does not stop later watchers from queueing more work",
       "torture-structure.test.ts > random reorder + failure reuses every existing relation",
       "torture-structure.test.ts > dispose during an indexed reordered pass restores every slot",
-      "torture-structure.test.ts > nested indexed failure restores the enclosing reader's slot state"
+      "torture-structure.test.ts > nested indexed failure restores the enclosing reader's slot state",
+      "tracking.test.ts > a source's first subscriber points back at its last one through every link and unlink",
+      "validation-delivery.test.ts > hands off pending validation for an edge added during indexed tracking (RQ1b)"
     ]
   }
 ]
