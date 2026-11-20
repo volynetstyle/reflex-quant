@@ -2329,3 +2329,18 @@ afterwards sees `[1, 5]` after a later write.
 
 234 dev / 227 production tests. No runtime change, no new ablation: both
 pins fix behaviour the current mechanisms already produce.
+
+### Audit corpus runner
+
+`research/audit-corpus.mjs` keeps the audit as a regression corpus. Git
+fetches the fork at `5d29274` by SHA; the 30 scripts go to
+`.cache/audit-corpus/`, not into the repository. Each runs against PROD
+and DEV bundles of `src/`. Verdicts: 19 fixed (exit 0); 5 contract
+boundaries (exit 1): Q2 (W5), RQ1a x3 (D7), and `neon-verify-stale-glitch`,
+whose glitch line is Q3 (P3/D6); 6 RQ6 scripts outside the contract (0 or 1
+accepted). The only edit to the copies turns `import(build)` into a file
+URL, so the `ledger-*` scripts also run on Windows.
+
+On `main` (Node 25.2.0) all 30 agree. Teeth: with `--src` set to the 1.2.0
+sources, all 19 fixed scripts disagree (the three RQ2 scripts in PROD
+only, as the audit found), and the runner exits 1.

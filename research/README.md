@@ -14,6 +14,7 @@ and [alien-signals comparison](https://volynetstyle.github.io/reflex-quant/alien
 - [WITNESS-AUDIT.md](WITNESS-AUDIT.md), [mutants.mjs](mutants.mjs) and [mutants.json](mutants.json) record and reproduce ablations.
 - [watcher-validation.mjs](watcher-validation.mjs) checks F4, F5 and the D7 validation barrier against the existing runtime.
 - [stack-commit-points.mjs](stack-commit-points.mjs) probes how the runtime degrades at the actual native stack limit, outside the contract (LOG, "RQ6 closed"), against a bundle of `src/` or of `--src <dir>`.
+- [audit-corpus.mjs](audit-corpus.mjs) runs the external audit of 1.2.0 (PeshoVurtoleta, pinned commit `5d29274`, 30 repro scripts) against PROD and DEV bundles of `src/` and checks each exit code against its recorded verdict: fixed (0), contract boundary (1), or outside the contract (RQ6, 0 or 1). `node research/audit-corpus.mjs [--src <dir>]`.
 - [HISTORY.md](HISTORY.md) and [HISTORY.html](HISTORY.html) show benchmark history.
 - [versions/](versions/) contains archived intermediate implementations referred to by the design log; these are research artifacts, not the current runtime.
 
