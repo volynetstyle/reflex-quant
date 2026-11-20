@@ -13,6 +13,7 @@ import {
   TAIL,
   TRIM,
   UNREAD,
+  createNode,
   cutDeps,
   moveDep,
   settleDeps,
@@ -29,8 +30,32 @@ const compare = Object.is;
 
 /** The running consumer, or null outside a tracking pass. */
 let active: Node | null = null;
-/** Last accepted edge of the running pass; saved with `active` on nesting. */
+/**
+ * Last accepted edge of the running pass, or AT_END; saved with `active` on
+ * nesting.
+ */
 let cursor: Edge | null = null;
+/**
+ * The cursor of a pass whose last accepted read appended: the accepted
+ * prefix is the whole list and the cursor is the consumer's `lastDep`, so
+ * the register names that relation instead of holding the edge. A new edge
+ * is young and the module context is old; storing the edge itself took the
+ * write barrier's slow path on every relation a pass appends. Never linked,
+ * never written; `miss`, `slot` and `exec` resolve it to `lastDep`, and in
+ * `read` its null `nextDep` and foreign `from` send every read to `miss`,
+ * which answers a repeat of the appended source as `read` would.
+ */
+const nowhere = createNode(null, undefined, 0);
+const AT_END: Edge = {
+  from: nowhere,
+  ver: 0,
+  nextDep: null,
+  to: nowhere,
+  nextSub: null,
+  gen: 0,
+  prevDep: null,
+  prevSub: null,
+};
 /**
  * One LIFO work stack shared by all walks: sibling edges to resume (mark),
  * edges to climb back through (pull), and slot cells an indexed run displaced.
@@ -483,7 +508,9 @@ export function exec(n: Node): void {
   try {
     value = n.fn!(n.value);
   } catch (error) {
-    const last = cursor as Edge | null;
+    let last = cursor as Edge | null;
+
+    if (last === AT_END) last = n.lastDep;
     active = prev;
     cursor = prevCursor;
     // The activation has ended: BUSY goes and the owed run is stored here,
@@ -492,7 +519,9 @@ export function exec(n: Node): void {
     fail(n, base, last);
     throw error;
   }
-  const last = cursor as Edge | null;
+  let last = cursor as Edge | null;
+
+  if (last === AT_END) last = n.lastDep;
   active = prev;
   cursor = prevCursor;
   const f = n.flags;
@@ -671,7 +700,7 @@ function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
     s.firstSub = e;
     e.prevSub = e;
   }
-  cursor = e;
+  cursor = next === null ? AT_END : e;
 
   // If the source is still STALE after peek, its push preceded this edge.
   // Pass that pending validation to the new subscriber (P5).
@@ -693,6 +722,15 @@ function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
  * the two reads stays visible to the next validation.
  */
 function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
+  if (last === AT_END) {
+    last = c.lastDep!;
+
+    if (last.from === s) {
+      if (__STATS__) stats.repeats++;
+
+      return;
+    }
+  }
   // An indexed pass owns its cursor's source slot. Nested passes restore it.
   if (last !== null && last.from.slot === last) return slot(c, s, last, next);
   const first = s.firstSub;
@@ -849,7 +887,7 @@ function slot(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 
   if (cell !== null && cell.to === c) return take(c, cell, s, last, next);
   attach(c, s, last, next);
-  claim(s, cursor as Edge);
+  claim(s, next === null ? c.lastDep! : (cursor as Edge));
 }
 
 /**
