@@ -2245,8 +2245,13 @@ killed.
 **Numbers.** 232 dev / 225 production tests (+7), 67 mutant anchors.
 Kernel bundle (esbuild, minified ESM, production defines) 8,039 → 8,118 B,
 gzip 2,852 → 2,873 B (the inline shape: 8,058 B, 2,863 B). The audit's
-script prints `not reproduced` and exits 0 on PROD and DEV. CI Benchmark
-for the out-of-line shape is the gate before merge.
+script prints `not reproduced` and exits 0 on PROD and DEV.
+
+CI Benchmark #63 (run 44757352869, out-of-line shape, Node 22.23.4, 9
+rounds): geomean 1.000 over 46 rows; track.stable-64 1.000 [0.992, 1.005]
+(inline shape: 1.061). Highest row effect.through-computed 1.049 [0.904,
+1.099], within its pair range. Validation ablations killed in DEV and PROD
+on Node 22 and 25. The out-of-line shape is merged.
 
 **Rest of the addendum.** The relayed lost-update report (in-pass write on
 a computed's first run, chain into an effect) is RQ1 shape b, already
