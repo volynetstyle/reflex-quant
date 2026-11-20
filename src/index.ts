@@ -114,11 +114,14 @@ export const get: <T>(source: Readable<T>) => T = read as never;
 /** `get` without observation: up to date, but the running consumer does not depend on it. */
 export const peek: <T>(source: Readable<T>) => T = refresh as never;
 
-/** Writes, then runs what the write scheduled; a write that woke nothing stops at one load. */
+/**
+ * Writes, then runs what the write scheduled. A write that reached no
+ * subscriber scheduled nothing, and outside a batch or drain the queue is
+ * already empty (every drain runs until it is), so it skips the host test.
+ */
 export function set<T>(source: Signal<T>, value: T): void {
-  write(source as unknown as Node, value);
-
-  if (size !== 0 && hold === 0) drainNow();
+  if (write(source as unknown as Node, value) && size !== 0 && hold === 0)
+    drainNow();
 }
 
 /**

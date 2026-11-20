@@ -47,7 +47,7 @@ export const variants = {
   lean: ["index-first-miss and no-displaced together", ...firstMiss, ...displaced],
 };
 
-const setGuard = "  write(source as unknown as Node, value);\n  if (size !== 0 && hold === 0) drainNow();";
+const setGuard = "  if (write(source as unknown as Node, value) && size !== 0 && hold === 0)\n    drainNow();";
 const hostImport = 'import { drainNow, hold, size, start, stop, watcher } from "./host";';
 const withFlush = 'import { drainNow, flush, hold, size, start, stop, watcher } from "./host";';
 const setFlush = [

@@ -94,7 +94,13 @@ function trim(): void {
 
 // ------------------------------------------------------------------- write
 
-export function write(s: Node, value: unknown): void {
+/**
+ * Store a changed value; true if a subscriber was reached. A source without
+ * subscribers keeps its version: only an edge holds an observation, and an
+ * edge attached later records the version current then. Skipping the bump
+ * also keeps the version out of a loop-carried read-modify-write.
+ */
+export function write(s: Node, value: unknown): boolean {
   const old = s.value;
 
   // `compare` (P1), spelled out here: V8 compiles Object.is on untyped
@@ -108,12 +114,16 @@ export function write(s: Node, value: unknown): void {
       ? value !== 0 || 1 / (old as number) === 1 / (value as number)
       : old !== old && value !== value
   )
-    return;
+    return false;
 
   s.value = value;
+
+  let e = s.firstSub;
+
+  if (e === null) return false;
   bump(s);
 
-  for (let e = s.firstSub; e !== null; e = e.nextSub) {
+  for (; e !== null; e = e.nextSub) {
     const n = e.to;
     const f = n.flags;
 
@@ -145,6 +155,7 @@ export function write(s: Node, value: unknown): void {
       if (subs !== null) mark(subs);
     }
   }
+  return true;
 }
 
 /**
