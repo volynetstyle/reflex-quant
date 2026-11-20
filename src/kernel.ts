@@ -27,10 +27,11 @@ export { stats } from "./instrumentation";
 
 const compare = Object.is;
 
-/** The running consumer, or null outside a tracking pass. */
+/**
+ * The running consumer, or null outside a tracking pass. Its pass's cursor
+ * is its own field (`Node.cursor`), so nesting saves `active` alone.
+ */
 let active: Node | null = null;
-/** Last accepted edge of the running pass; saved with `active` on nesting. */
-let cursor: Edge | null = null;
 /**
  * One LIFO work stack shared by all walks: sibling edges to resume (mark),
  * edges to climb back through (pull), and slot cells an indexed run displaced.
@@ -53,7 +54,7 @@ export function onWake(fn: (w: Node) => void): void {
   wake = fn;
 }
 
-/** No tracked consumer or occupied work-stack slot (tests; untracked suspends cursor). */
+/** No tracked consumer or occupied work-stack slot (tests; untracked suspends `active`). */
 export function idle(): boolean {
   return active === null && top === 0;
 }
@@ -235,13 +236,13 @@ export function read(n: Node): unknown {
 
   if (__STATS__) stats.reads++;
 
-  const last = cursor;
+  const last = c.cursor;
   const next = last === null ? c.firstDep : last.nextDep;
 
   if (next !== null && next.from === n) {
     if (__STATS__) stats.hits++;
 
-    cursor = next;
+    c.cursor = next;
     next.ver = n.ver;
 
     return n.value;
@@ -462,10 +463,14 @@ export function untracked<T>(fn: () => T): T {
 
 // --------------------------------------------------------------------- run
 
-/** Run `n.fn` as a tracking pass; commit value and edges on success. */
+/**
+ * Run `n.fn` as a tracking pass; commit value and edges on success. The
+ * pass's cursor is `n.cursor`: null at rest, so the pass starts with an empty
+ * prefix, and taken and cleared on both exits, so a node at rest retains no
+ * edge through it (LOG 39).
+ */
 export function exec(n: Node): void {
   const prev = active;
-  const prevCursor = cursor;
   const base = top;
 
   if (__STATS__) stats.runs++;
@@ -477,24 +482,23 @@ export function exec(n: Node): void {
   // Writes during the body set a fresh wake and still survive (W2/F4).
   n.flags = (n.flags & ~Flag.PendingMarked) | Flag.Busy;
   active = n;
-  cursor = null;
   let value: unknown;
 
   try {
     value = n.fn!(n.value);
   } catch (error) {
-    const last = cursor as Edge | null;
+    const last = n.cursor;
+    n.cursor = null;
     active = prev;
-    cursor = prevCursor;
     // The activation has ended: BUSY goes and the owed run is stored here,
     // so the flags are true before `fail` cleans up (truthful state).
     n.flags = (n.flags & ~Flag.Busy) | (n.fn !== null ? Flag.Dirty : 0);
     fail(n, base, last);
     throw error;
   }
-  const last = cursor as Edge | null;
+  const last = n.cursor;
+  n.cursor = null;
   active = prev;
-  cursor = prevCursor;
   const f = n.flags;
 
   if (last !== null && last.from.slot === last) unindex(n, base);
@@ -671,7 +675,7 @@ function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
     s.firstSub = e;
     e.prevSub = e;
   }
-  cursor = e;
+  c.cursor = e;
 
   // If the source is still STALE after peek, its push preceded this edge.
   // Pass that pending validation to the new subscriber (P5).
@@ -726,7 +730,7 @@ function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
       if (__STATS__) stats.tails++;
 
       e.ver = s.ver;
-      cursor = e;
+      c.cursor = e;
       return moveDep(c, e, last, next);
     }
   }
@@ -788,7 +792,7 @@ function near(
  */
 function skip(c: Node, s: Node, last: Edge | null, next: Edge, e: Edge): void {
   e.ver = s.ver;
-  cursor = e;
+  c.cursor = e;
 
   if (next.ver === SKIPPED) return skipDep(c, last, next, e);
 
@@ -816,7 +820,7 @@ function lookup(
     if (found.ver === SKIPPED) {
       if (__STATS__) stats.moves++;
       found.ver = s.ver;
-      cursor = found;
+      c.cursor = found;
       return moveDep(c, found, last, next!);
     }
     begin(c, found, first, next);
@@ -849,7 +853,7 @@ function slot(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 
   if (cell !== null && cell.to === c) return take(c, cell, s, last, next);
   attach(c, s, last, next);
-  claim(s, cursor as Edge);
+  claim(s, c.cursor as Edge);
 }
 
 /**
@@ -923,5 +927,5 @@ function take(
 
   e.ver = s.ver;
   moveDep(c, e, last, next!);
-  cursor = e;
+  c.cursor = e;
 }
