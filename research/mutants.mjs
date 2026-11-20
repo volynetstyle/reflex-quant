@@ -91,7 +91,7 @@ export const mutants = [
   ["eager-dispose", "disposal deferred to the end of the node's own run",
     [K, "  n.fn = null;\n  if ((n.flags & Flag.Busy) === 0) detach(n);", "  n.fn = null;\n  detach(n);"]],
   ["append-marker-unresolved", "miss resolves AT_END to lastDep before using the cursor as an edge",
-    [K, "  if (last === AT_END) {\n    last = c.lastDep!;", "  if (false) {\n    last = c.lastDep!;"]],
+    [K, "  if (next === null && last === AT_END) {\n    last = c.lastDep!;", "  if (false) {\n    last = c.lastDep!;"]],
   ["append-marker-claim", "an indexed append claims lastDep, not the AT_END marker",
     [K, "  claim(s, next === null ? c.lastDep! : (cursor as Edge));", "  claim(s, cursor as Edge);"]],
   ["append-marker-exit", "a successful exit resolves AT_END before pruning and unindexing",
