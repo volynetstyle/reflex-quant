@@ -724,9 +724,9 @@ function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
  * the two reads stays visible to the next validation.
  */
 function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
-  // AT_END has a null nextDep, so it implies next === null: test the register
-  // first, and a miss with a suffix (most reorder misses) skips the marker.
-  if (next === null && last === AT_END) {
+  // An empty suffix makes the cursor the tail, whether `last` is that edge
+  // or AT_END (read sends an empty list to attach), so miss never asks which.
+  if (next === null) {
     last = c.lastDep!;
 
     if (last.from === s) {
