@@ -2102,12 +2102,21 @@ CI" starts from layout, not from the code.
   write.no-subscribers 0.877, write.same-value 0.891, all with narrow
   ranges. The P1 test gains -0 → -0 and -0 → +0; it kills a variant that
   ignores the sign of zero.
-- **Open regression.** fan-out.effects-1000 1.113 [1.084, 1.135] on an
-  EPYC 7763 (Zen 3) runner; 1.002 for L+E on the same CPU model, none on
-  the other CPUs or locally (Node 22 1.005, Node 25 0.989). On Node 22
-  W2 changes an inlining decision: `grow` (the host ring's growth, an
-  array allocation) is inlined into `set` / `write`, so the rare growth
-  path sits inside the 1,000-subscriber loop. Not repaired yet.
+- **EPYC 7763 observation.** fan-out.effects-1000 1.113 [1.084, 1.135]
+  on a Zen 3 runner (run 44732369336); 1.002 for L+E on the same CPU
+  model. Two reruns of the same commit landed on other CPUs: 1.008 on an
+  EPYC 9V74 (44736090317) and 1.008 [1.005, 1.016] on a Xeon 6975P
+  (44736095501); locally Node 22 1.005, Node 25 0.989. Not reproduced
+  off that CPU model, which CI cannot select. A first explanation (W2
+  makes V8 12.4 inline the host's `grow` into `set`) was wrong: that
+  inlining varies run to run in both builds. What both builds share on
+  V8 12.4 is E's pattern in `write`'s subscriber loop: the edge is
+  reloaded from a stack slot before `e.nextSub`, because `mark` and the
+  inlined `wake` contain calls. Zen 3 renames only rsp-relative stack
+  accesses and V8 addresses slots from rbp, so that reload costs more
+  there; this is a hypothesis for the CPU dependence, not a measured
+  cause. Giving `wake`'s full-ring path its own exit did not remove the
+  reload and was not kept.
 
 ### Rejected
 
@@ -2131,5 +2140,7 @@ read.signal 0.822, batch.coalesce-64 0.845, pull.validate-wide-256 0.853,
 batch.writes-32 0.859, value-sort.256x32 0.872, write.no-subscribers
 0.877, signal-create 0.885. Highest: fan-out.effects-1000 1.113 (above),
 fan-out.computeds-1000 1.030 [0.80, 1.24], pull.diamond-1000 1.028.
+Reruns of the same commit: geomean 0.948 (44736090317) and 0.951
+(44736095501), no row above 1.04 in either.
 225 dev / 218 production tests, 64 oracle cases, 65 mutant anchors;
 2,908 B gzip (main 2,856; 2,871 before W2).
