@@ -2,7 +2,15 @@
 // cleanup, run), a FIFO queue for scheduled watchers, and batching.
 import { Flag, KEEP, TRIM } from "./graph";
 import type { Cleanup, Flags, Node, NodeFn } from "./graph";
-import { check, createNode, dispose, exec, onWake, untracked } from "./kernel";
+import {
+  check,
+  createNode,
+  dispose,
+  exec,
+  nulls,
+  onWake,
+  untracked,
+} from "./kernel";
 
 /**
  * The queue: a ring of `mask + 1` slots, a power of two, holding the `size`
@@ -10,7 +18,7 @@ import { check, createNode, dispose, exec, onWake, untracked } from "./kernel";
  * fewer than 2W + KEEP slots for W watchers queued at once (S8), and a
  * delivery takes no slot of its own: a slot is free again once taken.
  */
-let queue: (Node | null)[] = new Array<Node | null>(KEEP).fill(null);
+let queue: (Node | null)[] = nulls(KEEP) as (Node | null)[];
 let mask = KEEP - 1;
 let head = 0;
 /**
@@ -44,7 +52,7 @@ onWake(wake);
 
 /** A full ring doubles, its watchers moved to the front in queue order. */
 function grow(): void {
-  const next = new Array<Node | null>(size + size).fill(null);
+  const next = nulls(size + size) as (Node | null)[];
 
   for (let i = 0; i < size; i++) next[i] = queue[(head + i) & mask] as Node;
 

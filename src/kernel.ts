@@ -37,7 +37,17 @@ let cursor: Edge | null = null;
  * Every walk pops back to its own base before returning. Once the stack is
  * empty, an oversized buffer is cut back (`trim`).
  */
-const stack: WorkStack = new Array(256).fill(null);
+const stack: WorkStack = nulls(KEEP);
+/**
+ * `length` nulls, built PACKED: `new Array(n)` is born HOLEY in V8 and
+ * `fill` does not repack it, so every load would keep a hole check.
+ */
+export function nulls(length: number): (Edge | null)[] {
+  const array: (Edge | null)[] = [];
+
+  for (let i = 0; i < length; i++) array.push(null);
+  return array;
+}
 /** First free index of `stack`. */
 let top = 0;
 /** Longest the work stack has been when `trim` cut it (research). */
