@@ -423,6 +423,7 @@ recorded the work they save, not because they save none (LOG 30).
 | empty work stack releases oversized capacity at every producer exit | successful/failed validation, cold indexed runs, direct watchers and push without later demand (`no-trim`, placement ablations; LOG 40) |
 | disposed handles do not retain former dependencies (S4/resource correctness) | graph-field reachability is independent of former dependency width (LOG 39); LOG 43 removes the node cursor, retiring `retain-disposed-cursor`, and checks nested execution with `no-cursor-restore` |
 | no run of a node disposed during its validation (W3) | "a computed disposed while it is validated…" (`disposed-run`, `disposed-run-climb`); "a later source failing in the same walk…" (`disposed-left-dirty`) |
+| a computed disposed in its own successful run commits that run's value; a watcher's returned cleanup is dropped (W3, Q4) | "the demand that ran the disposing execution observes its value" (`self-dispose-drops-value`); "a watcher disposing itself keeps no cleanup from that run" (`self-dispose-keeps-cleanup`) |
 
 ## Q4. Optimization versus semantics
 

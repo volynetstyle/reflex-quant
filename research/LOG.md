@@ -2144,3 +2144,79 @@ Reruns of the same commit: geomean 0.948 (44736090317) and 0.951
 (44736095501), no row above 1.04 in either.
 225 dev / 218 production tests, 64 oracle cases, 65 mutant anchors;
 2,908 B gzip (main 2,856; 2,871 before W2).
+
+## Q4: a self-disposing computed commits its run's value (2026-11-20)
+
+**Source.** The external audit's 2026-11-20 addendum (PeshoVurtoleta,
+`research/audit-2026-11-19` at `5d29274`, item Q4, script
+`ext-self-dispose-commit.mjs`). A computed that calls `dispose` on itself
+in a run that returns: `exec` took `if (n.fn === null) return detach(n);`
+before the value/version commit, so the run's value was dropped. The
+demand that ran it answered the pre-run value (the initial value on a first
+run), and that value stayed readable. Disposing the same computed from
+outside after its run keeps that run's value. Re-run on `main` `e05a4ce`
+(Node 25.2.0): the script exits 1 on both PROD and DEV with all controls
+passing.
+
+**Contract decision.** The contract did not decide Q4: W3 said only
+"terminal and safe inside the node's own pass", and F1 covers only a run
+that throws. The old outcome came from where the early return sat, not
+from any rule. W3 now says: a computed that disposes itself during a
+successful execution commits the value returned by that execution before
+detaching; its observations from that execution do not remain subscribed;
+if that execution throws, F1 applies and the node is detached. Success of
+the run and lifetime of the node are separate axes:
+
+| self-dispose | callback | result |
+|---|---|---|
+| no | returns | normal commit |
+| no | throws | F1 |
+| yes | returns | value/version commit, then detach |
+| yes | throws | no commit (F1), detach |
+
+**Classification.** Semantic mechanism (W3) for the computed commit;
+resource correctness for the watcher guard below.
+
+**Repair.** On the disposal path `exec` detaches and then falls through
+to the value/version commit. The relation commit (`cutDeps`, `gen`,
+`settleDeps`) stays on the live path only: a terminal node's relations are
+detached, not committed. The live path's order is unchanged.
+
+Moving the whole commit above the early return was rejected: watchers go
+through `exec` too, and their run's value is the returned cleanup. A
+watcher disposed in its own run would keep that cleanup in `value`. It
+would never run and would keep alive whatever it closes over (the pinned
+"returned cleanup dropped" test only checks that the cleanup is never
+called). The disposal path therefore returns for a watcher before the
+commit.
+
+**Witnesses** (`test/semantics.test.ts`, "W3 self-disposal in a computed's
+own execution"): a first run that disposes itself; a re-run reached
+through an outer computed's validation, whose demand must observe the new
+value (`outer` = 11, not 1); a watcher reading the computed; cutoff (P2)
+when the disposing run returns an unchanged value; the throw case, first
+run and re-run (old value kept, detached, terminal); a self-disposing
+watcher keeps no cleanup. On the unchanged runtime the first three fail
+and the cutoff and throw tests pass.
+
+**Ablations.** `self-dispose-drops-value` (the old early return): killed
+by exactly the three success-path tests. `self-dispose-keeps-cleanup` (no
+watcher return): killed by the watcher test. `eager-dispose` stays
+killed.
+
+**Numbers.** 231 dev / 224 production tests (+6), 67 mutant anchors.
+Kernel bundle (esbuild, minified ESM, production defines) 8,039 → 8,058 B,
+gzip 2,852 → 2,863 B. The audit's script prints `not reproduced` and exits
+0 on PROD and DEV. No benchmark yet; the change reshapes the tail of
+`exec`, a path tuned in the previous entry (W2), so CI Benchmark is the
+gate before merge.
+
+**Rest of the addendum.** The relayed lost-update report (in-pass write on
+a computed's first run, chain into an effect) is RQ1 shape b, already
+closed on `main` by the `attach` handoff: `neon-inpass-write` and
+`ledger-b-link-to-pending` exit 0 on PROD and DEV. The latter imports a
+bare absolute path and fails on Windows (`ERR_UNSUPPORTED_ESM_URL_SCHEME`);
+it was run through a `pathToFileURL` copy. `dispose(h)` inside an effect's
+first run (`h` is still `undefined`, W5) and a cleanup that disposes its
+own effect (W1 + W3) are not defects; not re-checked here beyond their
+reasoning.
