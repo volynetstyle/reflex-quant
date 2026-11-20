@@ -22,13 +22,6 @@ export interface Node {
   fn: NodeFn | null;
   /** First and last dependency edges, in read order. */
   firstDep: Edge | null;
-  /**
-   * While its pass runs: the last accepted edge, null before the first; null
-   * at rest. Kept in the node, not a module register: a fresh consumer and
-   * its fresh edges are young, and a young edge stored into the module's
-   * (old) context takes the write barrier's slow path on every new relation.
-   */
-  cursor: Edge | null;
   lastDep: Edge | null;
   /**
    * First subscriber edge, in birth order. Its prevSub is the LAST subscriber,
@@ -40,6 +33,14 @@ export interface Node {
   slot: Edge | null;
   /** Successful runs; edges born since the last one are tentative. */
   gen: Generation;
+  /**
+   * While its pass runs: the last accepted edge, null before the first; null
+   * at rest. Kept in the node, not a module register: a fresh consumer and
+   * its fresh edges are young, and a young edge stored into the module's
+   * (old) context takes the write barrier's slow path on every new relation.
+   * Last in the layout, so every other field keeps its offset.
+   */
+  cursor: Edge | null;
 }
 
 export interface Edge {
@@ -150,11 +151,11 @@ export function createNode(fn: Node["fn"], value: unknown, flags: Flags): Node {
     ver: 0,
     fn,
     firstDep: null,
-    cursor: null,
     lastDep: null,
     firstSub: null,
     slot: null,
     gen: 0,
+    cursor: null,
   };
 }
 
