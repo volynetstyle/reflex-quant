@@ -95,7 +95,20 @@ function trim(): void {
 // ------------------------------------------------------------------- write
 
 export function write(s: Node, value: unknown): void {
-  if (compare(s.value, value)) return;
+  const old = s.value;
+
+  // `compare` (P1), spelled out here: V8 compiles Object.is on untyped
+  // values to a SameValue builtin call, while this site's `===` keeps the
+  // feedback of what is written. Equal operands differ only as +0 and -0,
+  // unequal ones are the same only as two NaNs. The commit in `exec` keeps
+  // Object.is: it sees `undefined` first and watchers' cleanups, and the
+  // spelled form measured slower there.
+  if (
+    old === value
+      ? value !== 0 || 1 / (old as number) === 1 / (value as number)
+      : old !== old && value !== value
+  )
+    return;
 
   s.value = value;
   bump(s);

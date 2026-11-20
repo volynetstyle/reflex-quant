@@ -333,6 +333,12 @@ describe("torture: surface safety", () => {
     set(source, -0);
     expect(runs).toBe(3);
 
+    set(source, -0);
+    expect(runs).toBe(3);
+
+    set(source, +0);
+    expect(runs).toBe(4);
+
     dispose(e);
   });
 
