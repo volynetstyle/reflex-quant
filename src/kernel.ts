@@ -45,7 +45,9 @@ let cursor: Edge | null = null;
  * `read` its null `nextDep` and foreign `from` send every read to `miss`,
  * which answers a repeat of the appended source as `read` would.
  */
-const nowhere = createNode(null, undefined, 0);
+// A Smi value, so the marker does not generalize the shared Node map's
+// `value` field from Smi to tagged in a process that holds only numbers.
+const nowhere = createNode(null, 0, 0);
 const AT_END: Edge = {
   from: nowhere,
   ver: 0,
