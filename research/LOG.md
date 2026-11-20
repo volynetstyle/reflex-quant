@@ -2132,4 +2132,4 @@ batch.writes-32 0.859, value-sort.256x32 0.872, write.no-subscribers
 0.877, signal-create 0.885. Highest: fan-out.effects-1000 1.113 (above),
 fan-out.computeds-1000 1.030 [0.80, 1.24], pull.diamond-1000 1.028.
 225 dev / 218 production tests, 64 oracle cases, 65 mutant anchors;
-2,871 B gzip (main 2,856).
+2,908 B gzip (main 2,856; 2,871 before W2).
