@@ -35,7 +35,14 @@ function graphReachable(root: Node): number {
         item.prevSub,
         item.nextSub,
       );
-    else pending.push(item.firstDep, item.slot, item.firstSub, item.lastDep);
+    else
+      pending.push(
+        item.firstDep,
+        item.cursor,
+        item.slot,
+        item.firstSub,
+        item.lastDep,
+      );
   }
   return seen.size;
 }
