@@ -2262,3 +2262,70 @@ it was run through a `pathToFileURL` copy. `dispose(h)` inside an effect's
 first run (`h` is still `undefined`, W5) and a cleanup that disposes its
 own effect (W1 + W3) are not defects; not re-checked here beyond their
 reasoning.
+
+## Audit Q2 and Q3: contract boundaries (2026-11-20)
+
+The external audit's two remaining questions (PeshoVurtoleta,
+`research/audit-2026-11-19`) are decided before 1.3.0. Neither changes the
+runtime. On `main` `907fc82` every other audit script either no longer
+reproduces (RQ1b/c, RQ2, RQ3, RQ4, RQ5, Q1, Q4) or reproduces behaviour the
+contract already places outside an obligation: RQ1a (D7) and RQ6 (native
+stack exhaustion, outside the contract since F6 was removed).
+
+### Q2: a failed `effect()` call running again in its own drain
+
+`neon-w5-failed-effect-rerun.mjs` exits 1 on PROD and DEV: the first run
+throws after writing its own source, or after a sibling writes it, and the
+watcher runs a second time (`runs [0, 1]`) before `effect()` rethrows and
+rolls back. Two of the three audit sessions read W5's last sentence and
+F5 as allowing this; neon read "never runs again" as starting at the first
+error.
+
+**Decision: keep.** This makes the existing W5/F5 order explicit; it is
+not a new choice. F5 says a failing operation still discharges its
+remaining obligations, and W5 rolls back the whole call "whichever run in
+the drain the call opened threw". W5 now says that the rollback happens
+when that drain ends, not at the first error, so the new watcher may run
+again before it, and "never runs again" counts from the rollback.
+
+**Pin.** "a failed effect() call may run again in its own drain, then
+rolls back (W5, F5)": self and sibling shapes, `runs [0, 1]`, the
+successful second run's cleanup consumed by the rollback, no run after
+later writes.
+
+### Q3: a write during validation
+
+`root = get(s) * 100 + get(a)`, where `a`'s run writes `s` after `s` was
+checked: in one evaluation a reader sees `[P, x] = [0, 1]`. The lasting
+consequence (frozen later subscribers, RQ1c) is fixed; the single
+observation remains. One audit session cited D6; another called it a P3
+glitch. The second reading is correct against P3's old wording, "no
+inconsistent intermediate observation": `[0, 1]` is one, literally. So D6
+alone does not decide the case; P3 and D6 conflicted.
+
+**Two models.** (a) Restart until the current snapshot: a demand that sees
+a write made during its own validation revalidates until no write
+intervenes. That is snapshot isolation for the whole machine. Quant does
+not promise it anywhere, and it needs a detection and restart on the
+validation path. (b) Start snapshot plus later causal work: the pass in
+progress is judged as of its start, and the write, a new causal change,
+is handled by the work it makes owed.
+
+**Decision: (b), the current behaviour.** The write comes from user code
+during a validation already in progress. It is a change that did not exist
+when the pass started, not a part of the wave being propagated. P3 now
+covers propagation of an established change: no partially propagated graph
+state, at most one execution per node per wave. A synchronous write by
+user code during an execution or a validation is a new causal change: the
+pass in progress stays judged as of its start (D6), and the write is
+observed by the work it makes owed (P5, F4). D6 now says the same for a
+validation, not only for an execution. Under this wording `[0, 1]` is a
+temporal split caused by a reentrant write, not a glitch.
+
+**Pin.** "a write during validation is a new change: the demand in
+progress answers as of its start (P3, D6)": `[0, 1]` once, then
+`get(p)` = 1 and `[1, 1]` on the next demand, and an effect created
+afterwards sees `[1, 5]` after a later write.
+
+234 dev / 227 production tests. No runtime change, no new ablation: both
+pins fix behaviour the current mechanisms already produce.

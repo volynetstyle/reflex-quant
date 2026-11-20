@@ -869,6 +869,67 @@ describe("W3 self-disposal in a computed's own execution", () => {
   });
 });
 
+describe("audit boundaries Q2 and Q3", () => {
+  it("a failed effect() call may run again in its own drain, then rolls back (W5, F5)", () => {
+    // Self: the failed first run writes its own source. Sibling: it makes a
+    // sibling write that source. Either delivery is established in the drain
+    // the call opened, so it runs before the rollback at the drain's end.
+    for (const sibling of [false, true]) {
+      const s = signal(0);
+      const t = signal(0);
+      if (sibling) watch(() => void (get(t) === 1 && set(s, 1)));
+      const runs: number[] = [];
+      let cleanups = 0;
+      expect(() =>
+        watch(() => {
+          const v = get(s);
+          runs.push(v);
+          if (v === 0) {
+            if (sibling) set(t, 1);
+            else set(s, 1);
+            throw new Error("init");
+          }
+          return () => void cleanups++;
+        }),
+      ).toThrow("init");
+      expect(runs).toEqual([0, 1]);
+      // The successful second run's cleanup is consumed by the rollback.
+      expect(cleanups).toBe(1);
+      set(s, 2);
+      set(s, 3);
+      expect(runs).toEqual([0, 1]);
+      expect(n(s).firstSub === null || sibling).toBe(true);
+    }
+  });
+
+  it("a write during validation is a new change: the demand in progress answers as of its start (P3, D6)", () => {
+    // A's run, inside P's validation, writes x after P already checked x.
+    const x = signal(0);
+    const t = signal(0);
+    const a = computed(() => {
+      if (get(t) === 1) set(x, 1);
+      return 0;
+    });
+    const p = computed(() => get(x) + get(a));
+    const q = computed(() => [get(p), get(x)]);
+    expect(get(p)).toBe(0);
+    set(t, 1);
+    // P is judged as of the start of its validation; x is read afterwards.
+    expect(get(q)).toEqual([0, 1]);
+    // The write made work owed: the next demand observes it.
+    expect(get(p)).toBe(1);
+    expect(get(q)).toEqual([1, 1]);
+    const seen: number[] = [];
+    const stop = effect(() => void seen.push(get(p)));
+    set(x, 5);
+    expect(seen).toEqual([1, 5]);
+    stop();
+    expect(idle()).toBe(true);
+  });
+
+  const n = (x: object) => x as unknown as Node;
+});
+
 describe("F5 first error", () => {
   // An operation that fails rethrows the first error it caught. Obligations
   // it still finishes afterwards (deferred watchers, rollback) run, but their
