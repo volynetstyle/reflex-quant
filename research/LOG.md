@@ -2177,10 +2177,21 @@ the run and lifetime of the node are separate axes:
 **Classification.** Semantic mechanism (W3) for the computed commit;
 resource correctness for the watcher guard below.
 
-**Repair.** On the disposal path `exec` detaches and then falls through
-to the value/version commit. The relation commit (`cutDeps`, `gen`,
-`settleDeps`) stays on the live path only: a terminal node's relations are
-detached, not committed. The live path's order is unchanged.
+**Repair.** `exec`'s disposal exit calls `disposed(n, value)` instead of
+`detach(n)`: it detaches, then commits the value and version. The
+relation commit (`cutDeps`, `gen`, `settleDeps`) stays on the live path
+only: a terminal node's relations are detached, not committed. Apart from
+that call target, `exec` is the same as on `main`.
+
+A first shape (`373b698`, `research/q4-self-dispose`) did the same inside
+`exec`: the disposal branch detached and fell through to the shared value
+commit, with the relation commit in an `else`. CI Benchmark #62 (run
+44753588453, Node 22.23.4, Xeon 6973P, 9 rounds): geomean 0.998 over 46
+rows, but track.stable-64 1.061 [1.051, 1.064], 352 ns against 332 ns,
+with every pair above 1.05. Locally (Node 22.23.4, same bundles) the row
+was 1.004 [0.955, 1.048], so the cost depends on the CPU, like the write
+loop in the previous entry. The out-of-line exit keeps the live path's
+code identical to `main`.
 
 Moving the whole commit above the early return was rejected: watchers go
 through `exec` too, and their run's value is the returned cleanup. A
@@ -2205,11 +2216,10 @@ watcher return): killed by the watcher test. `eager-dispose` stays
 killed.
 
 **Numbers.** 231 dev / 224 production tests (+6), 67 mutant anchors.
-Kernel bundle (esbuild, minified ESM, production defines) 8,039 → 8,058 B,
-gzip 2,852 → 2,863 B. The audit's script prints `not reproduced` and exits
-0 on PROD and DEV. No benchmark yet; the change reshapes the tail of
-`exec`, a path tuned in the previous entry (W2), so CI Benchmark is the
-gate before merge.
+Kernel bundle (esbuild, minified ESM, production defines) 8,039 → 8,118 B,
+gzip 2,852 → 2,873 B (the inline shape: 8,058 B, 2,863 B). The audit's
+script prints `not reproduced` and exits 0 on PROD and DEV. CI Benchmark
+for the out-of-line shape is the gate before merge.
 
 **Rest of the addendum.** The relayed lost-update report (in-pass write on
 a computed's first run, chain into an effect) is RQ1 shape b, already

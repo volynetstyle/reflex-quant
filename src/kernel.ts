@@ -490,22 +490,32 @@ export function exec(n: Node): void {
 
   n.flags = f & ~Flag.Busy;
 
-  if (n.fn === null) {
-    // Disposed in its own run: the relations are detached, not committed. A
-    // computed's run succeeded, so its value still commits (W3); a watcher's
-    // returned cleanup is dropped, as disposal already consumed the last one.
-    detach(n);
-    if ((f & Flag.Watch) !== 0) return;
-  } else {
-    // Commit only after a successful run. Dropping the unread suffix removes
-    // sources that this pass no longer depends on.
-    if ((last === null ? n.firstDep : last.nextDep) !== null) cutDeps(n, last);
+  if (n.fn === null) return disposed(n, value);
+  // Commit only after a successful run. Dropping the unread suffix removes
+  // sources that this pass no longer depends on.
+  if ((last === null ? n.firstDep : last.nextDep) !== null) cutDeps(n, last);
 
-    n.gen = (n.gen + 1) & CounterLimit.Mask;
+  n.gen = (n.gen + 1) & CounterLimit.Mask;
 
-    // Every edge is committed now; see SETTLE.
-    if ((n.gen & SETTLE) === 0) settleDeps(n);
+  // Every edge is committed now; see SETTLE.
+  if ((n.gen & SETTLE) === 0) settleDeps(n);
+
+  if (compare(value, n.value) === false) {
+    n.value = value;
+    bump(n);
   }
+}
+
+/**
+ * The end of a successful run that disposed its node (W3). The relations are
+ * detached, not committed. A computed's value still commits; a watcher's
+ * returned cleanup is dropped, as disposal already consumed the last one.
+ * Kept out of `exec` so that the live path keeps its shape.
+ */
+function disposed(n: Node, value: unknown): void {
+  detach(n);
+
+  if ((n.flags & Flag.Watch) !== 0) return;
 
   if (compare(value, n.value) === false) {
     n.value = value;
