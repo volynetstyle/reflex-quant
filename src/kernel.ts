@@ -276,8 +276,11 @@ export function read(n: Node): unknown {
 
   if (last !== null) {
     // The cursor's own source again: a repeat keeps its first observation
-    // (P5); anything else is resolved by `miss`.
-    if (last.from === n) {
+    // (P5); anything else is resolved by `miss`. With an empty suffix the
+    // cursor is the tail, also when `last` is AT_END: answering that repeat
+    // here keeps a first run's repeats out of `miss`, whose call site would
+    // otherwise warm up and stay a real call in a steady loop.
+    if ((next === null ? c.lastDep! : last).from === n) {
       if (__STATS__) stats.repeats++;
 
       return n.value;
@@ -726,15 +729,8 @@ function attach(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
 function miss(c: Node, s: Node, last: Edge | null, next: Edge | null): void {
   // An empty suffix makes the cursor the tail, whether `last` is that edge
   // or AT_END (read sends an empty list to attach), so miss never asks which.
-  if (next === null) {
-    last = c.lastDep!;
-
-    if (last.from === s) {
-      if (__STATS__) stats.repeats++;
-
-      return;
-    }
-  }
+  // `read` has already answered a repeat of the tail.
+  if (next === null) last = c.lastDep!;
   // An indexed pass owns its cursor's source slot. Nested passes restore it.
   if (last !== null && last.from.slot === last) return slot(c, s, last, next);
   const first = s.firstSub;
