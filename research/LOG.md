@@ -2344,3 +2344,65 @@ URL, so the `ledger-*` scripts also run on Windows.
 On `main` (Node 25.2.0) all 30 agree. Teeth: with `--src` set to the 1.2.0
 sources, all 19 fixed scripts disagree (the three RQ2 scripts in PROD
 only, as the audit found), and the runner exits 1.
+
+## Five CI losses, and the cursor's place (2026-11-20/21)
+
+The losses of the 1.3.0 run (44764012976) against the better rival were
+diagnosed on Node 22.23.4 (machine code with `--print-opt-code` on the real
+bench closures, attribution variants, then CI paired with `main`). They are
+three different kinds of cost, not one.
+
+- **write.no-subscribers (1.63, alien): redundant work. Merged (W, 1016714).**
+  A source without subscribers is observed by no edge, so its version is not
+  observable; `write` now bumps only with a subscriber and reports whether it
+  reached one, and `set` skips its host test when it did not (outside a batch
+  or drain the queue is empty). CI 44814293665 / 44817297209:
+  write.no-subscribers 0.711 / 0.722, write.same-value 0.501 / 0.742,
+  geomean 0.990 / 0.995 over 101 rows, no row high in both runs.
+- **track.duplicate-64 (1.42, Reflex): the unified read's JIT price.** The
+  shared `read` carries a warm `pull` call (feedback from computed reads);
+  inlined into every signal read in a user loop, it makes TurboFan spill the
+  user's accumulator to a stack slot. A pull-free signal read (hypothesis
+  only) gave 161 -> 126 ns. Tail-returning pull, inverted branch and a
+  non-inlined pull all still spill. Under-API specializations were measured
+  and rejected: node prototype split (S1) taxes the kernel with polymorphism
+  up to 1.24; a `fn`-based thin dispatch (T) folds only until the first
+  `dispose` in the process; a kind-carrying handle (H) costs allocation and
+  an indirection (diamond 1.26, signal-create 1.17). No public signal read.
+- **lifecycle.computed-create (1.26): a write barrier.** `cursor = e` stores
+  a young edge into the old module context: one RecordWrite stub per new
+  relation. See below.
+- **long-reorder.256 (1.18): the model's price.** About a third is the
+  UNREAD sweep per pass (a doubled sweep adds 295 ns); the rest is miss-path
+  length. Local reshapes reach 0.95-0.97. Kept.
+- **value-sort.256x32 (1.40): environment.** Both runtimes are bimodal per
+  round on CI with near-equal minima; locally quant is 0.91 of Reflex.
+
+### Where the cursor lives (research branches, not merged)
+
+CI paired with `main` 1016714, by witness group (construction / steady /
+mutation-tracking geomeans):
+
+- `research/cursor-field-middle`, `-tail`: cursor as a Node field.
+  0.92-0.93 / 0.98-0.99 / 1.00, but edit.insert-one-256 1.04-1.07 in all
+  three runs and stable.wide-256 ~1.05 for the tail position.
+- `research/node-pad`: one never-touched field, +8 B only: 1.001 / 1.004 /
+  1.001. So the field's cost was its stores (`c.cursor = next` on every hit,
+  clears on exit), not node density; compacting Node (`lastDep`, `slot`,
+  `gen`) has no measured justification on this suite.
+- `research/append-marker(-free)`: no field; an append stores the old,
+  never-linked Edge-shaped `AT_END` (cursor = lastDep) instead of the young
+  edge. Construction 0.93-0.95, steady 1.00, insert-one 0.96-0.99. But
+  track.duplicate-64 1.05-1.08 in every run: first-run repeats are answered
+  in `miss`, which warms its call site in `read`, and the steady loop then
+  keeps a real call. Answering the tail repeat in `read` instead
+  (`(next === null ? c.lastDep : last).from`) removed the call and cost
+  more: duplicate-64 1.174 (an extra dependent load per repeat). The marker
+  trades construction for repeat tracking; duplicate-64 is one of the five
+  losses, so it is not merged. LOG 43 stands.
+- Also measured: PACKED stack and ring (`new Array(n).fill` is born HOLEY
+  in V8; hole checks leave mark/verify/drain) 0.998 / 0.997 / 1.002, neutral;
+  marker placeholder with `value: undefined` generalized Node's `value`
+  field from Smi to tagged (write.no-subscribers 1.086) - placeholders must
+  keep field representations; per-site allocation sites cannot show on this
+  suite (pretenuring decides once, at setup).
