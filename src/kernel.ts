@@ -221,14 +221,23 @@ function mark(first: Edge): void {
 
 // -------------------------------------------------------------------- read
 
-/**
- * Bring `n` up to date if it is a stale computed, then track it. Each
- * outcome returns on its own and loads the value last: tracking runs no user
- * code, and V8 then keeps no value in a stack slot across `miss`.
- */
+/** Bring `n` up to date if it is a stale computed, then track it. */
 export function read(n: Node): unknown {
   if ((n.flags & Flag.Pull) !== 0) pull(n);
 
+  return track(n);
+}
+
+/**
+ * Track a read of `n`, which needs no pull: a signal, or a computed `read`
+ * has brought up to date. A signal read has this entry of its own, so when
+ * it is inlined into a caller it carries no call to `pull`; with feedback
+ * warmed by computed reads, that call kept the caller's loop values in
+ * stack slots. Each outcome returns on its own and loads the value last:
+ * tracking runs no user code, and V8 then keeps no value in a stack slot
+ * across `miss`.
+ */
+export function track(n: Node): unknown {
   const c = active;
 
   if (c === null) return n.value;

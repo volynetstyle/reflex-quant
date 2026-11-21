@@ -1,4 +1,4 @@
-// Public API: signal, computed, effect, get, peek, set, update, dispose,
+// Public API: signal, computed, effect, read, compute, peek, set, update, dispose,
 // batch, untracked, typeOf. A handle is the node itself: nothing is allocated besides
 // the node, and handle <-> node conversions are type assertions only (no
 // runtime wrapper). Every operation here exposes existing kernel and host
@@ -9,7 +9,8 @@ import {
   dispose as detach,
   createNode,
   peek as refresh,
-  read,
+  read as readComputed,
+  track,
   untracked,
   write,
 } from "./kernel";
@@ -26,7 +27,7 @@ declare const WRITE: unique symbol;
 declare const COMPUTED: unique symbol;
 declare const EFFECT: unique symbol;
 
-/** Anything `get` accepts. */
+/** Anything `peek` accepts: a signal or a computed. */
 export interface Readable<out T> {
   readonly [READ]: T;
 }
@@ -105,13 +106,18 @@ export function effect(fn: () => void | (() => void)): Effect {
 }
 
 /**
- * Kernel `read` itself under the public type: a signal's flags are 0, so one
- * read path serves signals and computeds, and no surface function stands in
- * front of it.
+ * Read a signal and, inside a computed or effect, depend on it. Kernel
+ * `track` itself under the public type: a signal never needs a pull, so this
+ * entry has no path into user code, and a caller that inlines it keeps its
+ * own loop values in registers (one entry for both kinds did not: the
+ * computed path's call spilled them).
  */
-export const get: <T>(source: Readable<T>) => T = read as never;
+export const read: <T>(source: Signal<T>) => T = track as never;
 
-/** `get` without observation: up to date, but the running consumer does not depend on it. */
+/** Read a computed, bringing it up to date first, and depend on it. Kernel `read` itself. */
+export const compute: <T>(source: Computed<T>) => T = readComputed as never;
+
+/** A read without observation: up to date, but the running consumer does not depend on it. */
 export const peek: <T>(source: Readable<T>) => T = refresh as never;
 
 /**

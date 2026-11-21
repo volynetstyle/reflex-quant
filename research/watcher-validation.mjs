@@ -54,7 +54,7 @@ function attempt(run, injected) {
 }
 
 function delivery(
-  { signal, computed, effect, get, set, batch, dispose },
+  { signal, computed, effect, read, compute, set, batch, dispose },
   phase,
   firstRead,
   secondWatcher,
@@ -72,17 +72,17 @@ function delivery(
   }
 
   const left = computed(() => {
-    const value = get(a);
+    const value = read(a);
     fail("validation");
     return value;
   });
-  const right = computed(() => get(b));
+  const right = computed(() => read(b));
   const seen = [];
   const watcher = effect(() => {
     const pair =
       firstRead === "A"
-        ? [get(left), get(right)]
-        : [get(right), get(left)].reverse();
+        ? [compute(left), compute(right)]
+        : [compute(right), compute(left)].reverse();
     fail("body");
     seen.push(pair);
     return () => fail("cleanup");
@@ -90,7 +90,7 @@ function delivery(
   const siblingSeen = [];
   const sibling = secondWatcher
     ? effect(() => {
-        siblingSeen.push(get(right));
+        siblingSeen.push(compute(right));
       })
     : null;
 

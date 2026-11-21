@@ -16,25 +16,25 @@ const steps = Number(count ?? (profile === "deep" ? 50000 : 400000));
 if (!Number.isSafeInteger(steps) || steps < 1 || steps > 1_000_000) {
   throw new Error("steps must be an integer between 1 and 1000000");
 }
-const { signal, computed, get, set } = await import(
+const { signal, computed, read, compute, set } = await import(
   pathToFileURL(path.resolve(bundle)).href
 );
 const source = signal(0);
 let tip = computed(() => {
-  const value = get(source);
+  const value = read(source);
   return profile === "cutoff" ? value & 1 : value;
 });
-get(tip);
+compute(tip);
 const depth = profile === "deep" ? 1200 : 3;
 for (let i = 0; i < depth; i++) {
   const below = tip;
-  tip = computed(() => get(below) + 1);
-  get(tip); // Build bottom-up so cold JS recursion is not the workload.
+  tip = computed(() => compute(below) + 1);
+  compute(tip); // Build bottom-up so cold JS recursion is not the workload.
 }
 let checksum = 0;
 for (let i = 1; i <= steps; i++) {
   set(source, profile === "cutoff" ? i * 2 : i);
-  checksum = (checksum + get(tip)) | 0;
+  checksum = (checksum + compute(tip)) | 0;
 }
 const expected =
   (steps * depth + (profile === "cutoff" ? 0 : (steps * (steps + 1)) / 2)) | 0;

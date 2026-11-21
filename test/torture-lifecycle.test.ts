@@ -2,7 +2,7 @@
 // queue under failure and disposal, nested failure inside a computation, and
 // failure across a full reorder.
 import { describe, expect, it } from "vitest";
-import { batch, computed, dispose, effect, get, peek, set, signal, type Computed } from "../src/index";
+import { compute, batch, computed, dispose, effect, read, peek, set, signal, type Computed } from "../src/index";
 import { idle, stats } from "../src/kernel";
 import type { Edge, Node } from "../src/graph";
 import { checkGraph, deps, resetStats } from "./support/graph";
@@ -15,7 +15,7 @@ describe("torture: cleanup between validation and callback", () => {
     let runs = 0;
     let cleanups = 0;
     const e = effect(() => {
-      const value = get(source);
+      const value = read(source);
       runs++;
       return () => {
         cleanups++;
@@ -38,8 +38,8 @@ describe("torture: cleanup between validation and callback", () => {
     const trigger = signal(0);
     const seen: number[] = [];
     const e = effect(() => {
-      get(trigger);
-      const value = get(source);
+      read(trigger);
+      const value = read(source);
       seen.push(value);
       return () => {
         set(source, value + 1);
@@ -52,15 +52,15 @@ describe("torture: cleanup between validation and callback", () => {
     // cleanup's error reaches the writer.
     expect(() => set(trigger, 1)).toThrow("cleanup");
     expect(seen).toEqual([0, 1]);
-    expect(get(source)).toBe(1);
+    expect(read(source)).toBe(1);
     // Each later delivery behaves the same way: one cleanup, one run.
     expect(() => set(trigger, 2)).toThrow("cleanup");
     expect(seen).toEqual([0, 1, 2]);
-    expect(get(source)).toBe(2);
+    expect(read(source)).toBe(2);
     // Disposal: teardown first, then the last cleanup (W3). Its write commits
     // but wakes nothing, and its error reaches the disposer.
     expect(() => dispose(e)).toThrow("cleanup");
-    expect([seen, get(source)]).toEqual([[0, 1, 2], 3]);
+    expect([seen, read(source)]).toEqual([[0, 1, 2], 3]);
     expect(n(source).firstSub).toBe(null);
     expect(idle()).toBe(true);
   });
@@ -71,7 +71,7 @@ describe("torture: host queue", () => {
     const source = signal(0);
     let runs = 0;
     const e = effect(() => {
-      get(source);
+      read(source);
       runs++;
     });
     batch(() => {
@@ -90,19 +90,19 @@ describe("torture: host queue", () => {
     const log: string[] = [];
     const stops = [
       effect(() => {
-        if (get(a) === 1) {
+        if (read(a) === 1) {
           log.push("A:error");
           throw new Error("first");
         }
       }),
       effect(() => {
-        if (get(a) === 1) {
+        if (read(a) === 1) {
           log.push("B");
           set(b, 1);
         }
       }),
       effect(() => {
-        if (get(b) === 1) log.push("C");
+        if (read(b) === 1) log.push("C");
       }),
     ];
     expect(() => set(a, 1)).toThrow("first");
@@ -116,7 +116,7 @@ describe("torture: nested failure", () => {
     const gate = signal(true);
     const after = signal(1);
     const inner = computed(() => {
-      if (get(gate)) throw new Error("inner");
+      if (read(gate)) throw new Error("inner");
       return 10;
     });
     let outerRuns = 0;
@@ -127,13 +127,13 @@ describe("torture: nested failure", () => {
       } catch {
         // the failed peek is neither an observation nor a context leak
       }
-      return get(after);
+      return read(after);
     });
-    expect(get(outer)).toBe(1);
+    expect(compute(outer)).toBe(1);
     set(after, 2);
-    expect([get(outer), outerRuns]).toEqual([2, 2]);
+    expect([compute(outer), outerRuns]).toEqual([2, 2]);
     set(gate, false);
-    expect([get(outer), outerRuns]).toEqual([2, 2]);
+    expect([compute(outer), outerRuns]).toEqual([2, 2]);
     expect(deps(n(outer))).toEqual([n(after)]);
     expect(idle()).toBe(true);
   });
@@ -151,9 +151,9 @@ describe("torture: nested failure", () => {
       [A, false],
     ];
     const c: Computed<number> = computed(() => {
-      const [reads, throws] = plan[get(phase)]!;
+      const [reads, throws] = plan[read(phase)]!;
       let t = 0;
-      for (const i of reads) t += get(s[i]!);
+      for (const i of reads) t += read(s[i]!);
       if (throws) throw new Error("attempt");
       return t;
     });
@@ -163,29 +163,29 @@ describe("torture: nested failure", () => {
       return null;
     };
     const ids = (list: number[]) => list.map((i) => n(s[i]!));
-    expect(get(c)).toBe(6);
+    expect(compute(c)).toBe(6);
     const committed = A.map(edgeOf);
     // B failed: its reads wake, the committed frontier stays.
     set(phase, 1);
-    expect(() => get(c)).toThrow("attempt");
+    expect(() => compute(c)).toThrow("attempt");
     expect(deps(n(c))).toEqual([n(phase), ...ids([4, 5]), ...ids(A)]);
     checkGraph(nodes);
     // C failed: B's tentative relations are gone.
     set(phase, 2);
-    expect(() => get(c)).toThrow("attempt");
+    expect(() => compute(c)).toThrow("attempt");
     expect(deps(n(c))).toEqual([n(phase), ...ids([6, 7]), ...ids(A)]);
     checkGraph(nodes);
     // reverse(A) failed: the committed relations are moved, not rebuilt; C's are gone.
     resetStats();
     set(phase, 3);
-    expect(() => get(c)).toThrow("attempt");
+    expect(() => compute(c)).toThrow("attempt");
     expect(deps(n(c))).toEqual([n(phase), ...ids([3, 2, 1, 0])]);
     expect(stats.links).toBe(0);
     checkGraph(nodes);
     // Recovery in the original order reuses the very same relations.
     resetStats();
     set(phase, 4);
-    expect(get(c)).toBe(6);
+    expect(compute(c)).toBe(6);
     expect(deps(n(c))).toEqual([n(phase), ...ids(A)]);
     expect(A.map(edgeOf)).toEqual(committed);
     expect(stats.links).toBe(0);
@@ -204,13 +204,13 @@ describe("contract characterization: who receives a computed's failure", () => {
     // and lets its try/catch observe the error has a different contract.
     const shouldThrow = signal(false);
     const value = computed(() => {
-      if (get(shouldThrow)) throw new Error("boom");
+      if (read(shouldThrow)) throw new Error("boom");
       return 1;
     });
     const seen: string[] = [];
     const e = effect(() => {
       try {
-        seen.push(String(get(value)));
+        seen.push(String(compute(value)));
       } catch {
         seen.push("error");
       }

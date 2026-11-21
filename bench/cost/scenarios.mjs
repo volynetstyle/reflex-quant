@@ -71,7 +71,7 @@ function layoutShuffle(api, n, { pad = 0, churn = 0 } = {}) {
 
 /** The shuffle program on raw handles (quant-internals). */
 function rawShuffle(q, n) {
-  const { computed, get, signal } = q;
+  const { computed, compute, get, signal } = q;
   const ps = range(n).map((k) => signal(k));
   const orders = range(4).map((k) => permutation(n, 0x9e3779b9 + k));
   const tick = signal(0);
@@ -81,7 +81,7 @@ function rawShuffle(q, n) {
     for (let k = 0; k < order.length; k++) t = (t + get(ps[order[k]])) & SMI;
     return t;
   });
-  get(c);
+  compute(c);
   return { ps, orders, tick, c };
 }
 
@@ -89,8 +89,8 @@ const decompose = {
   /** The real pass: write, then a tracked re-evaluation that reorders N edges. */
   full(q, n) {
     const { tick, c } = rawShuffle(q, n);
-    const { get, set } = q;
-    return (i) => (set(tick, i), get(c));
+    const { compute, set } = q;
+    return (i) => (set(tick, i), compute(c));
   },
   /** The body alone: N untracked reads in the same order (peek). */
   reads(q, n) {

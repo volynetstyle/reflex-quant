@@ -1,7 +1,7 @@
 // P5 witnesses shared by the semantic test (values, executions) and the
 // structural test (which repeat path each one reaches). Each program reads a
 // source, changes it once in the same execution, and reads it again.
-import { computed, get, set, signal, type Computed, type Signal } from "../../src/index";
+import { compute, computed, read, set, signal, type Computed, type Signal } from "../../src/index";
 
 /** a, b, (a := 2), a: the second read of a is a repeat found by the prefix scan. */
 export function prefixRepeat(): Computed<number> {
@@ -9,12 +9,12 @@ export function prefixRepeat(): Computed<number> {
   const b = signal(10);
   let wrote = false;
   return computed(() => {
-    const x = get(a) + get(b);
+    const x = read(a) + read(b);
     if (!wrote) {
       wrote = true;
       set(a, 2);
     }
-    return x + get(a);
+    return x + read(a);
   });
 }
 
@@ -38,23 +38,23 @@ export function foundRepeat(indexed: boolean): FoundRepeat {
   const mid = n / 2;
   const ps = Array.from({ length: n }, (_, i) => signal(i < 11 ? i : i === mid ? 11 : 0));
   const order = [mid, ...Array.from({ length: n - mid - 1 }, (_, i) => n - 1 - i), ...Array.from({ length: mid }, (_, i) => mid - 1 - i)];
-  if (indexed) get(computed(() => ps.reduce((s, p) => s + get(p), 0)));
+  if (indexed) compute(computed(() => ps.reduce((s, p) => s + read(p), 0)));
   const tick = signal(0);
   let wrote = false;
   let runs = 0;
   const c = computed(() => {
     runs++;
     let sum = 0;
-    if (get(tick) === 0) {
-      for (const p of ps) sum += get(p);
+    if (read(tick) === 0) {
+      for (const p of ps) sum += read(p);
       return sum;
     }
-    for (const i of order) sum += get(ps[i]!);
+    for (const i of order) sum += read(ps[i]!);
     if (!wrote) {
       wrote = true;
       set(ps[mid]!, 100);
     }
-    return sum + get(ps[mid]!);
+    return sum + read(ps[mid]!);
   });
   return { c, tick, runs: () => runs };
 }

@@ -28,12 +28,12 @@ workload set, not a claim that Quant wins every benchmark. The separate
 [project CI suite](#performance) measures Quant 1.2.0.
 
 ```ts
-import { signal, computed, effect, get, set } from "reflex-quant";
+import { signal, computed, effect, read, compute, set } from "reflex-quant";
 
 const count = signal(0);
-const doubled = computed(() => get(count) * 2);
+const doubled = computed(() => read(count) * 2);
 
-effect(() => console.log(`count=${get(count)} doubled=${get(doubled)}`));
+effect(() => console.log(`count=${read(count)} doubled=${compute(doubled)}`));
 // count=0 doubled=0
 
 set(count, 1); // count=1 doubled=2
@@ -78,11 +78,11 @@ ESM and CommonJS builds are included, along with type declarations. It needs Nod
 ### 1. Signals hold values
 
 ```ts
-import { signal, get, set, update } from "reflex-quant";
+import { signal, read, set, update } from "reflex-quant";
 
 const name = signal("Ada");
 
-get(name); // "Ada"
+read(name); // "Ada"
 set(name, "Grace"); // replace
 update(name, (n) => n.toUpperCase()); // derive from current: "GRACE"
 ```
@@ -99,14 +99,14 @@ const qty = signal(2);
 let runs = 0;
 const total = computed(() => {
   runs++;
-  return get(price) * get(qty);
+  return read(price) * read(qty);
 });
 
 set(qty, 3);
 set(qty, 5); // runs === 0: nobody asked yet
 
-get(total); // 20, runs === 1
-get(total); // 20, runs === 1: cached
+compute(total); // 20, runs === 1
+compute(total); // 20, runs === 1: cached
 ```
 
 ### 3. Effects react to changes
@@ -121,7 +121,7 @@ import { effect, dispose } from "reflex-quant";
 const room = signal("general");
 
 const chat = effect(() => {
-  const r = get(room);
+  const r = read(room);
   console.log("join", r);
   return () => console.log("leave", r);
 });
@@ -146,10 +146,10 @@ const first = signal("Ada");
 const last = signal("Lovelace");
 
 const displayName = computed(() =>
-  get(showFull) ? `${get(first)} ${get(last)}` : get(first),
+  read(showFull) ? `${read(first)} ${read(last)}` : read(first),
 );
 
-effect(() => console.log(get(displayName))); // "Ada"
+effect(() => console.log(compute(displayName))); // "Ada"
 
 set(last, "Byron"); //  (nothing: `last` isn't being read right now)
 set(showFull, true); // "Ada Byron"
@@ -165,10 +165,10 @@ never sees a half-updated state:
 ```ts
 const first = signal("Ada");
 const last = signal("Lovelace");
-const upper = computed(() => get(first).toUpperCase());
-const initials = computed(() => get(first)[0] + get(last)[0]);
+const upper = computed(() => read(first).toUpperCase());
+const initials = computed(() => read(first)[0] + read(last)[0]);
 
-effect(() => console.log(`${get(upper)} (${get(initials)})`));
+effect(() => console.log(`${compute(upper)} (${compute(initials)})`));
 // ADA (AL)
 
 set(first, "Grace");
@@ -182,9 +182,9 @@ put:
 
 ```ts
 const n = signal(1);
-const parity = computed(() => (get(n) % 2 === 0 ? "even" : "odd"));
+const parity = computed(() => (read(n) % 2 === 0 ? "even" : "odd"));
 
-effect(() => console.log(get(parity))); // "odd"
+effect(() => console.log(compute(parity))); // "odd"
 
 set(n, 3); // (nothing: still "odd")
 set(n, 4); // "even"
@@ -199,7 +199,7 @@ import { batch } from "reflex-quant";
 
 const x = signal(0);
 const y = signal(0);
-effect(() => console.log(`(${get(x)}, ${get(y)})`)); // (0, 0)
+effect(() => console.log(`(${read(x)}, ${read(y)})`)); // (0, 0)
 
 batch(() => {
   set(x, 10);
@@ -218,7 +218,7 @@ import { peek, untracked } from "reflex-quant";
 const query = signal("cats");
 const page = signal(1);
 
-effect(() => console.log(`search "${get(query)}" page ${peek(page)}`));
+effect(() => console.log(`search "${read(query)}" page ${peek(page)}`));
 // search "cats" page 1
 
 set(page, 2); //        (nothing: page was only peeked)
@@ -240,11 +240,11 @@ const items = signal([
 const discount = signal(0);
 
 const subtotal = computed(() =>
-  get(items).reduce((sum, i) => sum + i.price * i.qty, 0),
+  read(items).reduce((sum, i) => sum + i.price * i.qty, 0),
 );
-const total = computed(() => get(subtotal) * (1 - get(discount)));
+const total = computed(() => compute(subtotal) * (1 - read(discount)));
 
-effect(() => console.log(`Total: $${get(total).toFixed(2)}`));
+effect(() => console.log(`Total: $${compute(total).toFixed(2)}`));
 // Total: $11.00
 
 update(items, (list) => [...list, { name: "Juice", price: 5, qty: 1 }]);
@@ -267,14 +267,14 @@ const todos = signal([
 const filter = signal<"all" | "open" | "done">("all");
 
 const visible = computed(() => {
-  const f = get(filter);
-  if (f === "all") return get(todos);
-  return get(todos).filter((t) => t.done === (f === "done"));
+  const f = read(filter);
+  if (f === "all") return read(todos);
+  return read(todos).filter((t) => t.done === (f === "done"));
 });
-const left = computed(() => get(todos).filter((t) => !t.done).length);
+const left = computed(() => read(todos).filter((t) => !t.done).length);
 
 effect(() =>
-  console.log(`${get(visible).map((t) => t.text).join(", ")} | ${get(left)} left`),
+  console.log(`${compute(visible).map((t) => t.text).join(", ")} | ${compute(left)} left`),
 );
 // Write README, Ship 1.2.0 | 1 left
 
@@ -294,7 +294,7 @@ update(todos, (list) => list.map((t) => ({ ...t, done: true })));
 const query = signal("");
 
 effect(() => {
-  const q = get(query);
+  const q = read(query);
   const id = setTimeout(() => fetchResults(q), 300);
   return () => clearTimeout(id); // a new keystroke cancels the previous timer
 });
@@ -316,7 +316,7 @@ const button = document.querySelector("button")!;
 button.addEventListener("click", () => update(count, (n) => n + 1));
 
 effect(() => {
-  button.textContent = `Clicked ${get(count)} times`;
+  button.textContent = `Clicked ${read(count)} times`;
 });
 ```
 
@@ -328,7 +328,7 @@ effect(() => {
 ```ts
 const theme = signal(localStorage.getItem("theme") ?? "light");
 
-effect(() => localStorage.setItem("theme", get(theme)));
+effect(() => localStorage.setItem("theme", read(theme)));
 
 set(theme, "dark"); // saved
 ```
@@ -347,12 +347,12 @@ type Cell = { col: number; row: number };
 const mouse = signal({ x: 0, y: 0 });
 
 const cell = computed((prev: Cell | undefined) => {
-  const { x, y } = get(mouse);
+  const { x, y } = read(mouse);
   const next = { col: Math.floor(x / 100), row: Math.floor(y / 100) };
   return prev && prev.col === next.col && prev.row === next.row ? prev : next;
 });
 
-effect(() => console.log(get(cell))); // { col: 0, row: 0 }
+effect(() => console.log(compute(cell))); // { col: 0, row: 0 }
 
 set(mouse, { x: 10, y: 20 }); //  (nothing: same cell)
 set(mouse, { x: 150, y: 20 }); // { col: 1, row: 0 }
@@ -369,7 +369,8 @@ set(mouse, { x: 150, y: 20 }); // { col: 1, row: 0 }
 | `signal(value)`          | Create a writable value.                                                                      |
 | `computed(fn, initial?)` | Create a lazy, cached derived value. `fn(prev)` receives the last committed value.             |
 | `effect(fn)`             | Run `fn` now and again on every change it read. `fn` may return a cleanup function. Returns a handle. |
-| `get(x)`                 | Read a signal or computed and **subscribe** the current computation to it.                    |
+| `read(s)`                | Read a signal and **subscribe** the current computation to it.                                |
+| `compute(c)`             | Bring a computed up to date, read it and **subscribe** the current computation to it.         |
 | `peek(x)`                | Read the up-to-date value **without** subscribing.                                            |
 | `set(s, value)`          | Write a signal. Ignored if `Object.is(old, value)`.                                           |
 | `update(s, fn)`          | `set(s, fn(current))`. `fn` runs untracked. If it throws, nothing is written.                 |
@@ -378,9 +379,15 @@ set(mouse, { x: 150, y: 20 }); // { col: 1, row: 0 }
 | `dispose(x)`             | Stop an effect (running its cleanup) or detach a computed (its last committed value stays readable). |
 | `typeOf(x)`              | `"signal"`, `"computed"` or `"effect"`, without evaluating anything.                          |
 
-> **Why `get(count)` and not `count()` or `count.value`?** Here the handle *is*
+> **Why `read(count)` and not `count()` or `count.value`?** Here the handle *is*
 > the reactive node. Quant allocates no wrapper object or getter closure, so
 > each signal costs one object.
+>
+> **Why two reads?** A signal never needs to be brought up to date, a computed
+> may have to run first. One function for both carried the computed path into
+> every signal read, and the engine paid for it in loops that read signals
+> (`track.duplicate-64`, `stable.wide-8`). The types keep them apart: `read`
+> takes a `Signal`, `compute` a `Computed`.
 
 ## Good to know
 
@@ -398,17 +405,17 @@ several writes made before anyone reads collapse into a single run:
 
 ```ts
 const clicks = signal(0);
-const history = computed((prev) => [...prev, get(clicks)], [] as number[]);
+const history = computed((prev) => [...prev, read(clicks)], [] as number[]);
 
 set(clicks, 1);
 set(clicks, 2);
-get(history); // [2]   (1 was never observed)
+compute(history); // [2]   (1 was never observed)
 ```
 
 If you need every write, append to the log in the code that does the writing,
 not in a computed.
 
-**Errors don't break the graph.** If a computed throws, `get` rethrows the error
+**Errors don't break the graph.** If a computed throws, `compute` rethrows the error
 and the computed keeps its last good value as `prev`. Once its inputs are fixed,
 it recovers on the next read. If an effect throws during creation, it leaves
 nothing running.
@@ -416,7 +423,7 @@ nothing running.
 Two edges of error recovery are worth knowing. When a computed throws while an
 effect is checking whether it must rerun, that check stops there. The effect
 does not rerun until another change reaches it, even if a source the check
-never got to changes in the meantime; `get` still returns current values.
+never got to changes in the meantime; `read` and `compute` still return current values.
 And an effect whose first run throws can run once more before `effect()`
 throws, if that run triggered an update; side effects such as a request are
 not undone by the rollback.

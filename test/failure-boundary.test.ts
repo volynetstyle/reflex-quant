@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { computed, get, set, signal } from "../src/index";
+import { compute, computed, read, set, signal } from "../src/index";
 import { ContractSpecRuntime } from "./support/contract-spec";
 
 it.each([0, 1])(
@@ -47,24 +47,24 @@ it("resumes tracking in the enclosing callback after a caught failure (T3)", () 
   const tail = signal(10);
   const failure = new RangeError("inner");
   const inner = computed(() => {
-    if (get(broken)) throw failure;
+    if (read(broken)) throw failure;
     return 3;
   });
   const outer = computed(() => {
     let value = 0;
     try {
-      value = get(inner);
+      value = compute(inner);
     } catch (error) {
       if (error !== failure) throw error;
     }
-    return value + get(tail);
+    return value + read(tail);
   });
 
-  expect(get(outer)).toBe(10);
+  expect(compute(outer)).toBe(10);
   set(tail, 11);
-  expect(get(outer)).toBe(11);
+  expect(compute(outer)).toBe(11);
   set(broken, false);
-  expect(get(inner)).toBe(3);
+  expect(compute(inner)).toBe(3);
   set(tail, 12);
-  expect(get(outer)).toBe(15);
+  expect(compute(outer)).toBe(15);
 });

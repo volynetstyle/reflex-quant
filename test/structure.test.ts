@@ -7,7 +7,7 @@ import { idle, createNode, read, stackHighWater, stackLength, stats, write } fro
 import type { Node } from "../src/graph";
 import { check, checkGraph, edgeCount, resetStats } from "./support/graph";
 import { queueLength, run } from "../src/host";
-import { batch as publicBatch, dispose as publicDispose, effect as publicEffect, get as publicGet, set as publicSet, signal as publicSignal } from "../src/index";
+import { batch as publicBatch, dispose as publicDispose, effect as publicEffect, compute as publicCompute, read as publicRead, set as publicSet, signal as publicSignal } from "../src/index";
 import { foundRepeat, prefixRepeat } from "./support/p5";
 
 const signal = (v: unknown) => createNode(null, v, 0);
@@ -374,14 +374,14 @@ describe("structural bounds", () => {
     // exercising each path that recognises a repeated read.
     const c = prefixRepeat();
     resetStats();
-    publicGet(c);
+    publicCompute(c);
     expect([stats.dups, stats.sweeps, stats.indexes]).toEqual([1, 0, 0]);
     for (const indexed of [false, true]) {
       const w = foundRepeat(indexed);
-      publicGet(w.c);
+      publicCompute(w.c);
       publicSet(w.tick, 1);
       resetStats();
-      publicGet(w.c);
+      publicCompute(w.c);
       expect([stats.dups, stats.sweeps, stats.indexes]).toEqual(indexed ? [1, 0, 1] : [1, 1, 0]);
     }
   });
@@ -526,12 +526,12 @@ describe("S8 host queue capacity", () => {
     const s = publicSignal(0);
     let peakLength = 0;
     publicEffect(() => {
-      const v = publicGet(s);
+      const v = publicRead(s);
       const length = queueLength();
       if (length > peakLength) peakLength = length;
       if (v < N) publicSet(s, v + 1);
     });
-    expect(publicGet(s)).toBe(N);
+    expect(publicRead(s)).toBe(N);
     expect(peakLength).toBeLessThanOrEqual(bound(1));
     expect(queueLength()).toBeLessThanOrEqual(KEEP);
   });
@@ -544,14 +544,14 @@ describe("S8 host queue capacity", () => {
     const effects = publicBatch(() =>
       sources.map((s) =>
         publicEffect(() => {
-          const v = publicGet(s);
+          const v = publicRead(s);
           const length = queueLength();
           if (length > peakLength) peakLength = length;
           if (v < rounds) publicSet(s, v + 1);
         }),
       ),
     );
-    for (const s of sources) expect(publicGet(s)).toBe(rounds);
+    for (const s of sources) expect(publicRead(s)).toBe(rounds);
     expect(peakLength).toBeGreaterThanOrEqual(W);
     expect(peakLength).toBeLessThanOrEqual(bound(W));
     expect(queueLength()).toBeLessThanOrEqual(bound(W));
@@ -561,8 +561,8 @@ describe("S8 host queue capacity", () => {
   it("bursts between small drains keep the ring; small drains give it back after a ring's worth", () => {
     const s = publicSignal(0);
     const small = publicSignal(0);
-    publicEffect(() => void publicGet(small));
-    const effects = publicBatch(() => range(4 * TRIM).map(() => publicEffect(() => void publicGet(s))));
+    publicEffect(() => void publicRead(small));
+    const effects = publicBatch(() => range(4 * TRIM).map(() => publicEffect(() => void publicRead(s))));
     const ring = queueLength();
     expect(ring).toBeGreaterThanOrEqual(4 * TRIM);
     expect(ring).toBeLessThanOrEqual(bound(4 * TRIM));

@@ -5,7 +5,8 @@
 import { CounterLimit, Flag } from "../../src/graph.ts";
 import type { Node } from "../../src/graph.ts";
 
-export { batch, computed, dispose, effect, get, peek, set, signal, untracked, update } from "../../src/index.ts";
+// `get` is the public signal read (`read` names the kernel read here).
+export { batch, compute, computed, dispose, effect, read as get, peek, set, signal, untracked, update } from "../../src/index.ts";
 export { index, read, write } from "../../src/kernel.ts";
 export { moveDep as move } from "../../src/graph.ts";
 

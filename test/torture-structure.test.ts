@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
+import { compute,
   computed,
   dispose,
   effect,
-  get,
+  read,
   set,
   signal,
 } from "../src/index";
@@ -43,17 +43,17 @@ describe("torture: repeated failed frontiers", () => {
     const c = computed(() => {
       runs++;
 
-      const i = get(pick);
-      const value = get(choices[i]!);
+      const i = read(pick);
+      const value = read(choices[i]!);
 
-      if (get(failing)) {
+      if (read(failing)) {
         throw new Error("boom");
       }
 
       return value;
     });
 
-    expect(get(c)).toBe(0);
+    expect(compute(c)).toBe(0);
 
     set(failing, true);
 
@@ -62,7 +62,7 @@ describe("torture: repeated failed frontiers", () => {
     for (let i = 1; i < 64; i++) {
       set(pick, i);
 
-      expect(() => get(c)).toThrow("boom");
+      expect(() => compute(c)).toThrow("boom");
 
       // committed:
       //   pick
@@ -80,7 +80,7 @@ describe("torture: repeated failed frontiers", () => {
 
     set(failing, false);
 
-    expect(get(c)).toBe(63);
+    expect(compute(c)).toBe(63);
 
     // Successful recovery commits exactly the new branch.
     expect(edgeCount([node])).toBe(3);
@@ -90,7 +90,7 @@ describe("torture: repeated failed frontiers", () => {
     // Old committed branch must finally be gone.
     set(choices[0]!, 1000);
 
-    expect(get(c)).toBe(63);
+    expect(compute(c)).toBe(63);
     expect(runs).toBe(runsAfterRecovery);
     expect(idle()).toBe(true);
   });
@@ -104,11 +104,11 @@ describe("torture: tracking index under failure", () => {
     // Put the real reader deeper than SCAN in every subscriber list.
     const fillers = range(10).map(() =>
       computed(() =>
-        sources.reduce((sum, source) => sum + get(source), 0),
+        sources.reduce((sum, source) => sum + read(source), 0),
       ),
     );
 
-    fillers.forEach(get);
+    fillers.forEach(compute);
 
     const tick = signal(0);
     const failing = signal(false);
@@ -117,22 +117,22 @@ describe("torture: tracking index under failure", () => {
     const scattered = scatter(n);
 
     const c = computed(() => {
-      const order = get(tick) & 1 ? scattered : normal;
+      const order = read(tick) & 1 ? scattered : normal;
 
       let sum = 0;
 
       for (const i of order) {
-        sum += get(sources[i]!);
+        sum += read(sources[i]!);
       }
 
-      if (get(failing)) {
+      if (read(failing)) {
         throw new Error("boom");
       }
 
       return sum;
     });
 
-    get(c);
+    compute(c);
 
     const node = c as unknown as Node;
     const expectedEdges = n + 2; // tick + failing + sources
@@ -145,7 +145,7 @@ describe("torture: tracking index under failure", () => {
     for (let pass = 1; pass <= 50; pass++) {
       set(tick, pass);
 
-      expect(() => get(c)).toThrow("boom");
+      expect(() => compute(c)).toThrow("boom");
 
       expect(edgeCount([node])).toBe(expectedEdges);
       expect(stats.links).toBe(0);
@@ -168,11 +168,11 @@ it("dispose during an indexed reordered pass restores every slot", () => {
 
   const fillers = range(10).map(() =>
     computed(() =>
-      sources.reduce((sum, source) => sum + get(source), 0),
+      sources.reduce((sum, source) => sum + read(source), 0),
     ),
   );
 
-  fillers.forEach(get);
+  fillers.forEach(compute);
 
   const flip = signal(false);
   let runs = 0;
@@ -182,14 +182,14 @@ it("dispose during an indexed reordered pass restores every slot", () => {
   e = effect(() => {
     runs++;
 
-    const order = get(flip)
+    const order = read(flip)
       ? [...range(n)].reverse()
       : range(n);
 
     for (let k = 0; k < order.length; k++) {
-      get(sources[order[k]!]!);
+      read(sources[order[k]!]!);
 
-      if (get(flip) && k === 20) {
+      if (read(flip) && k === 20) {
         dispose(e);
       }
     }
@@ -231,10 +231,10 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
   // Ensure both real readers are deep subscribers.
   const fillers = range(10).map(() =>
     computed(() =>
-      sources.reduce((sum, source) => sum + get(source), 0),
+      sources.reduce((sum, source) => sum + read(source), 0),
     ),
   );
-  fillers.forEach(get);
+  fillers.forEach(compute);
 
   const innerTick = signal(0);
   const outerTick = signal(0);
@@ -246,7 +246,7 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
   let innerSawOuterIndex = false;
   let innerFailures = 0;
   const inner = computed(() => {
-    const order = get(innerTick) ? scattered : normal;
+    const order = read(innerTick) ? scattered : normal;
 
     if ((sources[0] as unknown as Node).slot !== null) {
       innerSawOuterIndex = true;
@@ -254,10 +254,10 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
     let sum = 0;
 
     for (const i of order) {
-      sum += get(sources[i]!);
+      sum += read(sources[i]!);
     }
 
-    if (get(failInner)) {
+    if (read(failInner)) {
       innerFailures++;
       throw new Error("inner");
     }
@@ -270,28 +270,28 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
   const outer = computed(() => {
     outerRuns++;
 
-    const order = get(outerTick) ? scattered : normal;
+    const order = read(outerTick) ? scattered : normal;
     let sum = 0;
 
     // Force the outer pass into its own nontrivial reorder first.
     for (let k = 0; k < 24; k++) {
-      sum += get(sources[order[k]!]!);
+      sum += read(sources[order[k]!]!);
     }
 
     try {
-      sum += get(inner);
+      sum += compute(inner);
     } catch {
       // F2: failed read is not an observation.
     }
 
     for (let k = 24; k < n; k++) {
-      sum += get(sources[order[k]!]!);
+      sum += read(sources[order[k]!]!);
     }
 
     return sum;
   });
 
-  get(outer);
+  compute(outer);
 
   set(failInner, true);
   set(innerTick, 1);
@@ -301,7 +301,7 @@ it("nested indexed failure restores the enclosing reader's slot state", () => {
   resetStats();
 
   // Outer catches inner failure and itself commits successfully.
-  expect(() => get(outer)).not.toThrow();
+  expect(() => compute(outer)).not.toThrow();
 
   expect(outerRuns).toBe(2);
   expect(innerFailures).toBe(1);

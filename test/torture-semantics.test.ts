@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import {
+import { compute,
   batch,
   computed,
   dispose,
   effect,
-  get,
+  read,
   set,
   signal,
 } from "../src/index";
@@ -22,8 +22,8 @@ describe("torture: failure and recovery", () => {
       return 42;
     });
 
-    expect(() => get(c)).toThrow("first");
-    expect(get(c)).toBe(42);
+    expect(() => compute(c)).toThrow("first");
+    expect(compute(c)).toBe(42);
     expect(calls).toBe(2);
     expect(idle()).toBe(true);
   });
@@ -33,7 +33,7 @@ describe("torture: failure and recovery", () => {
     let calls = 0;
 
     const c = computed(() => {
-      const value = get(source);
+      const value = read(source);
 
       if (++calls === 1) {
         throw new Error("boom");
@@ -41,14 +41,14 @@ describe("torture: failure and recovery", () => {
       return value;
     });
 
-    expect(() => get(c)).toThrow("boom");
+    expect(() => compute(c)).toThrow("boom");
 
     batch(() => {
       set(source, "b");
       set(source, "a");
     });
 
-    expect(get(c)).toBe("a");
+    expect(compute(c)).toBe("a");
     expect(calls).toBe(2);
   });
 
@@ -59,20 +59,20 @@ describe("torture: failure and recovery", () => {
     const c = computed((prev: number) => {
       previous.push(prev);
 
-      if (get(mode) === 1) {
+      if (read(mode) === 1) {
         throw new Error("boom");
       }
 
       return prev + 1;
     }, 0);
 
-    expect(get(c)).toBe(1);
+    expect(compute(c)).toBe(1);
 
     set(mode, 1);
-    expect(() => get(c)).toThrow("boom");
+    expect(() => compute(c)).toThrow("boom");
 
     set(mode, 2);
-    expect(get(c)).toBe(2);
+    expect(compute(c)).toBe(2);
 
     // The failed run saw prev=1 but did not replace it.
     expect(previous).toEqual([0, 1, 1]);
@@ -82,7 +82,7 @@ describe("torture: failure and recovery", () => {
     const source = signal(1);
 
     const c = computed(() => {
-      const value = get(source);
+      const value = read(source);
 
       if (value === 0) {
         throw new Error("pending");
@@ -91,15 +91,15 @@ describe("torture: failure and recovery", () => {
       return value * 10;
     });
 
-    expect(get(c)).toBe(10);
+    expect(compute(c)).toBe(10);
 
     set(source, 0);
 
-    expect(() => get(c)).toThrow("pending");
-    expect(() => get(c)).toThrow("pending");
+    expect(() => compute(c)).toThrow("pending");
+    expect(() => compute(c)).toThrow("pending");
 
     set(source, 2);
-    expect(get(c)).toBe(20);
+    expect(compute(c)).toBe(20);
   });
 
   it("a failed inner read is not an observation of the outer computation", () => {
@@ -113,9 +113,9 @@ describe("torture: failure and recovery", () => {
     const inner = computed(() => {
       innerRuns++;
 
-      const value = get(innerSource);
+      const value = read(innerSource);
 
-      if (get(gate)) {
+      if (read(gate)) {
         throw new Error("inner");
       }
 
@@ -128,34 +128,34 @@ describe("torture: failure and recovery", () => {
       let value = -1;
 
       try {
-        value = get(inner);
+        value = compute(inner);
       } catch {
         // Failed read must not become a committed observation.
       }
 
-      return get(anchor) + value;
+      return read(anchor) + value;
     });
 
-    expect(get(outer)).toBe(9);
+    expect(compute(outer)).toBe(9);
     expect(outerRuns).toBe(1);
 
     // innerSource wakes the failed inner, but outer must not depend on inner.
     set(innerSource, 2);
 
-    expect(get(outer)).toBe(9);
+    expect(compute(outer)).toBe(9);
     expect(outerRuns).toBe(1);
 
     // Even recovery of inner must not magically attach outer.
     set(gate, false);
 
-    expect(get(outer)).toBe(9);
+    expect(compute(outer)).toBe(9);
     expect(outerRuns).toBe(1);
 
     // Now force outer to execute. Its read succeeds and only now becomes
     // an observation.
     set(anchor, 11);
 
-    expect(get(outer)).toBe(15);
+    expect(compute(outer)).toBe(15);
     expect(outerRuns).toBe(2);
     expect(innerRuns).toBeGreaterThanOrEqual(2);
   });
@@ -172,12 +172,12 @@ describe("torture: failed watchers", () => {
     const e = effect(() => {
       runs++;
 
-      if (get(mode) === 0) {
-        get(stable);
+      if (read(mode) === 0) {
+        read(stable);
         return;
       }
 
-      get(tentative);
+      read(tentative);
       throw new Error("failed");
     });
 
@@ -212,15 +212,15 @@ describe("torture: failed watchers", () => {
     const failing = effect(() => {
       failingRuns++;
 
-      if (get(trigger) === 1) {
+      if (read(trigger) === 1) {
         set(output, 1);
-        get(retry);
+        read(retry);
         throw new Error("A");
       }
     });
 
     const sibling = effect(() => {
-      get(output);
+      read(output);
       siblingRuns++;
     });
 
@@ -230,7 +230,7 @@ describe("torture: failed watchers", () => {
     // The error is delayed until the drain has delivered sibling work.
     expect(() => set(trigger, 1)).toThrow("A");
 
-    expect(get(output)).toBe(1);
+    expect(read(output)).toBe(1);
     expect(failingRuns).toBe(2);
     expect(siblingRuns).toBe(2);
 
@@ -247,7 +247,7 @@ describe("torture: failed watchers", () => {
     const gate = signal(false);
 
     const deep = computed(() => {
-      if (get(gate)) {
+      if (read(gate)) {
         throw new Error("deep");
       }
 
@@ -261,8 +261,8 @@ describe("torture: failed watchers", () => {
       runs++;
 
       // Important: direct comes first in the committed frontier.
-      get(direct);
-      get(deep);
+      read(direct);
+      compute(deep);
 
       return () => {
         cleanups++;
@@ -302,7 +302,7 @@ describe("torture: surface safety", () => {
 
     const e = effect((() => {
       runs++;
-      return get(source);
+      return read(source);
     }) as unknown as () => void);
 
     expect(runs).toBe(1);
@@ -318,7 +318,7 @@ describe("torture: surface safety", () => {
     let runs = 0;
 
     const e = effect(() => {
-      get(source);
+      read(source);
       runs++;
     });
 
@@ -347,7 +347,7 @@ describe("torture: surface safety", () => {
     const seen: number[] = [];
 
     const e = effect(() => {
-      seen.push(get(source));
+      seen.push(read(source));
     });
 
     expect(() =>
@@ -372,7 +372,7 @@ describe("RED CANDIDATES", () => {
     expect(() =>
       effect(() => {
         runs++;
-        get(source);
+        read(source);
         throw new Error("setup failed");
       }),
     ).toThrow("setup failed");
@@ -394,17 +394,17 @@ it.runIf(dev)("a cycle introduced through a validating ancestor fails loudly", (
   let b!: ReturnType<typeof computed<number>>;
 
   a = computed(() => {
-    if (!get(cyclic)) {
+    if (!read(cyclic)) {
       return 0;
     }
 
-    return get(b) + 1;
+    return compute(b) + 1;
   });
 
-  b = computed(() => get(a) + 1);
+  b = computed(() => compute(a) + 1);
 
   // Initially acyclic.
-  expect(get(b)).toBe(1);
+  expect(compute(b)).toBe(1);
 
   set(cyclic, true);
 
@@ -415,17 +415,17 @@ it.runIf(dev)("a cycle introduced through a validating ancestor fails loudly", (
   //
   // A strict cycle policy should reject this rather than consume an older
   // committed value from an ancestor currently being validated.
-  expect(() => get(b)).toThrow(/Cycle/);
+  expect(() => compute(b)).toThrow(/Cycle/);
 
   set(cyclic, false);
-  expect(get(b)).toBe(1);
+  expect(compute(b)).toBe(1);
 });
 
 it("D2 characterization: failed computed executes before validating its old frontier", () => {
   const deepGate = signal(false);
 
   const deep = computed(() => {
-    if (get(deepGate)) {
+    if (read(deepGate)) {
       throw new Error("deep");
     }
 
@@ -438,27 +438,27 @@ it("D2 characterization: failed computed executes before validating its old fron
   const outer = computed(() => {
     outerRuns++;
 
-    const value = get(deep);
+    const value = compute(deep);
 
-    if (get(outerFailure)) {
+    if (read(outerFailure)) {
       throw new Error("outer");
     }
 
     return value;
   });
 
-  expect(get(outer)).toBe(1);
+  expect(compute(outer)).toBe(1);
   expect(outerRuns).toBe(1);
 
   set(outerFailure, true);
 
-  expect(() => get(outer)).toThrow("outer");
+  expect(() => compute(outer)).toThrow("outer");
   expect(outerRuns).toBe(2);
 
   // The old committed frontier can now fail too.
   set(deepGate, true);
 
-  expect(() => get(outer)).toThrow("deep");
+  expect(() => compute(outer)).toThrow("deep");
 
   // Execute-first semantics:
   expect(outerRuns).toBe(3);

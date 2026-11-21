@@ -1,6 +1,6 @@
 // Level 1: observable semantics through the public API.
 import { describe, expect, it } from "vitest";
-import { batch, computed, dispose, effect as watch, get, peek, set, signal, untracked, type Computed, type Effect } from "../src/index";
+import { compute, batch, computed, dispose, effect as watch, read, peek, set, signal, untracked, type Computed, type Effect } from "../src/index";
 import { idle } from "../src/kernel";
 import { Flag, type Node } from "../src/graph";
 import { checkGraph } from "./support/graph";
@@ -18,7 +18,7 @@ it("a cleanup write before a failed body does not hot-retry the cold watcher (F3
   let step = 0, runs = 0, cleanups = 0;
   const watcher = watch(() => {
     runs++;
-    get(source);
+    read(source);
     if (step === 1) { step = 2; throw new Error("body"); }
     return () => {
       cleanups++;
@@ -39,11 +39,11 @@ describe("propagation", () => {
   it("diamond: one execution per node, no glitch", () => {
     const a = signal(1);
     let runs = { b: 0, c: 0, d: 0 };
-    const b = computed(() => (runs.b++, get(a) * 2));
-    const c = computed(() => (runs.c++, get(a) * 3));
-    const d = computed(() => (runs.d++, `${get(b)}+${get(c)}`));
+    const b = computed(() => (runs.b++, read(a) * 2));
+    const c = computed(() => (runs.c++, read(a) * 3));
+    const d = computed(() => (runs.d++, `${compute(b)}+${compute(c)}`));
     const seen: string[] = [];
-    effect(() => void seen.push(get(d)));
+    effect(() => void seen.push(compute(d)));
     runs = { b: 0, c: 0, d: 0 };
     set(a, 2);
     expect(seen).toEqual(["2+3", "4+6"]);
@@ -53,51 +53,51 @@ describe("propagation", () => {
   it("layered diamond 8x8: each node executes once per write", () => {
     const src = signal(0);
     let count = 0;
-    let layer = Array.from({ length: 8 }, (_, i) => computed(() => (count++, get(src) + i)));
+    let layer = Array.from({ length: 8 }, (_, i) => computed(() => (count++, read(src) + i)));
     for (let l = 1; l < 8; l++) {
       const prev = layer;
-      layer = prev.map((_, i) => computed(() => (count++, get(prev[i]!) + get(prev[(i + 1) % 8]!))));
+      layer = prev.map((_, i) => computed(() => (count++, compute(prev[i]!) + compute(prev[(i + 1) % 8]!))));
     }
-    const sink = computed(() => layer.reduce((s, n) => s + get(n), 0));
-    get(sink);
+    const sink = computed(() => layer.reduce((s, n) => s + compute(n), 0));
+    compute(sink);
     count = 0;
     set(src, 1);
-    get(sink);
+    compute(sink);
     expect(count).toBe(64);
   });
 
   it("cutoff: an unchanged computed stops propagation", () => {
     const a = signal(1);
     let below = 0;
-    const parity = computed(() => get(a) % 2);
-    const after = computed(() => (below++, get(parity) * 10));
-    get(after);
+    const parity = computed(() => read(a) % 2);
+    const after = computed(() => (below++, compute(parity) * 10));
+    compute(after);
     below = 0;
     set(a, 3);
-    expect(get(after)).toBe(10);
+    expect(compute(after)).toBe(10);
     expect(below).toBe(0);
   });
 
   it("fan-out: one write reaches every effect once", () => {
     const a = signal(0);
     const hits = new Array(100).fill(0);
-    hits.forEach((_, i) => effect(() => void (get(a), hits[i]++)));
+    hits.forEach((_, i) => effect(() => void (read(a), hits[i]++)));
     set(a, 1);
     expect(hits.every((h) => h === 2)).toBe(true);
   });
 
   it("fan-in: a write to any of many sources updates the sink", () => {
     const ps = Array.from({ length: 100 }, (_, i) => signal(i));
-    const sum = computed(() => ps.reduce((s, p) => s + get(p), 0));
-    expect(get(sum)).toBe(4950);
+    const sum = computed(() => ps.reduce((s, p) => s + read(p), 0));
+    expect(compute(sum)).toBe(4950);
     set(ps[57]!, 0);
-    expect(get(sum)).toBe(4950 - 57);
+    expect(compute(sum)).toBe(4950 - 57);
   });
 
   it("direct ABA re-runs the effect (versions, not values)", () => {
     const a = signal(0);
     let runs = 0;
-    effect(() => void (get(a), runs++));
+    effect(() => void (read(a), runs++));
     batch(() => {
       set(a, 1);
       set(a, 0);
@@ -111,7 +111,7 @@ describe("batching", () => {
     const a = signal(1);
     const b = signal(2);
     const seen: number[] = [];
-    effect(() => void seen.push(get(a) + get(b)));
+    effect(() => void seen.push(read(a) + read(b)));
     batch(() => {
       set(a, 10);
       batch(() => set(b, 20));
@@ -122,10 +122,10 @@ describe("batching", () => {
 
   it("reads inside a batch see committed values", () => {
     const a = signal(1);
-    const d = computed(() => get(a) * 2);
+    const d = computed(() => read(a) * 2);
     batch(() => {
       set(a, 5);
-      expect(get(d)).toBe(10);
+      expect(compute(d)).toBe(10);
     });
   });
 });
@@ -136,9 +136,9 @@ describe("effects", () => {
     const b = signal(0);
     const log: string[] = [];
     const stop = effect(() => {
-      const v = get(a);
+      const v = read(a);
       log.push(`run ${v}`);
-      return () => log.push(`cleanup ${v} b=${get(b)}`);
+      return () => log.push(`cleanup ${v} b=${read(b)}`);
     });
     set(a, 1);
     set(b, 1); // read only by the cleanup: not a dependency
@@ -152,12 +152,12 @@ describe("effects", () => {
     const a = signal(0);
     const seen: number[] = [];
     effect(() => {
-      const v = get(a);
+      const v = read(a);
       seen.push(v);
       if (v < 3) set(a, v + 1);
     });
     expect(seen).toEqual([0, 1, 2, 3]);
-    expect(get(a)).toBe(3);
+    expect(read(a)).toBe(3);
   });
 
   it("a write to a not-yet-read source during the run adds no rerun", () => {
@@ -166,8 +166,8 @@ describe("effects", () => {
     let runs = 0;
     effect(() => {
       runs++;
-      if (get(a) === 1) set(b, 5); // b is read after this write
-      get(b);
+      if (read(a) === 1) set(b, 5); // b is read after this write
+      read(b);
     });
     set(a, 1);
     expect(runs).toBe(2);
@@ -177,10 +177,10 @@ describe("effects", () => {
     const a = signal(0);
     const log: string[] = [];
     effect(() => {
-      if (get(a) === 1) throw new Error("bad");
+      if (read(a) === 1) throw new Error("bad");
       log.push("first");
     });
-    effect(() => void (get(a), log.push("second")));
+    effect(() => void (read(a), log.push("second")));
     expect(() => set(a, 1)).toThrow("bad");
     expect(log).toEqual(["first", "second", "second"]);
     set(a, 2);
@@ -192,12 +192,12 @@ describe("effects", () => {
     const gate = signal(false);
     const base = signal(1);
     const deep = computed(() => {
-      if (get(gate)) throw new Error("deep");
-      return get(base);
+      if (read(gate)) throw new Error("deep");
+      return read(base);
     });
-    const mid = computed(() => get(deep) + 1);
+    const mid = computed(() => compute(deep) + 1);
     const seen: number[] = [];
-    effect(() => void seen.push(get(mid)));
+    effect(() => void seen.push(compute(mid)));
     expect(() => set(gate, true)).toThrow("deep");
     // Repair to the same value: validated again, not executed (exact cutoff).
     set(gate, false);
@@ -229,12 +229,12 @@ describe("effects", () => {
   it("an effect failing after its first run keeps the obligation (R2)", () => {
     const d = signal(0);
     const u = signal(0);
-    const c = computed(() => get(u) > 5);
+    const c = computed(() => read(u) > 5);
     let runs = 0;
     effect(() => {
       runs++;
-      get(c);
-      if (get(d) > 0) throw new Error("w");
+      compute(c);
+      if (read(d) > 0) throw new Error("w");
     });
     expect(() => set(d, 1)).toThrow("w");
     // c recomputes to the same value; the failed run still owes an execution.
@@ -247,7 +247,7 @@ describe("effects", () => {
     const log: string[] = [];
     let stop: () => void = () => {};
     stop = effect(() => {
-      const v = get(a);
+      const v = read(a);
       if (v === 1) stop();
       return () => log.push(`cleanup ${v}`);
     });
@@ -265,12 +265,12 @@ describe("effects", () => {
     let runs = 0;
     stop = effect(() => {
       runs++;
-      const order = get(flip) ? [5, 3, 1, 0, 2, 4] : [0, 1, 2, 3, 4, 5];
+      const order = read(flip) ? [5, 3, 1, 0, 2, 4] : [0, 1, 2, 3, 4, 5];
       for (const [k, i] of order.entries()) {
-        get(sources[i]!);
-        if (get(flip) && k === 1) stop(); // mid-pass, before reordered reads
+        read(sources[i]!);
+        if (read(flip) && k === 1) stop(); // mid-pass, before reordered reads
       }
-      if (get(flip)) get(fresh); // a source never read before
+      if (read(flip)) read(fresh); // a source never read before
     });
     set(flip, true);
     for (const s of sources) set(s, 100);
@@ -287,10 +287,10 @@ describe("effects", () => {
     const other = signal(0);
     const log: string[] = [];
     let otherRuns = 0;
-    effect(() => void (get(a), get(other), otherRuns++)); // unrelated subscriber
+    effect(() => void (read(a), read(other), otherRuns++)); // unrelated subscriber
     let stop: () => void = () => {};
     stop = effect(() => {
-      log.push(`run ${get(a)}`);
+      log.push(`run ${read(a)}`);
       return () => {
         log.push("cleanup");
         stop();
@@ -308,13 +308,13 @@ describe("effects", () => {
     const a = signal(0);
     const counts = [0, 0, 0];
     const stops: (() => void)[] = [];
-    stops.push(effect(() => void (get(a), counts[0]++)));
+    stops.push(effect(() => void (read(a), counts[0]++)));
     stops.push(effect(() => {
-      get(a);
+      read(a);
       counts[1]++;
-      if (get(a) === 1) stops[0]!();
+      if (read(a) === 1) stops[0]!();
     }));
-    stops.push(effect(() => void (get(a), counts[2]++)));
+    stops.push(effect(() => void (read(a), counts[2]++)));
     set(a, 1);
     set(a, 2);
     expect(counts).toEqual([2, 3, 3]);
@@ -326,44 +326,44 @@ describe("tracking boundaries", () => {
     const a = signal(1);
     const b = signal(2);
     let runs = 0;
-    const c = computed(() => (runs++, get(a) + untracked(() => get(b))));
-    expect(get(c)).toBe(3);
+    const c = computed(() => (runs++, read(a) + untracked(() => read(b))));
+    expect(compute(c)).toBe(3);
     set(b, 5);
-    expect(get(c)).toBe(3);
+    expect(compute(c)).toBe(3);
     expect(runs).toBe(1);
   });
 
   it("a computed that writes a source it already read converges on the next read (F1)", () => {
     const a = signal(0);
     const c = computed(() => {
-      const v = get(a);
+      const v = read(a);
       if (v === 1) set(a, 2);
       return v;
     });
-    expect(get(c)).toBe(0);
+    expect(compute(c)).toBe(0);
     set(a, 1);
-    expect(get(c)).toBe(1); // computed before the write
-    expect(get(c)).toBe(2); // and not left stale
+    expect(compute(c)).toBe(1); // computed before the write
+    expect(compute(c)).toBe(2); // and not left stale
   });
 
   it("cycles throw instead of overflowing", () => {
     const flag = signal(false);
     const holder: { c?: Computed<number> } = {};
-    const c = computed((): number => (get(flag) ? get(holder.c!) : 0));
+    const c = computed((): number => (read(flag) ? compute(holder.c!) : 0));
     holder.c = c;
-    expect(get(c)).toBe(0);
+    expect(compute(c)).toBe(0);
     set(flag, true);
-    expect(() => get(c)).toThrow("Cycle");
+    expect(() => compute(c)).toThrow("Cycle");
     expect(idle()).toBe(true);
   });
 
   it("disposing a computed detaches it and freezes its value", () => {
     const a = signal(1);
-    const c = computed(() => get(a) * 2);
-    expect(get(c)).toBe(2);
+    const c = computed(() => read(a) * 2);
+    expect(compute(c)).toBe(2);
     dispose(c);
     set(a, 5);
-    expect(get(c)).toBe(2);
+    expect(compute(c)).toBe(2);
   });
 });
 
@@ -378,14 +378,14 @@ describe("P5 in-pass invalidation", () => {
     let runs = 0;
     const c = computed(() => {
       runs++;
-      const x = get(a);
+      const x = read(a);
       if (!wrote) {
         wrote = true;
         set(a, 2);
       }
-      return x + get(a);
+      return x + read(a);
     });
-    expect([get(c), get(c), get(c)]).toEqual([3, 4, 4]);
+    expect([compute(c), compute(c), compute(c)]).toEqual([3, 4, 4]);
     expect(runs).toBe(2);
   });
 
@@ -394,11 +394,11 @@ describe("P5 in-pass invalidation", () => {
     let runs = 0;
     const c = computed(() => {
       runs++;
-      const x = get(a);
+      const x = read(a);
       set(a, 1);
-      return x + get(a);
+      return x + read(a);
     });
-    expect([get(c), get(c)]).toEqual([2, 2]);
+    expect([compute(c), compute(c)]).toEqual([2, 2]);
     expect(runs).toBe(1);
   });
 
@@ -409,12 +409,12 @@ describe("P5 in-pass invalidation", () => {
     const c = computed(() => {
       runs++;
       // peek is not an observation: the write lands before a is observed.
-      if (get(t) === 1 && peek(a) === 1) set(a, 2);
-      return get(a) + get(a);
+      if (read(t) === 1 && peek(a) === 1) set(a, 2);
+      return read(a) + read(a);
     });
-    expect(get(c)).toBe(2);
+    expect(compute(c)).toBe(2);
     set(t, 1);
-    expect([get(c), get(c)]).toEqual([4, 4]);
+    expect([compute(c), compute(c)]).toEqual([4, 4]);
     expect(runs).toBe(2);
   });
 
@@ -424,15 +424,15 @@ describe("P5 in-pass invalidation", () => {
     let runs = 0;
     const c = computed(() => {
       runs++;
-      const x = get(a);
+      const x = read(a);
       if (!wrote) {
         wrote = true;
         set(a, 2);
         set(a, 1);
       }
-      return x + get(a);
+      return x + read(a);
     });
-    expect([get(c), get(c)]).toEqual([2, 2]);
+    expect([compute(c), compute(c)]).toEqual([2, 2]);
     expect(runs).toBe(2);
   });
 
@@ -441,12 +441,12 @@ describe("P5 in-pass invalidation", () => {
     // by the prefix scan, through the subscribers or through a slot
     // (test/support/p5.ts; structure.test.ts pins which path each reaches).
     const c = prefixRepeat();
-    expect([get(c), get(c), get(c)]).toEqual([13, 14, 14]);
+    expect([compute(c), compute(c), compute(c)]).toEqual([13, 14, 14]);
     for (const indexed of [false, true]) {
       const w = foundRepeat(indexed);
-      expect(get(w.c)).toBe(66);
+      expect(compute(w.c)).toBe(66);
       set(w.tick, 1);
-      expect([get(w.c), get(w.c), get(w.c)]).toEqual([166, 255, 255]);
+      expect([compute(w.c), compute(w.c), compute(w.c)]).toEqual([166, 255, 255]);
       expect(w.runs()).toBe(3);
     }
     expect(idle()).toBe(true);
@@ -464,7 +464,7 @@ describe("W5 construction atomicity", () => {
     expect(() =>
       watch(() => {
         runs++;
-        get(source);
+        read(source);
         throw new Error("setup");
       }),
     ).toThrow("setup");
@@ -480,19 +480,19 @@ describe("W5 construction atomicity", () => {
     let runs = 0;
     let cleanups = 0;
     const failing = watch(() => {
-      if (get(out) === 1) throw new Error("sibling");
+      if (read(out) === 1) throw new Error("sibling");
     });
     expect(() =>
       watch(() => {
         runs++;
-        get(tick);
+        read(tick);
         set(out, 1);
         return () => void cleanups++;
       }),
     ).toThrow("sibling");
     // Its own run succeeded: the write stays, the cleanup is consumed, and
     // the unreachable watcher never runs again.
-    expect([get(out), runs, cleanups]).toEqual([1, 1, 1]);
+    expect([read(out), runs, cleanups]).toEqual([1, 1, 1]);
     expect(n(tick).firstSub).toBe(null);
     set(tick, 1);
     expect([runs, cleanups]).toEqual([1, 1]);
@@ -507,7 +507,7 @@ describe("W5 construction atomicity", () => {
       batch(() => {
         handle = watch(() => {
           runs++;
-          get(source);
+          read(source);
           throw new Error("deferred");
         });
       }),
@@ -534,9 +534,9 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
     const cyclic = signal(false);
     const poke = signal(0);
     const h: { b?: Computed<number> } = {};
-    const a = computed((): number => (get(cyclic) ? get(h.b!) + 1 : 0));
-    const b = (h.b = computed((): number => get(poke) + get(a) + 1));
-    expect(get(b)).toBe(1);
+    const a = computed((): number => (read(cyclic) ? compute(h.b!) + 1 : 0));
+    const b = (h.b = computed((): number => read(poke) + compute(a) + 1));
+    expect(compute(b)).toBe(1);
     return { cyclic, poke, a, b };
   };
 
@@ -544,10 +544,10 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
     const { cyclic, a, b } = pair();
     set(cyclic, true);
     // verify(b) runs a; a reads b, whose validation is in progress.
-    expect(() => get(b)).toThrow("Cycle");
+    expect(() => compute(b)).toThrow("Cycle");
     checkGraph(nodes(a, b));
     set(cyclic, false);
-    expect([get(a), get(b)]).toEqual([0, 1]);
+    expect([compute(a), compute(b)]).toEqual([0, 1]);
     expect(idle()).toBe(true);
   });
 
@@ -557,7 +557,7 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
       set(cyclic, true);
       // b STALE through a, or DIRTY through its own signal.
       if (direct) set(poke, 0.5);
-      expect(() => get(b)).toThrow("Cycle");
+      expect(() => compute(b)).toThrow("Cycle");
       checkGraph(nodes(a, b));
     }
   });
@@ -567,10 +567,10 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
     set(cyclic, true);
     // a runs and reads b; b's validation reaches a, whose run is on the stack.
     // Taken as clean, b would keep 1 at rest while a holds 2.
-    expect(() => get(a)).toThrow("Cycle");
+    expect(() => compute(a)).toThrow("Cycle");
     checkGraph(nodes(a, b));
     set(cyclic, false);
-    expect([get(a), get(b)]).toEqual([0, 1]);
+    expect([compute(a), compute(b)]).toEqual([0, 1]);
   });
 
   it("every cycle up to length 4 fails whichever node is demanded, directly or from above", () => {
@@ -583,17 +583,17 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
             const cyclic = signal(false);
             const ring: Computed<number>[] = [];
             for (let i = 0; i < k; i++)
-              ring.push(computed((): number => (i === gate && !get(cyclic) ? 0 : get(ring[(i + 1) % k]!) + 1)));
-            const top = computed(() => get(ring[demand]!));
+              ring.push(computed((): number => (i === gate && !read(cyclic) ? 0 : compute(ring[(i + 1) % k]!) + 1)));
+            const top = computed(() => compute(ring[demand]!));
             const target = above ? top : ring[demand]!;
             const at = (i: number) => (gate - i + k) % k;
-            expect([get(top), ...ring.map((c) => get(c))]).toEqual([at(demand), ...ring.map((_, i) => at(i))]);
+            expect([compute(top), ...ring.map((c) => compute(c))]).toEqual([at(demand), ...ring.map((_, i) => at(i))]);
             set(cyclic, true);
             const label = `k=${k} gate=${gate} demand=${demand} above=${above}`;
-            expect(() => get(target), label).toThrow("Cycle");
+            expect(() => compute(target), label).toThrow("Cycle");
             checkGraph(nodes(top, ...ring), label);
             set(cyclic, false);
-            expect([get(top), ...ring.map((c) => get(c))], label).toEqual([at(demand), ...ring.map((_, i) => at(i))]);
+            expect([compute(top), ...ring.map((c) => compute(c))], label).toEqual([at(demand), ...ring.map((_, i) => at(i))]);
             checkGraph(nodes(top, ...ring), label);
             expect(idle(), label).toBe(true);
           }
@@ -606,23 +606,23 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
       const trig = signal(0);
       const x = signal(0);
       const a = computed(() => {
-        const t = get(trig);
+        const t = read(trig);
         if (t === 1) set(x, 1);
         return t * 10;
       });
-      const b = computed(() => get(a) + 1);
+      const b = computed(() => compute(a) + 1);
       const seen: number[] = [];
       const stop = effect(() => {
-        if (get(x) === 1) seen.push(readsB ? get(b) : get(a));
+        if (read(x) === 1) seen.push(readsB ? compute(b) : compute(a));
       });
       // Read once, so the next demand validates b rather than running it.
-      expect(get(b)).toBe(1);
+      expect(compute(b)).toBe(1);
       set(trig, 1);
-      expect(() => (readsB ? get(b) : get(a))).toThrow("Cycle");
+      expect(() => (readsB ? compute(b) : compute(a))).toThrow("Cycle");
       // Never the value b held before a's run.
       expect(seen).toEqual([]);
       checkGraph(nodes(a, b));
-      expect(get(b)).toBe(11);
+      expect(compute(b)).toBe(11);
       stop();
     }
   });
@@ -634,23 +634,23 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
     // Not reactive: strands the watcher STALE without another push.
     let broken = false;
     const g = computed(() => {
-      get(s);
+      read(s);
       if (broken) throw new Error("g");
       return 0;
     });
     const a = computed(() => {
-      const t = get(trig);
+      const t = read(trig);
       if (t === 1) set(x, 1);
       return t * 10;
     });
-    const b = computed(() => get(a) + 1);
+    const b = computed(() => compute(a) + 1);
     let runs = 0;
     let cleanups = 0;
     const stop = effect(() => {
       runs++;
-      get(g);
-      get(b);
-      get(x);
+      compute(g);
+      compute(b);
+      read(x);
       return () => void cleanups++;
     });
     // The watcher's validation fails at g, before it reaches b: b stays STALE.
@@ -664,7 +664,7 @@ describe.runIf(dev)("C1 evaluation in progress (development build)", () => {
     broken = false;
     // b's validation runs a; a's write delivers the watcher, whose validation
     // reaches b. Taken as clean, b would let the cleanup run first.
-    expect(() => get(b)).toThrow("Cycle");
+    expect(() => compute(b)).toThrow("Cycle");
     expect([runs, cleanups]).toEqual([1, 0]);
     // The next push re-delivers it.
     set(x, 2);
@@ -680,17 +680,17 @@ describe("W3 disposal during validation", () => {
     const fault = signal(false);
     const h: { b?: Computed<number> } = {};
     const a = computed(() => {
-      const v = get(s);
+      const v = read(s);
       if (v === 1) dispose(h.b!);
       return change ? v : 0;
     });
-    const m = computed(() => get(a));
+    const m = computed(() => compute(a));
     const t = computed(() => {
-      if (get(fault)) throw new Error("t");
+      if (read(fault)) throw new Error("t");
       return 0;
     });
-    const b = (h.b = computed(() => (through ? get(m) : get(a)) + get(t) + 1));
-    expect(get(b)).toBe(1);
+    const b = (h.b = computed(() => (through ? compute(m) : compute(a)) + compute(t) + 1));
+    expect(compute(b)).toBe(1);
     return { s, fault, a, m, t, b };
   };
 
@@ -700,9 +700,9 @@ describe("W3 disposal during validation", () => {
     for (const through of [false, true]) {
       const { s, a, m, t, b } = program(through, true);
       set(s, 1);
-      expect(get(b)).toBe(1);
+      expect(compute(b)).toBe(1);
       set(s, 2);
-      expect(get(b)).toBe(1);
+      expect(compute(b)).toBe(1);
       checkGraph(nodes(a, m, t, b));
       expect(n(b).firstDep).toBe(null);
       expect(idle()).toBe(true);
@@ -717,11 +717,11 @@ describe("W3 disposal during validation", () => {
       set(fault, true);
       set(s, 1);
     });
-    expect(() => get(b)).toThrow("t");
+    expect(() => compute(b)).toThrow("t");
     expect(n(b).flags & Flag.Pending).toBe(0);
-    expect(get(b)).toBe(1);
+    expect(compute(b)).toBe(1);
     set(fault, false);
-    expect(get(b)).toBe(1);
+    expect(compute(b)).toBe(1);
     expect(idle()).toBe(true);
   });
 
@@ -740,24 +740,24 @@ describe("W3 self-disposal in a computed's own execution", () => {
     let runs = 0;
     const c: Computed<number> = computed(() => {
       runs++;
-      const v = get(s);
+      const v = read(s);
       if (v === at) {
         dispose(c);
         if (fault) throw new Error("c");
       }
       return v * 10;
     }, -1);
-    const outer = computed(() => get(c) + 1);
+    const outer = computed(() => compute(c) + 1);
     return { s, c, outer, runs: () => runs };
   };
 
   it("commits the value of a first run that disposes itself", () => {
     const { s, c, outer, runs } = program(0);
-    expect(get(outer)).toBe(1);
-    expect(get(c)).toBe(0);
+    expect(compute(outer)).toBe(1);
+    expect(compute(c)).toBe(0);
     set(s, 1);
-    expect(get(c)).toBe(0);
-    expect(get(outer)).toBe(1);
+    expect(compute(c)).toBe(0);
+    expect(compute(outer)).toBe(1);
     expect(runs()).toBe(1);
     expect(n(c).firstDep).toBe(null);
     expect(idle()).toBe(true);
@@ -767,15 +767,15 @@ describe("W3 self-disposal in a computed's own execution", () => {
     // outer validates c, c runs, disposes itself and returns 10: the new
     // version reaches outer in the same demand.
     const { s, c, outer, runs } = program(1);
-    expect(get(outer)).toBe(1);
+    expect(compute(outer)).toBe(1);
     set(s, 1);
-    expect(get(outer)).toBe(11);
-    expect(get(c)).toBe(10);
+    expect(compute(outer)).toBe(11);
+    expect(compute(c)).toBe(10);
     expect(runs()).toBe(2);
     // Terminal: no relation from c's last run stays subscribed.
     set(s, 2);
-    expect(get(outer)).toBe(11);
-    expect(get(c)).toBe(10);
+    expect(compute(outer)).toBe(11);
+    expect(compute(c)).toBe(10);
     expect(runs()).toBe(2);
     expect(n(s).firstSub).toBe(null);
     checkGraph([n(s), n(c), n(outer)]);
@@ -787,17 +787,17 @@ describe("W3 self-disposal in a computed's own execution", () => {
     const s = signal(0);
     const h: { c?: Computed<number> } = {};
     const d = computed(() => {
-      if (get(s) === 1) dispose(h.c!);
+      if (read(s) === 1) dispose(h.c!);
       return 0;
     });
-    const c = (h.c = computed(() => get(d) + get(s) * 10));
-    const outer = computed(() => get(c) + 1);
-    expect(get(outer)).toBe(1);
+    const c = (h.c = computed(() => compute(d) + read(s) * 10));
+    const outer = computed(() => compute(c) + 1);
+    expect(compute(outer)).toBe(1);
     set(s, 1);
-    expect(get(outer)).toBe(11);
+    expect(compute(outer)).toBe(11);
     set(s, 2);
-    expect(get(outer)).toBe(11);
-    expect(get(c)).toBe(10);
+    expect(compute(outer)).toBe(11);
+    expect(compute(c)).toBe(10);
     expect(n(c).firstDep).toBe(null);
   });
 
@@ -805,7 +805,7 @@ describe("W3 self-disposal in a computed's own execution", () => {
     const { s, c } = program(1);
     const seen: number[] = [];
     const stop = effect(() => {
-      seen.push(get(c));
+      seen.push(compute(c));
     });
     set(s, 1);
     set(s, 2);
@@ -818,16 +818,16 @@ describe("W3 self-disposal in a computed's own execution", () => {
     const s = signal(0);
     let outerRuns = 0;
     const c: Computed<number> = computed(() => {
-      if (get(s) === 1) dispose(c);
+      if (read(s) === 1) dispose(c);
       return 7;
     });
     const outer = computed(() => {
       outerRuns++;
-      return get(c);
+      return compute(c);
     });
-    expect(get(outer)).toBe(7);
+    expect(compute(outer)).toBe(7);
     set(s, 1);
-    expect(get(outer)).toBe(7);
+    expect(compute(outer)).toBe(7);
     expect(outerRuns).toBe(1);
     expect(n(c).firstDep).toBe(null);
   });
@@ -836,17 +836,17 @@ describe("W3 self-disposal in a computed's own execution", () => {
     for (const first of [true, false]) {
       const { s, c, outer, runs } = program(first ? 0 : 1, true);
       if (first) {
-        expect(() => get(outer)).toThrow("c");
-        expect(get(c)).toBe(-1);
+        expect(() => compute(outer)).toThrow("c");
+        expect(compute(c)).toBe(-1);
       } else {
-        expect(get(outer)).toBe(1);
+        expect(compute(outer)).toBe(1);
         set(s, 1);
-        expect(() => get(outer)).toThrow("c");
-        expect(get(c)).toBe(0);
+        expect(() => compute(outer)).toThrow("c");
+        expect(compute(c)).toBe(0);
       }
       const at = runs();
       set(s, 3);
-      expect(get(c)).toBe(first ? -1 : 0);
+      expect(compute(c)).toBe(first ? -1 : 0);
       expect(runs()).toBe(at);
       expect(n(c).firstDep).toBe(null);
       expect(n(s).firstSub).toBe(null);
@@ -859,7 +859,7 @@ describe("W3 self-disposal in a computed's own execution", () => {
     // never run, and keeping it would retain whatever it closes over.
     const s = signal(0);
     const w: Effect = watch(() => {
-      if (get(s) === 1) dispose(w);
+      if (read(s) === 1) dispose(w);
       return () => {};
     });
     set(s, 1);
@@ -877,12 +877,12 @@ describe("audit boundaries Q2 and Q3", () => {
     for (const sibling of [false, true]) {
       const s = signal(0);
       const t = signal(0);
-      if (sibling) watch(() => void (get(t) === 1 && set(s, 1)));
+      if (sibling) watch(() => void (read(t) === 1 && set(s, 1)));
       const runs: number[] = [];
       let cleanups = 0;
       expect(() =>
         watch(() => {
-          const v = get(s);
+          const v = read(s);
           runs.push(v);
           if (v === 0) {
             if (sibling) set(t, 1);
@@ -907,20 +907,20 @@ describe("audit boundaries Q2 and Q3", () => {
     const x = signal(0);
     const t = signal(0);
     const a = computed(() => {
-      if (get(t) === 1) set(x, 1);
+      if (read(t) === 1) set(x, 1);
       return 0;
     });
-    const p = computed(() => get(x) + get(a));
-    const q = computed(() => [get(p), get(x)]);
-    expect(get(p)).toBe(0);
+    const p = computed(() => read(x) + compute(a));
+    const q = computed(() => [compute(p), read(x)]);
+    expect(compute(p)).toBe(0);
     set(t, 1);
     // P is judged as of the start of its validation; x is read afterwards.
-    expect(get(q)).toEqual([0, 1]);
+    expect(compute(q)).toEqual([0, 1]);
     // The write made work owed: the next demand observes it.
-    expect(get(p)).toBe(1);
-    expect(get(q)).toEqual([1, 1]);
+    expect(compute(p)).toBe(1);
+    expect(compute(q)).toEqual([1, 1]);
     const seen: number[] = [];
-    const stop = effect(() => void seen.push(get(p)));
+    const stop = effect(() => void seen.push(compute(p)));
     set(x, 5);
     expect(seen).toEqual([1, 5]);
     stop();
@@ -939,7 +939,7 @@ describe("F5 first error", () => {
     const source = signal(0);
     let runs = 0;
     const stop = effect(() => {
-      if (get(source) === 1) {
+      if (read(source) === 1) {
         runs++;
         throw new Error("watcher");
       }
@@ -959,7 +959,7 @@ describe("F5 first error", () => {
   it("an inner batch's error passes through the outer batch end unchanged", () => {
     const source = signal(0);
     const stop = effect(() => {
-      if (get(source) === 1) throw new Error("watcher");
+      if (read(source) === 1) throw new Error("watcher");
     });
     expect(() =>
       batch(() => {
@@ -975,7 +975,7 @@ describe("F5 first error", () => {
   it("a failed effect() call reports its run's error, not its rollback's", () => {
     const out = signal(0);
     const failing = watch(() => {
-      if (get(out) === 1) throw new Error("sibling");
+      if (read(out) === 1) throw new Error("sibling");
     });
     let cleanups = 0;
     expect(() =>

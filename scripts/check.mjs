@@ -20,11 +20,11 @@ const fail = (message) => {
 };
 
 function smoke(api, format) {
-  const { signal, computed, effect, get, set, dispose, batch, typeOf } = api;
+  const { signal, computed, effect, read, compute, set, dispose, batch, typeOf } = api;
   const a = signal(1);
-  const b = computed(() => get(a) * 2);
+  const b = computed(() => read(a) * 2);
   const seen = [];
-  const e = effect(() => void seen.push(get(b)));
+  const e = effect(() => void seen.push(compute(b)));
   if ([typeOf(a), typeOf(b), typeOf(e)].join() !== "signal,computed,effect") fail(`${format}: incorrect handle kinds`);
   batch(() => {
     set(a, 2);
@@ -33,7 +33,7 @@ function smoke(api, format) {
   dispose(e);
   set(a, 4);
   if (seen.join() !== "2,6") fail(`${format}: effect saw ${seen.join()}`);
-  if (get(b) !== 8) fail(`${format}: computed is ${get(b)}`);
+  if (compute(b) !== 8) fail(`${format}: computed is ${compute(b)}`);
 }
 
 const esm = await import(pathToFileURL(path.join(root, pkg.exports["."].import.default)).href);
@@ -53,15 +53,15 @@ for (const [api, format] of [[esmDev, "esm development"], [cjsDev, "cjs developm
 // production build carries no diagnosis. What production answers for this
 // erroneous program is not a contract; that it answers proves the diagnosis
 // was compiled out.
-function cycleThroughValidation({ signal, computed, get, set }) {
+function cycleThroughValidation({ signal, computed, read, compute, set }) {
   const cyclic = signal(false);
   const holder = {};
-  const a = computed(() => (get(cyclic) ? get(holder.b) + 1 : 0));
-  holder.b = computed(() => get(a) + 1);
-  get(holder.b);
+  const a = computed(() => (read(cyclic) ? compute(holder.b) + 1 : 0));
+  holder.b = computed(() => compute(a) + 1);
+  compute(holder.b);
   set(cyclic, true);
   try {
-    get(holder.b);
+    compute(holder.b);
     return "answered";
   } catch (error) {
     return error.message;
@@ -81,11 +81,11 @@ console.log("build split: development diagnoses C1, production carries no diagno
   const adapt = (api) => ({
     signal: (v) => {
       const n = api.signal(v);
-      return { get: () => api.get(n), set: (x) => api.set(n, x) };
+      return { get: () => api.read(n), set: (x) => api.set(n, x) };
     },
     computed: (fn) => {
       const n = api.computed(fn);
-      return { get: () => api.get(n) };
+      return { get: () => api.compute(n) };
     },
     effect: (fn) => {
       const n = api.effect(fn);
@@ -193,9 +193,9 @@ try {
     const consumer = path.join(tmp, `use.${extension}`);
     consumers.push(consumer);
     writeFileSync(consumer, [
-      `import { signal, computed, effect, get, peek, set, update, dispose, typeOf, type Signal, type Computed, type Effect, type Readable } from ${JSON.stringify(path.join(root, "dist", entry).replaceAll("\\", "/"))};`,
+      `import { signal, computed, effect, read, compute, peek, set, update, dispose, typeOf, type Signal, type Computed, type Effect, type Readable } from ${JSON.stringify(path.join(root, "dist", entry).replaceAll("\\", "/"))};`,
       "const a: Signal<number> = signal(1);",
-      "const b: Computed<string> = computed(() => String(get(a)));",
+      "const b: Computed<string> = computed(() => String(read(a)));",
       "const e: Effect = effect(() => {});",
       "const signalKind: 'signal' = typeOf(a);",
       "const computedKind: 'computed' = typeOf(b);",
@@ -207,18 +207,22 @@ try {
       "// @ts-expect-error only reactive handles are accepted",
       "typeOf(42);",
       "export { signalKind, computedKind, effectKind, eitherKind, mixedKind };",
-      "const s: string = get(b);",
+      "const s: string = compute(b);",
       "set(a, 2);",
-      "dispose(effect(() => void get(b)));",
+      "dispose(effect(() => void compute(b)));",
       "// @ts-expect-error a computed cannot be set",
       "set(b, 'x');",
+      "// @ts-expect-error read takes a signal; a computed is read with compute",
+      "read(b);",
+      "// @ts-expect-error compute takes a computed",
+      "compute(a);",
       "// Reading is covariant: a Signal<number> is a Readable<number | string>.",
       "const r: Readable<number | string> = a;",
       "// @ts-expect-error a signal is written, so it is invariant",
       "const w: Signal<number | string> = a;",
       "export { r, w };",
       "// Seeded computed: prev is T, not T | undefined.",
-      "const total: Computed<number> = computed((prev) => prev + get(a), 0);",
+      "const total: Computed<number> = computed((prev) => prev + read(a), 0);",
       "const p: number = peek(total);",
       "update(a, (v) => v + 1);",
       "// @ts-expect-error update needs a signal",

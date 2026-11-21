@@ -57,7 +57,7 @@ const setFlush = [
 
 /**
  * The public write and read paths against the release (current: set tests
- * the queue at the call site, LOG 27; get and peek are kernel read and peek
+ * the queue at the call site, LOG 27; read and peek are kernel track and peek
  * under the public type, LOG 30). flush-call and get-function are the earlier
  * forms, kept as regression guards; size-first and commit, measured in two
  * runs (research/COST-MODEL.md), are retired. None changes an answer: run.mjs
@@ -68,8 +68,8 @@ export const surfaceVariants = {
   current: ["set tests the queue at the call site: as released"],
   "flush-call": ["set calls flush() (previous release)", ...setFlush],
   "get-function": [
-    "get and peek as surface functions around kernel read and peek (previous release)",
-    [I, "export const get: <T>(source: Readable<T>) => T = read as never;", "export function get<T>(source: Readable<T>): T {\n  return read(source as unknown as Node) as T;\n}"],
+    "read and peek as surface functions around kernel track and peek (an earlier release's form)",
+    [I, "export const read: <T>(source: Signal<T>) => T = track as never;", "export function read<T>(source: Signal<T>): T {\n  return track(source as unknown as Node) as T;\n}"],
     [I, "export const peek: <T>(source: Readable<T>) => T = refresh as never;", "export function peek<T>(source: Readable<T>): T {\n  return refresh(source as unknown as Node) as T;\n}"],
   ],
 };

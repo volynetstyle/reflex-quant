@@ -74,18 +74,18 @@ const BUSY = 1 << 2; // Flag.Busy
 const witnesses = {
   // exec stores BUSY, then calls the body and, on failure, `fail`.
   activation(q) {
-    const { signal, computed, get, set } = q;
+    const { signal, computed, read, compute, set } = q;
     const input = signal(0);
-    const nodes = Array.from({ length: 512 }, (_, i) => computed(() => get(input) + i));
-    for (const node of nodes) get(node);
+    const nodes = Array.from({ length: 512 }, (_, i) => computed(() => read(input) + i));
+    for (const node of nodes) compute(node);
     set(input, 1);
-    const run = sweep((i) => get(nodes[i]), nodes.length);
+    const run = sweep((i) => compute(nodes[i]), nodes.length);
     const bad = [];
     if (run.foreign) bad.push(`attempt threw ${run.foreign.message}`);
     for (let i = 0; i < nodes.length; i++) {
       if ((nodes[i].flags & BUSY) !== 0) bad.push(`node ${i} BUSY`);
       try {
-        if (get(nodes[i]) !== 1 + i) bad.push(`node ${i} value ${get(nodes[i])}`);
+        if (compute(nodes[i]) !== 1 + i) bad.push(`node ${i} value ${compute(nodes[i])}`);
       } catch (error) {
         bad.push(`node ${i} threw ${error.message}`);
       }
@@ -102,7 +102,7 @@ const witnesses = {
     const input = signal(0);
     const seen = [];
     const watcher = effect(() => {
-      seen.push(get(input));
+      seen.push(read(input));
     });
     set(input, 1);
     if (seen.join() !== "0,1") bad.push(`new watcher saw [${seen}]`);
@@ -117,7 +117,7 @@ const witnesses = {
       const input = signal(0);
       let seen = -1;
       const watcher = effect(() => {
-        seen = get(input);
+        seen = read(input);
       });
       return { input, watcher, seen: () => seen };
     });
@@ -138,13 +138,13 @@ const witnesses = {
     const { signal, effect, get, set, dispose, batch } = q;
     const fillers = Array.from({ length: 4096 }, () => {
       const input = signal(0);
-      return { input, watcher: effect(() => void get(input)) };
+      return { input, watcher: effect(() => void read(input)) };
     });
     const targets = Array.from({ length: 512 }, () => {
       const input = signal(0);
       let seen = -1;
       const watcher = effect(() => {
-        seen = get(input);
+        seen = read(input);
       });
       return { input, watcher, seen: () => seen };
     });

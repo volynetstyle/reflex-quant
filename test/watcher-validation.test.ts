@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { Flag } from "../src/graph";
 import type { Node } from "../src/graph";
-import {
+import { compute,
   batch,
   computed,
   dispose,
   effect,
-  get,
+  read,
   set,
   signal,
 } from "../src/index";
@@ -54,18 +54,18 @@ describe("watcher validation flag boundary", () => {
       const first = signal(0);
       const broken = signal(false);
       const injected = new Error("validation");
-      const changed = computed(() => get(first));
+      const changed = computed(() => read(first));
       const throwing = computed(() => {
-        if (get(broken)) throw injected;
+        if (read(broken)) throw injected;
         return 0;
       });
       let runs = 0;
       let cleanups = 0;
       const watcher = effect(() => {
         runs++;
-        get(direct);
-        get(changed);
-        get(throwing);
+        read(direct);
+        compute(changed);
+        compute(throwing);
         return () => {
           cleanups++;
         };
@@ -104,18 +104,18 @@ describe("watcher validation barrier", () => {
       let cleanups = 0;
       const left = computed(() => {
         leftChecks++;
-        if (get(broken)) throw injected;
+        if (read(broken)) throw injected;
         return 0;
       });
       const leaf = computed(() => {
         rightChecks++;
-        const value = get(b);
+        const value = read(b);
         return cutoff ? 0 : value;
       });
-      const right = computed(() => get(leaf));
+      const right = computed(() => compute(leaf));
       const seen: [number, number][] = [];
       const watcher = effect(() => {
-        seen.push([get(left), get(right)]);
+        seen.push([compute(left), compute(right)]);
         return () => {
           cleanups++;
         };
@@ -161,15 +161,15 @@ describe("watcher validation barrier", () => {
     const bodyError = new Error("body");
     const checkError = new Error("left");
     const left = computed(() => {
-      if (get(broken)) throw checkError;
+      if (read(broken)) throw checkError;
       return 1;
     });
-    const right = computed(() => get(source) & 1);
+    const right = computed(() => read(source) & 1);
     const attempts: [number, number][] = [];
     let failBody = false;
     let cleanups = 0;
     const watcher = effect(() => {
-      attempts.push([get(left), get(right)]);
+      attempts.push([compute(left), compute(right)]);
       if (failBody) throw bodyError;
       return () => {
         cleanups++;
@@ -217,7 +217,7 @@ describe("watcher validation barrier", () => {
     let once = true;
     let leftChecks = 0;
     const left = computed(() => {
-      const value = get(a);
+      const value = read(a);
       leftChecks++;
       if (value === 1 && once) {
         once = false;
@@ -225,10 +225,10 @@ describe("watcher validation barrier", () => {
       }
       return value;
     });
-    const right = computed(() => get(b));
+    const right = computed(() => read(b));
     const seen: [number, number][] = [];
     const watcher = effect(() => {
-      seen.push([get(left), get(right)]);
+      seen.push([compute(left), compute(right)]);
     });
 
     try {
@@ -241,7 +241,7 @@ describe("watcher validation barrier", () => {
       set(b, 2);
       expect(leftChecks).toBe(2);
       expect(seen).toEqual([[0, 0]]);
-      expect(get(left)).toBe(1);
+      expect(compute(left)).toBe(1);
       expect(leftChecks).toBe(3);
       set(a, 2);
       expect(seen).toEqual([

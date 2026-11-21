@@ -1,12 +1,12 @@
 // Structural resource witnesses: follow graph pointers from a retained
 // handle through every node and edge graph field.
 import { describe, expect, it } from "vitest";
-import {
+import { compute,
   batch,
   computed,
   dispose,
   effect,
-  get,
+  read,
   set,
   signal,
   type Computed,
@@ -55,10 +55,10 @@ describe("disposed dependency retention", () => {
       let runs = 0;
       const c = computed(() => {
         runs++;
-        return sources.reduce((sum, s) => sum + get(s), 0);
+        return sources.reduce((sum, s) => sum + read(s), 0);
       });
       const value = (width * (width + 1)) / 2;
-      expect(get(c)).toBe(value);
+      expect(compute(c)).toBe(value);
       dispose(c);
       // Subscriptions and all graph paths disappear while the handle is retained.
       expect(n(c).firstDep === null).toBe(true);
@@ -67,7 +67,7 @@ describe("disposed dependency retention", () => {
       released(c);
       dispose(c);
       for (const s of sources) set(s, 99);
-      expect(get(c)).toBe(value);
+      expect(compute(c)).toBe(value);
       expect(runs).toBe(1);
       checkGraph([n(c), ...sources.map(n)]);
       expect(idle()).toBe(true);
@@ -81,22 +81,22 @@ describe("disposed dependency retention", () => {
       const fresh = Array.from({ length: 12 }, (_, i) => signal(i + 100));
       const mode = signal(established ? 0 : 1);
       const c = computed(() => {
-        const m = get(mode);
+        const m = read(mode);
         const sources = m === 0 ? old : fresh.slice(m);
-        const sum = sources.reduce((value, s) => value + get(s), 0);
+        const sum = sources.reduce((value, s) => value + read(s), 0);
         if (m !== 0) throw new Error("attempt");
         return sum;
       });
-      if (established) expect(get(c)).toBe(66);
+      if (established) expect(compute(c)).toBe(66);
       for (const m of [1, 2, 3]) {
         set(mode, m);
-        expect(() => get(c)).toThrow("attempt");
+        expect(() => compute(c)).toThrow("attempt");
         checkGraph([n(c)]);
       }
       dispose(c);
       expect(graphReachable(n(c))).toBe(1);
       released(c);
-      expect(get(c)).toBe(established ? 66 : undefined);
+      expect(compute(c)).toBe(established ? 66 : undefined);
       checkGraph([n(c), ...old.map(n), ...fresh.map(n), n(mode)]);
       expect(idle()).toBe(true);
     },
@@ -110,9 +110,9 @@ describe("disposed dependency retention", () => {
       const fresh = signal(100);
       let armed = false;
       const c: Computed<number> = computed(() => {
-        get(tick);
+        read(tick);
         const sum = (armed ? [...sources].reverse() : sources).reduce(
-          (value, s) => value + get(s),
+          (value, s) => value + read(s),
           0,
         );
         if (armed) {
@@ -120,21 +120,21 @@ describe("disposed dependency retention", () => {
           const edge = indexAfter(cn, n(sources[0]!));
           dispose(c);
           expect(edge.from.slot === edge && cn.firstDep !== null).toBe(true);
-          get(fresh);
-          get(sources[0]!);
+          read(fresh);
+          read(sources[0]!);
           expect(edge.from.slot === edge).toBe(true);
           if (throws) throw new Error("self-dispose");
         }
         return sum;
       });
-      expect(get(c)).toBe(276);
+      expect(compute(c)).toBe(276);
       armed = true;
       set(tick, 1);
-      if (throws) expect(() => get(c)).toThrow("self-dispose");
-      else expect(get(c)).toBe(276);
+      if (throws) expect(() => compute(c)).toThrow("self-dispose");
+      else expect(compute(c)).toBe(276);
       released(c);
       expect(graphReachable(n(c))).toBe(1);
-      expect(get(c)).toBe(276);
+      expect(compute(c)).toBe(276);
       checkGraph([n(c), n(tick), n(fresh), ...sources.map(n)]);
       expect(idle()).toBe(true);
     },
@@ -150,11 +150,11 @@ describe("disposed dependency retention", () => {
       let e!: Effect;
       e = effect(() => {
         runs++;
-        if (get(source) === 1) {
+        if (read(source) === 1) {
           dispose(e);
           expect(n(e).firstDep !== null).toBe(true);
-          get(fresh);
-          get(source);
+          read(fresh);
+          read(source);
           if (throws) throw new Error("watcher self-dispose");
         }
         return () => {
@@ -181,15 +181,15 @@ describe("disposed dependency retention", () => {
       let runs = 0;
       let cleanups = 0;
       const survivor = effect(() => {
-        get(source);
+        read(source);
         runs++;
       });
       const e = effect(() => {
-        get(source);
+        read(source);
         return () => {
           cleanups++;
           released(e);
-          get(untracked);
+          read(untracked);
           set(source, 1);
           if (throws) throw new Error("cleanup");
         };
@@ -211,7 +211,7 @@ describe("disposed dependency retention", () => {
     const source = signal(0);
     let runs = 0;
     const e = effect(() => {
-      get(source);
+      read(source);
       runs++;
     });
     batch(() => {
@@ -232,23 +232,23 @@ describe("disposed dependency retention", () => {
         const fault = signal(false);
         let b!: Computed<number>;
         const a = computed(() => {
-          if (get(source) === 1) dispose(b);
+          if (read(source) === 1) dispose(b);
           return 0;
         });
-        const m = computed(() => get(a));
+        const m = computed(() => compute(a));
         const tail = computed(() => {
-          if (get(fault)) throw new Error("validation");
+          if (read(fault)) throw new Error("validation");
           return 1;
         });
-        b = computed(() => (through ? get(m) : get(a)) + get(tail));
-        expect(get(b)).toBe(1);
+        b = computed(() => (through ? compute(m) : compute(a)) + compute(tail));
+        expect(compute(b)).toBe(1);
         set(source, 1);
         set(fault, throws);
-        if (throws) expect(() => get(b)).toThrow("validation");
-        else expect(get(b)).toBe(1);
+        if (throws) expect(() => compute(b)).toThrow("validation");
+        else expect(compute(b)).toBe(1);
         released(b);
         expect(graphReachable(n(b))).toBe(1);
-        expect(get(b)).toBe(1);
+        expect(compute(b)).toBe(1);
         checkGraph([b, a, m, tail, source, fault].map(n));
         expect(idle()).toBe(true);
       },
@@ -256,14 +256,14 @@ describe("disposed dependency retention", () => {
 
   it("preserves frozen values and downstream subscriptions", () => {
     const source = signal(2);
-    const c = computed(() => get(source) * 2);
-    const d = computed(() => get(c) + 1);
-    expect(get(d)).toBe(5);
+    const c = computed(() => read(source) * 2);
+    const d = computed(() => compute(c) + 1);
+    expect(compute(d)).toBe(5);
     dispose(c);
     released(c);
     expect(n(c).firstSub !== null).toBe(true);
     set(source, 9);
-    expect(get(d)).toBe(5);
+    expect(compute(d)).toBe(5);
     checkGraph([source, c, d].map(n));
     dispose(d);
   });
@@ -271,13 +271,13 @@ describe("disposed dependency retention", () => {
   it("keeps an object cached as the computed value", () => {
     const source = signal(1);
     const c = computed(() => {
-      get(source);
+      read(source);
       return source;
     });
-    expect(get(c) === source).toBe(true);
+    expect(compute(c) === source).toBe(true);
     dispose(c);
     released(c);
-    expect(get(c) === source).toBe(true);
+    expect(compute(c) === source).toBe(true);
     checkGraph([n(c), n(source)]);
   });
 
@@ -287,7 +287,7 @@ describe("disposed dependency retention", () => {
     }, 7);
     dispose(c);
     released(c);
-    expect(get(c)).toBe(7);
+    expect(compute(c)).toBe(7);
     expect(idle()).toBe(true);
   });
 });

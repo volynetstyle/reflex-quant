@@ -1,11 +1,11 @@
 import { expect, it } from "vitest";
 import type { Node } from "../src/graph";
-import {
+import { compute,
   batch,
   computed,
   dispose,
   effect,
-  get,
+  read,
   set,
   signal,
 } from "../src/index";
@@ -20,7 +20,7 @@ it.each(["changed", "unchanged", "owed", "cleanup throws", "pull throws"])(
     const events: string[] = [];
     let watcher: Effect;
     const first = computed(() => {
-      const value = get(source);
+      const value = read(source);
       if (value === 1) {
         dispose(watcher);
         if (mode === "pull throws") throw failure;
@@ -28,14 +28,14 @@ it.each(["changed", "unchanged", "owed", "cleanup throws", "pull throws"])(
       return mode === "unchanged" ? 0 : value;
     });
     const later = computed(() => {
-      if (get(source) === 1) throw new Error("detached source");
+      if (read(source) === 1) throw new Error("detached source");
       return 0;
     });
     watcher = effect(() => {
       events.push("body");
-      get(first);
-      get(later);
-      get(direct);
+      compute(first);
+      compute(later);
+      read(direct);
       return () => {
         events.push("cleanup");
         if (mode === "cleanup throws") throw failure;
@@ -63,19 +63,19 @@ it("rechecks a committed source made stale by a later source before cleanup (RQ3
   const gate = signal(false);
   const error = new Error("earlier source");
   const first = computed(() => {
-    if (get(gate)) throw error;
+    if (read(gate)) throw error;
     return 0;
   });
   const second = computed(() => {
-    const value = get(trigger);
+    const value = read(trigger);
     if (value === 1) set(gate, true);
     return value;
   });
   const events: string[] = [];
   const watcher = effect(() => {
     events.push("body");
-    get(first);
-    get(second);
+    compute(first);
+    compute(second);
     return () => {
       events.push("cleanup");
     };
@@ -91,16 +91,16 @@ it("rechecks a committed source made stale by a later source before cleanup (RQ3
 it("checks a pending source on demand after the first computed subscription (RQ1b)", () => {
   const input = signal(0);
   const source = computed(() => {
-    const value = get(input);
+    const value = read(input);
     if (value === 0) set(input, 1);
     return value;
   });
-  const reader = computed(() => get(source));
+  const reader = computed(() => compute(source));
 
-  expect(get(reader)).toBe(0);
-  expect(get(reader)).toBe(1);
+  expect(compute(reader)).toBe(0);
+  expect(compute(reader)).toBe(1);
   set(input, 2);
-  expect(get(reader)).toBe(2);
+  expect(compute(reader)).toBe(2);
 });
 
 it("preserves cutoff when a newly linked pending source validates unchanged (RQ1b, P2)", () => {
@@ -108,12 +108,12 @@ it("preserves cutoff when a newly linked pending source validates unchanged (RQ1
   let checks = 0;
   const source = computed(() => {
     checks++;
-    if (get(input) === 0) set(input, 1);
+    if (read(input) === 0) set(input, 1);
     return 0;
   });
   const observed: number[] = [];
   const watcher = effect(() => {
-    observed.push(get(source));
+    observed.push(compute(source));
   });
   expect(checks).toBe(2);
   expect(observed).toEqual([0]);
@@ -124,32 +124,32 @@ it("hands off pending validation for an edge added during indexed tracking (RQ1b
   const reorder = signal(false);
   const inputs = Array.from({ length: 24 }, () => signal(0));
   const pivot = inputs[12]!;
-  const firstReader = computed(() => get(pivot));
-  get(firstReader);
+  const firstReader = computed(() => read(pivot));
+  compute(firstReader);
 
   const input = signal(0);
   const source = computed(() => {
-    const value = get(input);
+    const value = read(input);
     if (value === 0) set(input, 1);
     return value;
   });
   let indexedAttachment = false;
   const reader = computed(() => {
     let value = 0;
-    if (get(reorder)) {
-      get(pivot);
+    if (read(reorder)) {
+      read(pivot);
       indexedAttachment ||= (pivot as unknown as Node).slot !== null;
-      value = get(source);
+      value = compute(source);
     }
-    for (const input of inputs) get(input);
+    for (const input of inputs) read(input);
     return value;
   });
 
-  expect(get(reader)).toBe(0);
+  expect(compute(reader)).toBe(0);
   set(reorder, true);
-  expect(get(reader)).toBe(0);
+  expect(compute(reader)).toBe(0);
   expect(indexedAttachment).toBe(true);
-  expect(get(reader)).toBe(1);
+  expect(compute(reader)).toBe(1);
 });
 
 it.each(["execution", "validation"])(
@@ -158,22 +158,22 @@ it.each(["execution", "validation"])(
     const input = signal(0);
     const trigger = signal(false);
     const later = computed(() => {
-      if (get(trigger)) set(input, 1);
+      if (read(trigger)) set(input, 1);
       return 0;
     });
     const source = computed(() => {
-      const value = get(input);
-      if (phase === "validation") get(later);
+      const value = read(input);
+      if (phase === "validation") compute(later);
       else if (value === 0) set(input, 1);
       return value;
     });
     if (phase === "validation") {
-      expect(get(source)).toBe(0);
+      expect(compute(source)).toBe(0);
       set(trigger, true);
     }
     const seen: number[] = [];
     const watcher = effect(() => {
-      seen.push(get(source));
+      seen.push(compute(source));
     });
     expect(seen).toEqual([0, 1]);
     set(input, 2);

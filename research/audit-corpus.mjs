@@ -88,11 +88,27 @@ function fetchCorpus() {
   return out;
 }
 
+/**
+ * The audit's scripts call the unified `get` of 1.2.0. Since 2.0 a signal is
+ * read with `read` and a computed with `compute`; this entry gives the pinned
+ * scripts their `get` on top of both, choosing by handle kind, so the corpus
+ * keeps testing semantics rather than the API's spelling. With sources that
+ * still export `get` (an older `--src`), theirs is used.
+ */
+const compatibility = (index) => `export * from ${JSON.stringify(index)};
+import * as q from ${JSON.stringify(index)};
+export const get = q.get ?? ((h) => (q.typeOf(h) === "computed" ? q.compute(h) : q.read(h)));
+`;
+
 async function bundle(dev) {
   const esbuild = require("esbuild");
   const outfile = path.join(cache, "build", dev ? "dev.js" : "prod.js");
   await esbuild.build({
-    entryPoints: [path.join(src, "index.ts")],
+    stdin: {
+      contents: compatibility(path.join(src, "index.ts").replaceAll("\\", "/")),
+      resolveDir: src,
+      loader: "js",
+    },
     bundle: true,
     platform: "neutral",
     target: "es2022",
